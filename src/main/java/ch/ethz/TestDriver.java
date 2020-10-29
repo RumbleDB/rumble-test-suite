@@ -1,16 +1,12 @@
 package ch.ethz;
 
 import net.sf.saxon.s9api.*;
-import net.sf.saxon.s9api.streams.Predicates;
 import net.sf.saxon.s9api.streams.Steps;
-import org.apache.spark.SparkConf;
-import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.sql.SparkSession;
 import org.rumbledb.api.Item;
 import org.rumbledb.api.Rumble;
 import org.rumbledb.api.SequenceOfItems;
 import org.rumbledb.config.RumbleRuntimeConfiguration;
-import sparksoniq.spark.SparkSessionManager;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -18,6 +14,7 @@ import java.io.InputStreamReader;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class TestDriver {
     private String testsRepositoryScriptFileName = "get-tests-repository.sh";
@@ -27,6 +24,9 @@ public class TestDriver {
     private String testSetToTest = "math-acos.xml";
     private SparkSession sparkSession;
     private Rumble rumbleInstance;
+    private int numberOfFails;
+    private int numberOfSuccess;
+    private String resultVariableName = "result";
 
     void execute() {
         workingDirectoryPath = Paths.get("").toAbsolutePath();
@@ -75,18 +75,24 @@ public class TestDriver {
     }
 
     private void initializeSparkAndRumble() {
-        // Initialize Spark
-        sparkSession = SparkSession.builder()
-                .master("local")
-                .appName("rumble-test-suite")
-                .getOrCreate();
-
-        // Initialize Rumble
+        // Initialize configuration - the instance will be the same as in org.rumbledb.cli.Main.java (one for shell)
         // TODO RumbleRuntimeConfiguration rumbleConf = new RumbleRuntimeConfiguration() // I added init() in default ctor
         RumbleRuntimeConfiguration rumbleConf = new RumbleRuntimeConfiguration(
                 new String[]{
                         "--output-format","json"
                 });
+
+
+        // Initialize Spark - not needed when I have part of code from org.rumbledb.cli.JsoniqQueryExecutor.java
+        sparkSession = SparkSession.builder()
+                .master("local")
+                .appName("rumble-test-suite")
+                .getOrCreate();
+
+        // org.rumbledb.cli.JsoniqQueryExecutor.java does this for some reason in the ctor
+        //SparkSessionManager.COLLECT_ITEM_LIMIT = rumbleConf.getResultSizeCap();
+
+        // Initialize Rumble
         rumbleInstance = new Rumble(rumbleConf);
     }
 
@@ -100,11 +106,11 @@ public class TestDriver {
         catalogBuilder.setLineNumbering(true);
         XdmNode catalogNode = catalogBuilder.build(catalogFile);
 
-        // TODO check if we need a namespace
-        // xpc.declareNamespace("", this.catalogNamespace());
         XPathCompiler xpc = testDriverProcessor.newXPathCompiler();
         xpc.setLanguageVersion("3.1");
         xpc.setCaching(true);
+        // Yes we do need Namespace. It is required to run evaluateSingle and luckily it is hardcoded in QT3TestDriverHE
+        xpc.declareNamespace("", "http://www.w3.org/2010/09/qt-fots-catalog");
 
         for (XdmNode testSet : catalogNode.select(Steps.descendant("test-set")).asList()) {
             this.processTestSet(catalogBuilder, xpc, testSet);
@@ -138,7 +144,7 @@ public class TestDriver {
         }
     }
 
-    private void processTestCase(XdmNode testCase, XPathCompiler xpc){
+    private void processTestCase(XdmNode testCase, XPathCompiler xpc) throws SaxonApiException {
         XdmNode resultNode = testCase.select(Steps.child("result")).asNode();
         XdmNode testNode = testCase.select(Steps.child("test")).asNode();
 
@@ -147,26 +153,47 @@ public class TestDriver {
         // Small converter
         testString = Convert(testString);
 
+        // Execute query JSONiq
+//        JsoniqQueryExecutor executor = new JsoniqQueryExecutor(new RumbleRuntimeConfiguration(
+//                new String[]{
+//                        "--query-path", "testquery.json"
+//                }));
+//        try {
+//            executor.runQuery();
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
+
         // Execute query
         SequenceOfItems queryResult = rumbleInstance.runQuery(testString);
 
-        List<Item> resultList = new ArrayList<Item>(){};
-        queryResult.populateListWithWarningOnlyIfCapReached(resultList);
+        // Coppied from JsoniqQueryExecutor.java - 150th line of code
+        List<Item> outputList = null;
+        outputList = new ArrayList<>();
+        queryResult.populateListWithWarningOnlyIfCapReached(outputList);
+        List<String> lines = outputList.stream().map(x -> x.serialize()).collect(Collectors.toList());
+        System.out.println(String.join("\n", lines));
 
-        while (queryResult.hasNext()){
-            Item item = queryResult.next();
-        }
+        // TODO figure out alternative results afterwards - this is if then else or...
+        // This does not return what I want, xpc is not correct
+        XdmNode assertion = (XdmNode)xpc.evaluateSingle("result/*[1]", testCase);
 
+        if (compareExpectedResultAndOutput(outputList, assertion))
+            numberOfSuccess++;
+        else
+            numberOfFails++;
 
-        boolean needSerializedResult = resultNode.select(Steps.descendant("assert-serialization-error")).exists() || resultNode.select(Steps.descendant("serialization-matches")).exists();
-        boolean needResultValue = needSerializedResult &&
-                resultNode.select(Steps.descendant(Predicates.isElement())
-                        .where(Predicates.not(Predicates.hasLocalName("serialization-matches")
-                                .or(Predicates.hasLocalName("assert-serialization-error"))
-                                .or(Predicates.hasLocalName("any-of"))
-                                .or(Predicates.hasLocalName("all-of")))))
-                        .exists();
+        // TODO check this results value
+//        boolean needSerializedResult = resultNode.select(Steps.descendant("assert-serialization-error")).exists() || resultNode.select(Steps.descendant("serialization-matches")).exists();
+//        boolean needResultValue = needSerializedResult &&
+//                resultNode.select(Steps.descendant(Predicates.isElement())
+//                        .where(Predicates.not(Predicates.hasLocalName("serialization-matches")
+//                                .or(Predicates.hasLocalName("assert-serialization-error"))
+//                                .or(Predicates.hasLocalName("any-of"))
+//                                .or(Predicates.hasLocalName("all-of")))))
+//                        .exists();
 
+        //TODO check the XSLT (isApplicable)
 //        dependency = (XdmNode)var17.next();
 //        exp = dependency.attribute("type");
 //        if (exp == null) {
@@ -187,9 +214,86 @@ public class TestDriver {
 //        }
     }
 
+    private boolean compareExpectedResultAndOutput(List<Item> outputList, XdmNode assertion) {
+        String tag = assertion.getNodeName().getLocalName();
+        switch(tag) {
+            case "assert-empty":
+                return AssertEmpty(outputList);
+            case "assert":
+                return Assert(outputList, assertion);
+            case "assert-eq":
+                return AssertEq(outputList, assertion);
+//            case -1414935165:
+//                if (tag.equals("all-of")) {
+//                    var9 = 18;
+//                }
+//                break;
+//            case 358832481:
+//                if (tag.equals("assert-type")) {
+//                    var9 = 11;
+//                }
+//                break;
+            case "assert-string-value":
+                return AssertStringValue(outputList, assertion);
+            default:
+                return false;
+        }
+    }
+
+    private boolean AssertEq(List<Item> outputList, XdmNode assertion) {
+        String expression = assertion.getStringValue();
+        List<String> lines = outputList.stream().map(x -> x.serialize()).collect(Collectors.toList());
+
+        expression = expression + "=" + lines.get(0);
+
+        // TODO Put into method!
+        SequenceOfItems queryResult = rumbleInstance.runQuery(expression);
+        outputList = new ArrayList<>();
+        queryResult.populateListWithWarningOnlyIfCapReached(outputList);
+
+        return AssertTrue(outputList);
+    }
+
+    private boolean Assert(List<Item> outputList, XdmNode assertion) {
+        // TODO maybe work with XdmNode instead of strings??? Really tricky to convert Rumble result to XdmValue...
+        String expression = assertion.getStringValue();
+        // I cannot extract value as string... getStringValue throws exception if not string and I cannot cast it
+        //expression = expression.replace("$" + resultVariableName, outputList.get(0).getStringValue());
+
+        List<String> lines = outputList.stream().map(x -> x.serialize()).collect(Collectors.toList());
+        expression = expression.replace("$" + resultVariableName, lines.get(0));
+
+
+        // TODO Put into method!
+        SequenceOfItems queryResult = rumbleInstance.runQuery(expression);
+        outputList = new ArrayList<>();
+        queryResult.populateListWithWarningOnlyIfCapReached(outputList);
+
+        return AssertTrue(outputList);
+    }
+
+    private boolean AssertTrue(List<Item> outputList){
+        if (outputList.size() != 1)
+            return false;
+        if (!outputList.get(0).isBoolean())
+            return false;
+
+        return outputList.get(0).getBooleanValue();
+    }
+
+    private boolean AssertEmpty(List<Item> outputList) {
+        return outputList.size() == 0;
+    }
+
+    private boolean AssertStringValue(List<Item> outputList, XdmNode assertion) {
+        // TODO maybe both to lower string
+        String expression = assertion.getStringValue();
+        return expression.equals(outputList.get(0).getStringValue());
+    }
+
     private String Convert(String testString) {
 
-        // Found in fn/abs.xml
+        // Found in fn/abs.xml and math/math-acos.xml
         testString = testString.replace("xs:integer","integer");
         testString = testString.replace("xs:int","integer");
         testString = testString.replace("xs:double", "double");
