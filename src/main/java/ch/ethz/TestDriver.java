@@ -145,45 +145,29 @@ public class TestDriver {
     }
 
     private void processTestCase(XdmNode testCase, XPathCompiler xpc) throws SaxonApiException {
-        XdmNode resultNode = testCase.select(Steps.child("result")).asNode();
-        XdmNode testNode = testCase.select(Steps.child("test")).asNode();
+        String testCaseName = testCase.attribute("name");
+        if (!Arrays.asList(skipTestCaseList).contains(testCaseName)) {
+            XdmNode resultNode = testCase.select(Steps.child("result")).asNode();
+            XdmNode testNode = testCase.select(Steps.child("test")).asNode();
 
-        String testString = testNode.getStringValue();
+            String testString = testNode.getStringValue();
 
-        // Small converter
-        testString = Convert(testString);
+            // Small converter
+            testString = Convert(testString);
 
-        // Execute query JSONiq
-//        JsoniqQueryExecutor executor = new JsoniqQueryExecutor(new RumbleRuntimeConfiguration(
-//                new String[]{
-//                        "--query-path", "testquery.json"
-//                }));
-//        try {
-//            executor.runQuery();
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
+            // Execute query
+            List<Item> resultAsList = runQuery(testString);
 
-        // Execute query
-        SequenceOfItems queryResult = rumbleInstance.runQuery(testString);
+            // TODO figure out alternative results afterwards - this is if then else or...
+            // This does not return what I want, xpc is not correct
+            XdmNode assertion = (XdmNode) xpc.evaluateSingle("result/*[1]", testCase);
 
-        // Coppied from JsoniqQueryExecutor.java - 150th line of code
-        List<Item> outputList = null;
-        outputList = new ArrayList<>();
-        queryResult.populateListWithWarningOnlyIfCapReached(outputList);
-        List<String> lines = outputList.stream().map(x -> x.serialize()).collect(Collectors.toList());
-        System.out.println(String.join("\n", lines));
+            if (compareExpectedResultAndOutput(resultAsList, assertion))
+                numberOfSuccess++;
+            else
+                numberOfFails++;
 
-        // TODO figure out alternative results afterwards - this is if then else or...
-        // This does not return what I want, xpc is not correct
-        XdmNode assertion = (XdmNode)xpc.evaluateSingle("result/*[1]", testCase);
-
-        if (compareExpectedResultAndOutput(outputList, assertion))
-            numberOfSuccess++;
-        else
-            numberOfFails++;
-
-        // TODO check this results value
+            // TODO check this results value
 //        boolean needSerializedResult = resultNode.select(Steps.descendant("assert-serialization-error")).exists() || resultNode.select(Steps.descendant("serialization-matches")).exists();
 //        boolean needResultValue = needSerializedResult &&
 //                resultNode.select(Steps.descendant(Predicates.isElement())
@@ -193,7 +177,7 @@ public class TestDriver {
 //                                .or(Predicates.hasLocalName("all-of")))))
 //                        .exists();
 
-        //TODO check the XSLT (isApplicable)
+            //TODO check the XSLT (isApplicable)
 //        dependency = (XdmNode)var17.next();
 //        exp = dependency.attribute("type");
 //        if (exp == null) {
@@ -212,17 +196,18 @@ public class TestDriver {
 //                return;
 //            }
 //        }
+        }
     }
 
-    private boolean compareExpectedResultAndOutput(List<Item> outputList, XdmNode assertion) {
+    private boolean compareExpectedResultAndOutput(List<Item> resultAsList, XdmNode assertion) {
         String tag = assertion.getNodeName().getLocalName();
         switch(tag) {
             case "assert-empty":
-                return AssertEmpty(outputList);
+                return AssertEmpty(resultAsList);
             case "assert":
-                return Assert(outputList, assertion);
+                return Assert(resultAsList, assertion);
             case "assert-eq":
-                return AssertEq(outputList, assertion);
+                return AssertEq(resultAsList, assertion);
 //            case -1414935165:
 //                if (tag.equals("all-of")) {
 //                    var9 = 18;
@@ -234,61 +219,53 @@ public class TestDriver {
 //                }
 //                break;
             case "assert-string-value":
-                return AssertStringValue(outputList, assertion);
+                return AssertStringValue(resultAsList, assertion);
             default:
                 return false;
         }
     }
 
-    private boolean AssertEq(List<Item> outputList, XdmNode assertion) {
-        String expression = assertion.getStringValue();
-        List<String> lines = outputList.stream().map(x -> x.serialize()).collect(Collectors.toList());
+    private boolean AssertEq(List<Item> resultAsList, XdmNode assertion) {
+        String assertExpression = assertion.getStringValue();
+        List<String> lines = resultAsList.stream().map(x -> x.serialize()).collect(Collectors.toList());
 
-        expression = expression + "=" + lines.get(0);
+        assertExpression += "=" + lines.get(0);
 
-        // TODO Put into method!
-        SequenceOfItems queryResult = rumbleInstance.runQuery(expression);
-        outputList = new ArrayList<>();
-        queryResult.populateListWithWarningOnlyIfCapReached(outputList);
+        List<Item> nestedResult = runQuery(assertExpression);
 
-        return AssertTrue(outputList);
+        return AssertTrue(nestedResult);
     }
 
-    private boolean Assert(List<Item> outputList, XdmNode assertion) {
+    private boolean Assert(List<Item> resultAsList, XdmNode assertion) {
         // TODO maybe work with XdmNode instead of strings??? Really tricky to convert Rumble result to XdmValue...
-        String expression = assertion.getStringValue();
+        String assertExpression = assertion.getStringValue();
         // I cannot extract value as string... getStringValue throws exception if not string and I cannot cast it
-        //expression = expression.replace("$" + resultVariableName, outputList.get(0).getStringValue());
+        //assertExpression = assertExpression.replace("$" + resultVariableName, resultAsList.get(0).getStringValue());
 
-        List<String> lines = outputList.stream().map(x -> x.serialize()).collect(Collectors.toList());
-        expression = expression.replace("$" + resultVariableName, lines.get(0));
+        assertExpression = assertExpression.replace("$" + resultVariableName, singleItemToString(resultAsList));
 
+        List<Item> nestedResult = runQuery(assertExpression);
 
-        // TODO Put into method!
-        SequenceOfItems queryResult = rumbleInstance.runQuery(expression);
-        outputList = new ArrayList<>();
-        queryResult.populateListWithWarningOnlyIfCapReached(outputList);
-
-        return AssertTrue(outputList);
+        return AssertTrue(nestedResult);
     }
 
-    private boolean AssertTrue(List<Item> outputList){
-        if (outputList.size() != 1)
+    private boolean AssertTrue(List<Item> resultAsList){
+        if (resultAsList.size() != 1)
             return false;
-        if (!outputList.get(0).isBoolean())
+        if (!resultAsList.get(0).isBoolean())
             return false;
 
-        return outputList.get(0).getBooleanValue();
+        return resultAsList.get(0).getBooleanValue();
     }
 
-    private boolean AssertEmpty(List<Item> outputList) {
-        return outputList.size() == 0;
+    private boolean AssertEmpty(List<Item> resultAsList) {
+        return resultAsList.size() == 0;
     }
 
-    private boolean AssertStringValue(List<Item> outputList, XdmNode assertion) {
+    private boolean AssertStringValue(List<Item> resultAsList, XdmNode assertion) {
         // TODO maybe both to lower string
-        String expression = assertion.getStringValue();
-        return expression.equals(outputList.get(0).getStringValue());
+        String assertExpression = assertion.getStringValue();
+        return assertExpression.equals(singleItemToString(resultAsList));
     }
 
     private String Convert(String testString) {
@@ -304,6 +281,30 @@ public class TestDriver {
         // Replace with regex checks!
         testString = testString.replace("fn:","");
 
+        // Found in math acos, asin, atan, cos, exp, exp10, log, log10, pow, sin, sqrt, tan (tests 7, 8, 9 usually)
+        // TODO check for assertions as well!
+        testString = testString.replace("double('NaN')", "double(\"NaN\")");
+        testString = testString.replace("double('INF')", "double(\"Infinity\")");
+        testString = testString.replace("double('-INF')", "double(\"-Infinity\")");
+
         return testString;
     }
+
+    private List<Item> runQuery(String query){
+        // Coppied from JsoniqQueryExecutor.java - 150th line of code
+        SequenceOfItems queryResult = rumbleInstance.runQuery(query);
+        List<Item> resultAsList = new ArrayList<>();
+        queryResult.populateListWithWarningOnlyIfCapReached(resultAsList);
+        return resultAsList;
+    }
+
+    private String singleItemToString(List<Item> itemList){
+        if (itemList.size() != 1)
+            return null;
+        else
+            return itemList.stream().map(x -> x.serialize()).collect(Collectors.toList()).get(0);
+    }
+
+    private String[] skipTestCaseList = new String[]{
+    };
 }
