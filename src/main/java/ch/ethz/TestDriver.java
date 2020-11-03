@@ -24,7 +24,7 @@ public class TestDriver {
     // Set this field if you want to run a specific test set that starts with string below
     private String testSetToTest = "";
     // Set this field if you want to run a specific test case that starts with string below
-    private String testCaseToTest = "";
+    private String testCaseToTest = "json-doc-error-001";
     private SparkSession sparkSession;
     private Rumble rumbleInstance;
     private int numberOfFails;
@@ -263,7 +263,8 @@ public class TestDriver {
 
             while (childIterator.hasNext())
             {
-                String childTag = ((XdmNode)childIterator.next()).getNodeName().getLocalName();
+                XdmNode childNode = (XdmNode)childIterator.next();
+                String childTag = childNode.getNodeName().getLocalName();
                 if (childTag.equals("error")){
                     AssertError(assertion, testCaseName, e.getErrorCode());
                     return;
@@ -513,7 +514,7 @@ public class TestDriver {
         if (testString.contains("xs:gYear")) throw new UnsupportedTypeException();
         if (testString.contains("xs:gYearMonth")) throw new UnsupportedTypeException();
         testString = testString.replace("xs:hexBinary","hexBinary");
-        // TODO Check if okay (why do we have isInt???
+        // int is 32bits, integer is infinite. It is okay to do this conversion now
         testString = testString.replace("xs:int","integer");
         testString = testString.replace("xs:integer","integer");
         if (testString.contains("xs:long")) throw new UnsupportedTypeException();
