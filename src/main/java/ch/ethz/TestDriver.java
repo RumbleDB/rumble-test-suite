@@ -266,7 +266,7 @@ public class TestDriver {
                 XdmNode childNode = (XdmNode)childIterator.next();
                 String childTag = childNode.getNodeName().getLocalName();
                 if (childTag.equals("error")){
-                    AssertError(assertion, testCaseName, e.getErrorCode());
+                    AssertError(childNode, testCaseName, e.getErrorCode());
                     return;
                 }
             }
