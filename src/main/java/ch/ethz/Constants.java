@@ -7,11 +7,12 @@ public class Constants {
     public static final Path WORKING_DIRECTORY_PATH = Paths.get("").toAbsolutePath();
 
     // Enables producing log files
-    public static final boolean PRODUCE_LOGS = true;
+    public static final boolean PRODUCE_LOGS = false;
 
     // Log files here
-    public static final String TEST_CASE_HEADER = "TestSetFileName,Success,Fails,Skipped,Dependencies,Crashes,UnsupportedTypes, UnsuppportedErrorCodes\n";
-    public static final String TEST_CASE_TEMPLATE = "%s,%d,%d,%d,%d,%d,%d,%d\n";
+    public static final String TEST_CASE_HEADER = "TestSetFileName,Success,Fails,Skipped,Dependencies,Crashes," +
+                                                  "UnsupportedTypes,UnsuppportedErrorCodes,Sum,Processed,Matches\n";
+    public static final String TEST_CASE_TEMPLATE = "%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%s\n";
 
     public static final String TEST_CASE_FILENAME = "Test_Case_Statistics.csv";
     public static final StringBuffer TEST_CASE_SB = new StringBuffer();

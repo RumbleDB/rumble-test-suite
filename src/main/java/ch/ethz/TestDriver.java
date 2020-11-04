@@ -1,6 +1,5 @@
 package ch.ethz;
 
-import com.google.common.collect.Lists;
 import net.sf.saxon.s9api.*;
 import net.sf.saxon.s9api.streams.Steps;
 import org.apache.spark.sql.SparkSession;
@@ -24,7 +23,7 @@ public class TestDriver {
     // Set this field if you want to run a specific test set that starts with string below
     private String testSetToTest = "";
     // Set this field if you want to run a specific test case that starts with string below
-    private String testCaseToTest = "json-doc-error-001";
+    private String testCaseToTest = ""; //json-doc-error-001
     private SparkSession sparkSession;
     private Rumble rumbleInstance;
     private int numberOfFails;
@@ -35,6 +34,7 @@ public class TestDriver {
     private int numberOfDependencies;
     private int numberOfUnsupportedTypes;
     private int numberOfUnsupportedErrorCodes;
+    private int numberOfProcessedTestCases;
 
     void execute() {
         getTestsRepository();
@@ -146,13 +146,18 @@ public class TestDriver {
             resetCounters();
             for (XdmNode testCase : testSetDocNode.select(Steps.descendant("test-case")).asList()) {
                 this.processTestCase(testCase, xpc);
+                numberOfProcessedTestCases++;
             }
             System.out.println(testSetFileName + " Success: " + numberOfSuccess + " Fails: " + numberOfFails +
                                                  " Skipped: " + numberOfSkipped + " Dependencies: " + numberOfDependencies +
                                                  " Crashes: " + numberOfCrashes + " UnsupportedTypes: " + numberOfUnsupportedTypes +
                                                  " UnsupportedErrors: " + numberOfUnsupportedErrorCodes);
-            Constants.TEST_CASE_SB.append(String.format(Constants.TEST_CASE_TEMPLATE, testSetFileName, numberOfSuccess, numberOfFails,
-                    numberOfSkipped, numberOfDependencies, numberOfCrashes, numberOfUnsupportedTypes, numberOfUnsupportedErrorCodes));
+            int sum = (numberOfSuccess + numberOfFails + numberOfSkipped + numberOfDependencies
+            + numberOfCrashes + numberOfUnsupportedTypes + numberOfUnsupportedErrorCodes);
+            String checkMatching = sum == numberOfProcessedTestCases ? "OK" : "NOT";
+            Constants.TEST_CASE_SB.append(String.format(Constants.TEST_CASE_TEMPLATE, testSetFileName, numberOfSuccess,
+                    numberOfFails, numberOfSkipped, numberOfDependencies, numberOfCrashes, numberOfUnsupportedTypes,
+                    numberOfUnsupportedErrorCodes, sum, numberOfProcessedTestCases, checkMatching));
         }
     }
 
@@ -164,6 +169,7 @@ public class TestDriver {
         numberOfCrashes = 0;
         numberOfUnsupportedTypes = 0;
         numberOfUnsupportedErrorCodes = 0;
+        numberOfProcessedTestCases = 0;
     }
 
     private void processTestCase(XdmNode testCase, XPathCompiler xpc) throws SaxonApiException {
@@ -244,6 +250,7 @@ public class TestDriver {
     }
 
     private void TestPassOrFail(boolean conditionToEvaluate, String testCaseName) {
+        // Was merged into single code for both AssertError and also the part in processTestCase.
         if (conditionToEvaluate) {
             numberOfSuccess++;
         } else {
@@ -260,16 +267,40 @@ public class TestDriver {
         }
         else if (tag.equals("any-of")){
             Iterator childIterator = assertion.children("*").iterator();
+            boolean foundSingleMatch = false;
+            boolean seenUnsupportedCode = false;
+            boolean seenSingleErrorInAny = false;
 
-            while (childIterator.hasNext())
+            while (childIterator.hasNext() && !foundSingleMatch)
             {
+                seenSingleErrorInAny = true;
                 XdmNode childNode = (XdmNode)childIterator.next();
                 String childTag = childNode.getNodeName().getLocalName();
                 if (childTag.equals("error")){
-                    AssertError(childNode, testCaseName, e.getErrorCode());
-                    return;
+                    // We cannot use AsserError as we can check for multiple error codes and then log for each of them
+                    String expectedError = assertion.attribute("code");
+                    if (!Arrays.asList(supportedErrorCodes).contains(expectedError))
+                        seenUnsupportedCode = true;
+                    else
+                        foundSingleMatch = e.getErrorCode().equals(expectedError);
                 }
             }
+            if (foundSingleMatch){
+                numberOfSuccess++;
+                return;
+            }
+            else if (seenUnsupportedCode){
+                numberOfUnsupportedErrorCodes++;
+                Constants.UNSUPPORTED_ERRORS_SB.append(testCaseName + "\n");
+                return;
+            }
+            else if (seenSingleErrorInAny){
+                numberOfFails++;
+                Constants.FAILED_TESTS_SB.append(testCaseName + "\n");
+                return;
+            }
+
+            // If it has any but we are not supposed to compare Error codes (did not see single one), then it is a Crash
         }
         numberOfCrashes++;
         Constants.CRASHED_TESTS_SB.append(testCaseName + "\n");
