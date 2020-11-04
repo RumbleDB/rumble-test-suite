@@ -21,9 +21,9 @@ public class TestDriver {
     private String catalogFileName = "catalog.xml";
     private Path testsRepositoryDirectoryPath;
     // Set this field if you want to run a specific test set that starts with string below
-    private String testSetToTest = "";
+    private String testSetToTest = ""; //fn-json-doc
     // Set this field if you want to run a specific test case that starts with string below
-    private String testCaseToTest = ""; //json-doc-error-001
+    private String testCaseToTest = ""; //
     private SparkSession sparkSession;
     private Rumble rumbleInstance;
     private int numberOfFails;
@@ -180,12 +180,54 @@ public class TestDriver {
                 XdmNode testNode = testCase.select(Steps.child("test")).asNode();
 
                 try {
-                    // Prevent executing any query that has dependencies
-                    XdmNode dependencyNode = testCase.select(Steps.child("dependency")).asNode();
-                    if (dependencyNode != null) {
-                        Constants.DEPENDENCY_TESTS_SB.append(testCaseName + "\n");
-                        numberOfDependencies++;
-                        return;
+                    // Prevent executing any query that has dependencies that we do not fulfill
+
+                    List<XdmNode> dependencies = testCase.select(Steps.child("dependency")).asList();
+                    // TODO check what happens when we include dependencies on the TEST SET LEVEL
+                    //dependencies.addAll(testCase.getParent().select(Steps.child("dependency")).asList());
+
+                    if (dependencies != null && dependencies.size() != 0) {
+                        boolean allDependenciesSatisfied = false;
+                        for (XdmNode dependencyNode : dependencies) {
+                            String type = dependencyNode.attribute("type");
+                            String value = dependencyNode.attribute("value");
+                            if (type == null || value == null){
+                                // TODO Maybe separate in another file in future (or just contain all skips in one)
+                                Constants.SKIPPED_TESTS_SB.append(testCaseName + dependencyNode.toString() + "\n");
+                                numberOfSkipped++;
+                                return;
+                            }
+
+                            // TODO implement all possible dependency check
+                            switch (type){
+                                // Check if not the XSLT (isApplicable original method)
+                                case "spec" :
+                                {
+                                    //if (!value.contains("XSLT") && !value.contains("XT")) {
+                                    if (!(value.contains("XQ") || value.contains("XP"))){
+                                        Constants.SKIPPED_TESTS_SB.append(testCaseName + dependencyNode.toString() + "\n");
+                                        numberOfSkipped++;
+                                        return;
+                                    }
+                                    else {
+                                        allDependenciesSatisfied = true;
+                                        break;
+                                    }
+                                }
+                                case "xsd-version" :
+                                {
+                                    // TODO skip until we receive environments as well
+                                    allDependenciesSatisfied = true;
+                                    break;
+                                }
+                                default:
+                                {
+                                    Constants.DEPENDENCY_TESTS_SB.append(testCaseName + dependencyNode.toString() + "\n");
+                                    numberOfDependencies++;
+                                    return;
+                                }
+                            }
+                        }
                     }
                 } catch (Exception e) {
                     // This exception means there are no dependencies and we can proceed with running the query
@@ -224,29 +266,11 @@ public class TestDriver {
 //                                .or(Predicates.hasLocalName("any-of"))
 //                                .or(Predicates.hasLocalName("all-of")))))
 //                        .exists();
-
-            //TODO check the XSLT (isApplicable)
-//        dependency = (XdmNode)var17.next();
-//        exp = dependency.attribute("type");
-//        if (exp == null) {
-//            throw new IllegalStateException("dependency/@type is missing");
-//        }
-//
-//        value = dependency.attribute("value");
-//        if (value == null) {
-//            throw new IllegalStateException("dependency/@value is missing");
-//        }
-//
-//        if (exp.equals("spec")) {
-//            if (value.contains("XSLT") || value.contains("XT")) {
-//                //this.writeTestcaseElement(testCaseName, "n/a", "not" + this.spec.specAndVersion);
-//                //++this.notrun;
-//                return;
-//            }
-//        }
         }
-        else
+        else {
+            // Not logging these as they are only in the list below!
             numberOfSkipped++;
+        }
     }
 
     private void TestPassOrFail(boolean conditionToEvaluate, String testCaseName) {
@@ -406,11 +430,13 @@ public class TestDriver {
         // What was found in fn/abs.xml and math/math-acos.xml is now replaced with convert types
         testString = ConvertTypes(testString);
 
-        // Found in math/math-acos.xml
-        testString = testString.replace("math:","");
-
-        // Replace with regex checks!
+        // Replace with Regex Checks
         testString = testString.replace("fn:","");
+        testString = testString.replace("math:","");
+        testString = testString.replace("map:","");
+        testString = testString.replace("array:","");
+        //testString = testString.replace("op:",""); // doesn't exist
+        //testString = testString.replace("prod:",""); // doesn't exist
 
         // Found in math acos, asin, atan, cos, exp, exp10, log, log10, pow, sin, sqrt, tan (tests 7, 8, 9 usually)
         testString = testString.replace("double('NaN')", "double(\"NaN\")");
@@ -522,9 +548,11 @@ public class TestDriver {
             "math-exp-008",  // We need to also somehow convert the assertion to JSONiq xs:double('INF') vs Infinity
             "math-exp10-007", // We need to also somehow convert the assertion to JSONiq xs:double('INF') vs Infinity
             "math-log-008", // We need to also somehow convert the assertion to JSONiq xs:double('INF') vs Infinity
-            "math-log10-008" // We need to also somehow convert the assertion to JSONiq xs:double('INF') vs Infinity
+            "math-log10-008", // We need to also somehow convert the assertion to JSONiq xs:double('INF') vs Infinity
+            "json-doc-error-028" // Exception in Spark when populating list
             // "math-pow.xml" // Has a lot of xs:double('INF')
             // "abs.xml" // Abs always returns double and he wants Integer
+
     };
 
     private String ConvertTypes(String testString) throws UnsupportedTypeException {
@@ -546,9 +574,10 @@ public class TestDriver {
         if (testString.contains("xs:gYear")) throw new UnsupportedTypeException();
         if (testString.contains("xs:gYearMonth")) throw new UnsupportedTypeException();
         testString = testString.replace("xs:hexBinary","hexBinary");
+        // If we put replace for xs:int before xs:integer. In case that we have xs:integer we would get integereger
+        testString = testString.replace("xs:integer","integer");
         // int is 32bits, integer is infinite. It is okay to do this conversion now
         testString = testString.replace("xs:int","integer");
-        testString = testString.replace("xs:integer","integer");
         if (testString.contains("xs:long")) throw new UnsupportedTypeException();
         if (testString.contains("xs:negativeInteger")) throw new UnsupportedTypeException();
         if (testString.contains("xs:nonPositiveInteger")) throw new UnsupportedTypeException();

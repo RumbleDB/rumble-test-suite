@@ -37,6 +37,7 @@ public class Run {
                     Log(Constants.FAILED_TESTS_FILENAME, "List of all test cases:\n", Constants.FAILED_TESTS_SB);
                     Log(Constants.DEPENDENCY_TESTS_FILENAME, "List of all test cases:\n", Constants.DEPENDENCY_TESTS_SB);
                     Log(Constants.UNSUPPORTED_ERRORS_FILENAME, "List of all test cases:\n", Constants.UNSUPPORTED_ERRORS_SB);
+                    Log(Constants.SKIPPED_TESTS_FILENAME, "List of all test cases:\n", Constants.SKIPPED_TESTS_SB);
                 }
             }
         });

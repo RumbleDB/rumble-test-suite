@@ -31,4 +31,7 @@ public class Constants {
 
     public static final String UNSUPPORTED_ERRORS_FILENAME = "Test_Cases_With_Unsupported_Error_Codes.txt";
     public static final StringBuffer UNSUPPORTED_ERRORS_SB = new StringBuffer();
+
+    public static final String SKIPPED_TESTS_FILENAME = "Test_Case_With_Irregular_Dependency.txt";
+    public static final StringBuffer SKIPPED_TESTS_SB = new StringBuffer();
 }
