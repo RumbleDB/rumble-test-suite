@@ -397,7 +397,8 @@ public class TestDriver {
     private boolean AssertStringValue(List<Item> resultAsList, XdmNode assertion) {
         // TODO maybe both to lower string
         String assertExpression = assertion.getStringValue();
-        return assertExpression.equals(singleItemToString(resultAsList));
+        List<String> lines = resultAsList.stream().map(x -> x.serialize()).collect(Collectors.toList());
+        return assertExpression.equals(String.join("\n", lines));
     }
 
     private String Convert(String testString) throws UnsupportedTypeException {
