@@ -21,7 +21,7 @@ public class TestDriver {
     private String catalogFileName = "catalog.xml";
     private Path testsRepositoryDirectoryPath;
     // Set this field if you want to run a specific test set that starts with string below
-    private String testSetToTest = ""; //fn-json-doc
+    private String testSetToTest = ""; //
     // Set this field if you want to run a specific test case that starts with string below
     private String testCaseToTest = ""; //
     private SparkSession sparkSession;
@@ -35,6 +35,7 @@ public class TestDriver {
     private int numberOfUnsupportedTypes;
     private int numberOfUnsupportedErrorCodes;
     private int numberOfProcessedTestCases;
+    private int numberOfManaged;
 
     void execute() {
         getTestsRepository();
@@ -142,22 +143,22 @@ public class TestDriver {
         File testSetFile = new File(testsRepositoryDirectoryPath.resolve(testSetFileName).toString());
         XdmNode testSetDocNode = catalogBuilder.build(testSetFile);
 
-        if (testSetToTest.equals("") || testSetFileName.startsWith(testSetToTest)) {
+        if (testSetToTest.equals("") || testSetFileName.contains(testSetToTest)) {
             resetCounters();
             for (XdmNode testCase : testSetDocNode.select(Steps.descendant("test-case")).asList()) {
                 this.processTestCase(testCase, xpc);
                 numberOfProcessedTestCases++;
             }
-            System.out.println(testSetFileName + " Success: " + numberOfSuccess + " Fails: " + numberOfFails +
+            System.out.println(testSetFileName + " Success: " + numberOfSuccess + " Managed: " + numberOfManaged + " Fails: " + numberOfFails +
                                                  " Skipped: " + numberOfSkipped + " Dependencies: " + numberOfDependencies +
                                                  " Crashes: " + numberOfCrashes + " UnsupportedTypes: " + numberOfUnsupportedTypes +
                                                  " UnsupportedErrors: " + numberOfUnsupportedErrorCodes);
-            int sum = (numberOfSuccess + numberOfFails + numberOfSkipped + numberOfDependencies
+            int sum = (numberOfSuccess + numberOfManaged + numberOfFails + numberOfSkipped + numberOfDependencies
             + numberOfCrashes + numberOfUnsupportedTypes + numberOfUnsupportedErrorCodes);
             String checkMatching = sum == numberOfProcessedTestCases ? "OK" : "NOT";
             Constants.TEST_CASE_SB.append(String.format(Constants.TEST_CASE_TEMPLATE, testSetFileName, numberOfSuccess,
-                    numberOfFails, numberOfSkipped, numberOfDependencies, numberOfCrashes, numberOfUnsupportedTypes,
-                    numberOfUnsupportedErrorCodes, sum, numberOfProcessedTestCases, checkMatching));
+                    numberOfManaged, numberOfFails, numberOfSkipped, numberOfDependencies, numberOfCrashes,
+                    numberOfUnsupportedTypes, numberOfUnsupportedErrorCodes, sum, numberOfProcessedTestCases, checkMatching));
         }
     }
 
@@ -170,12 +171,13 @@ public class TestDriver {
         numberOfUnsupportedTypes = 0;
         numberOfUnsupportedErrorCodes = 0;
         numberOfProcessedTestCases = 0;
+        numberOfManaged = 0;
     }
 
     private void processTestCase(XdmNode testCase, XPathCompiler xpc) throws SaxonApiException {
         String testCaseName = testCase.attribute("name");
         if (!Arrays.asList(skipTestCaseList).contains(testCaseName)) {
-            if (testCaseToTest.equals("") || testCaseName.startsWith(testCaseToTest)) {
+            if (testCaseToTest.equals("") || testCaseName.contains(testCaseToTest)) {
                 XdmNode resultNode = testCase.select(Steps.child("result")).asNode();
                 XdmNode testNode = testCase.select(Steps.child("test")).asNode();
 
@@ -214,9 +216,15 @@ public class TestDriver {
                                         break;
                                     }
                                 }
+                                case "higherOrderFunctions" :
+                                {
+                                    // Supported by Rumble
+                                    allDependenciesSatisfied = true;
+                                    break;
+                                }
                                 case "xsd-version" :
                                 {
-                                    // TODO skip until we receive environments as well
+                                    // Rumble doesn't care about schema
                                     allDependenciesSatisfied = true;
                                     break;
                                 }
@@ -240,13 +248,13 @@ public class TestDriver {
                 XdmNode assertion = (XdmNode) xpc.evaluateSingle("result/*[1]", testCase);
 
                 try {
-                    // Small converter
-                    testString = Convert(testString);
+                    // Hard Coded converter
+                    String convertedTestString = Convert(testString);
 
                     // Execute query
-                    List<Item> resultAsList = runQuery(testString);
+                    List<Item> resultAsList = runQuery(convertedTestString);
 
-                    TestPassOrFail(checkAssertion(resultAsList, assertion), testCaseName);
+                    TestPassOrFail(checkAssertion(resultAsList, assertion), testCaseName, convertedTestString.equals(testString));
                 } catch (UnsupportedTypeException ute) {
                     numberOfUnsupportedTypes++;
                     Constants.UNSUPPORTED_TYPE_SB.append(testCaseName + "\n");
@@ -273,10 +281,17 @@ public class TestDriver {
         }
     }
 
-    private void TestPassOrFail(boolean conditionToEvaluate, String testCaseName) {
+    private void TestPassOrFail(boolean conditionToEvaluate, String testCaseName, boolean isQueryUnchanged) {
         // Was merged into single code for both AssertError and also the part in processTestCase.
         if (conditionToEvaluate) {
-            numberOfSuccess++;
+            if (isQueryUnchanged) {
+                numberOfSuccess++;
+                Constants.SUCCESS_TESTS_SB.append(testCaseName + "\n");
+            }
+            else{
+                numberOfManaged++;
+                Constants.MANAGED_TESTS_SB.append(testCaseName + "\n");
+            }
         } else {
             numberOfFails++;
             Constants.FAILED_TESTS_SB.append(testCaseName + "\n");
@@ -337,7 +352,7 @@ public class TestDriver {
             Constants.UNSUPPORTED_ERRORS_SB.append(testCaseName + "\n");
         }
         else {
-            TestPassOrFail(errorCode.equals(expectedError), testCaseName);
+            TestPassOrFail(errorCode.equals(expectedError), testCaseName, true);
         }
     }
 

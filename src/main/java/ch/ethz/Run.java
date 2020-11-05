@@ -2,13 +2,15 @@ package ch.ethz;
 
 
 import java.io.File;
+import java.io.IOException;
 import java.io.PrintWriter;
+import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.text.SimpleDateFormat;
-import java.util.Calendar;
+import java.util.*;
 
 public class Run {
     private static String logDirectoryName = "stevanresults";
@@ -25,6 +27,33 @@ public class Run {
             public void run(){
                 if (Constants.PRODUCE_LOGS) {
                     Path logDirectoryPath = Constants.WORKING_DIRECTORY_PATH.resolve(logDirectoryName);
+
+                    // For comparing with the previous statistics
+                    File[] allLogDirectories = new File(logDirectoryPath.toString()).listFiles();
+                    Arrays.sort(allLogDirectories, Comparator.reverseOrder());
+                    Path lastSuccessPath = allLogDirectories[0].toPath().resolve(Constants.SUCCESS_TESTS_FILENAME);
+                    Path lastManagedPath = allLogDirectories[0].toPath().resolve(Constants.MANAGED_TESTS_FILENAME);
+                    Charset charset = Charset.defaultCharset();
+                    List<String> allPreviousPassedTests = null;
+                    try {
+                         allPreviousPassedTests = Files.readAllLines(lastSuccessPath, charset);
+                         allPreviousPassedTests.addAll(Files.readAllLines(lastManagedPath, charset));
+                    } catch (IOException e) {
+                        // First time it will fail and we will check for null
+                    }
+                    // Instantiate with new ArrayList, otherwise you cannot do addAll since asList returns non-resizable
+                    List<String> allCurrentPassedTests = new ArrayList<String>(Arrays.asList(Constants.SUCCESS_TESTS_SB.toString().split("\n")));
+                    allCurrentPassedTests.addAll(Arrays.asList(Constants.MANAGED_TESTS_SB.toString().split("\n")));
+
+                    if (allPreviousPassedTests != null){
+                        for (String passedTest : allPreviousPassedTests){
+                            if (!allCurrentPassedTests.contains(passedTest) && !passedTest.contains("List of all test cases")){
+                                Constants.BROKEN_TESTS_SB.append(passedTest + "\n");
+                            }
+                        }
+                    }
+
+                    // Create directory for new statistics
                     String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(Calendar.getInstance().getTime());
                     logSubDirectoryPath = logDirectoryPath.resolve(timeStamp);
                     File logSubDirectory = new File(logSubDirectoryPath.toString());
@@ -38,6 +67,9 @@ public class Run {
                     Log(Constants.DEPENDENCY_TESTS_FILENAME, "List of all test cases:\n", Constants.DEPENDENCY_TESTS_SB);
                     Log(Constants.UNSUPPORTED_ERRORS_FILENAME, "List of all test cases:\n", Constants.UNSUPPORTED_ERRORS_SB);
                     Log(Constants.SKIPPED_TESTS_FILENAME, "List of all test cases:\n", Constants.SKIPPED_TESTS_SB);
+                    Log(Constants.SUCCESS_TESTS_FILENAME, "List of all test cases:\n", Constants.SUCCESS_TESTS_SB);
+                    Log(Constants.MANAGED_TESTS_FILENAME, "List of all test cases:\n", Constants.MANAGED_TESTS_SB);
+                    Log(Constants.BROKEN_TESTS_FILENAME, "List of all test cases:\n", Constants.BROKEN_TESTS_SB);
                 }
             }
         });

@@ -10,28 +10,37 @@ public class Constants {
     public static final boolean PRODUCE_LOGS = false;
 
     // Log files here
-    public static final String TEST_CASE_HEADER = "TestSetFileName,Success,Fails,Skipped,Dependencies,Crashes," +
-                                                  "UnsupportedTypes,UnsuppportedErrorCodes,Sum,Processed,Matches\n";
-    public static final String TEST_CASE_TEMPLATE = "%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%s\n";
+    public static final String TEST_CASE_HEADER = "TestSetFileName,Success,Managed,Fails,Skipped,Dependencies,Crashes," +
+                                                  "UnsupportedTypes,UnsupportedErrorCodes,Sum,Processed,Matches\n";
+    public static final String TEST_CASE_TEMPLATE = "%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%s\n";
 
-    public static final String TEST_CASE_FILENAME = "Test_Case_Statistics.csv";
+    public static final String TEST_CASE_FILENAME = "Statistics.csv";
     public static final StringBuffer TEST_CASE_SB = new StringBuffer();
 
-    public static final String UNSUPPORTED_TYPE_FILENAME = "Test_Cases_With_Unsupported_Type.txt";
+    public static final String UNSUPPORTED_TYPE_FILENAME = "UnsupportedTypes.txt";
     public static final StringBuffer UNSUPPORTED_TYPE_SB = new StringBuffer();
 
-    public static final String CRASHED_TESTS_FILENAME = "Test_Cases_Throwing_Exceptions.txt";
+    public static final String CRASHED_TESTS_FILENAME = "Crashes.txt";
     public static final StringBuffer CRASHED_TESTS_SB = new StringBuffer();
 
-    public static final String FAILED_TESTS_FILENAME = "Test_Cases_Failing_Assertion.txt";
+    public static final String FAILED_TESTS_FILENAME = "Fails.txt";
     public static final StringBuffer FAILED_TESTS_SB = new StringBuffer();
 
-    public static final String DEPENDENCY_TESTS_FILENAME = "Test_Cases_With_Dependency.txt";
+    public static final String DEPENDENCY_TESTS_FILENAME = "Dependencies.txt";
     public static final StringBuffer DEPENDENCY_TESTS_SB = new StringBuffer();
 
-    public static final String UNSUPPORTED_ERRORS_FILENAME = "Test_Cases_With_Unsupported_Error_Codes.txt";
+    public static final String UNSUPPORTED_ERRORS_FILENAME = "UnsupportedErrorCodes.txt";
     public static final StringBuffer UNSUPPORTED_ERRORS_SB = new StringBuffer();
 
-    public static final String SKIPPED_TESTS_FILENAME = "Test_Case_With_Irregular_Dependency.txt";
+    public static final String SKIPPED_TESTS_FILENAME = "Skipped.txt";
     public static final StringBuffer SKIPPED_TESTS_SB = new StringBuffer();
+
+    public static final String SUCCESS_TESTS_FILENAME = "Success.txt";
+    public static final StringBuffer SUCCESS_TESTS_SB = new StringBuffer();
+
+    public static final String MANAGED_TESTS_FILENAME = "Managed.txt";
+    public static final StringBuffer MANAGED_TESTS_SB = new StringBuffer();
+
+    public static final String BROKEN_TESTS_FILENAME = "BrokenWithLatestImplementation.txt";
+    public static final StringBuffer BROKEN_TESTS_SB = new StringBuffer();
 }
