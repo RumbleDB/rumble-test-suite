@@ -2,6 +2,7 @@ package ch.ethz;
 
 import net.sf.saxon.s9api.*;
 import net.sf.saxon.s9api.streams.Steps;
+import org.apache.commons.lang.StringUtils;
 import org.apache.spark.sql.SparkSession;
 import org.rumbledb.api.Item;
 import org.rumbledb.api.Rumble;
@@ -21,9 +22,9 @@ public class TestDriver {
     private String catalogFileName = "catalog.xml";
     private Path testsRepositoryDirectoryPath;
     // Set this field if you want to run a specific test set that starts with string below
-    private String testSetToTest = ""; //
+    private String testSetToTest = ""; // json
     // Set this field if you want to run a specific test case that starts with string below
-    private String testCaseToTest = ""; //
+    private String testCaseToTest = ""; // json-doc-002
     private SparkSession sparkSession;
     private Rumble rumbleInstance;
     private int numberOfFails;
@@ -36,6 +37,10 @@ public class TestDriver {
     private int numberOfUnsupportedErrorCodes;
     private int numberOfProcessedTestCases;
     private int numberOfManaged;
+
+    // For JSON-doc
+    private Map<String, String> URItoPathLookupTable = new HashMap<>();
+    private String jsonDocName = "fn/json-doc";
 
     void execute() {
         getTestsRepository();
@@ -143,6 +148,11 @@ public class TestDriver {
         File testSetFile = new File(testsRepositoryDirectoryPath.resolve(testSetFileName).toString());
         XdmNode testSetDocNode = catalogBuilder.build(testSetFile);
 
+        // TODO remove the skip once https://github.com/RumbleDB/rumble/issues/805 is fixed
+        if (testSetFileName.contains(jsonDocName))
+            return;
+            //prepareJsonDocEnvironment(testSetDocNode);
+
         if (testSetToTest.equals("") || testSetFileName.contains(testSetToTest)) {
             resetCounters();
             for (XdmNode testCase : testSetDocNode.select(Steps.descendant("test-case")).asList()) {
@@ -159,6 +169,19 @@ public class TestDriver {
             Constants.TEST_CASE_SB.append(String.format(Constants.TEST_CASE_TEMPLATE, testSetFileName, numberOfSuccess,
                     numberOfManaged, numberOfFails, numberOfSkipped, numberOfDependencies, numberOfCrashes,
                     numberOfUnsupportedTypes, numberOfUnsupportedErrorCodes, sum, numberOfProcessedTestCases, checkMatching));
+        }
+    }
+
+    private void prepareJsonDocEnvironment(XdmNode testSetDocNode) {
+        // For some reason we have to access the first one and then we will see the environments
+        List<XdmNode> environments = testSetDocNode.children().iterator().next().select(Steps.child("environment")).asList();
+        for (XdmNode environment : environments){
+            List<XdmNode> resources = environment.select(Steps.descendant("resource")).asList();
+            for (XdmNode resource : resources){
+                String file = resource.attribute("file");
+                String uri = resource.attribute("uri");
+                URItoPathLookupTable.put(uri,file);
+            }
         }
     }
 
@@ -250,6 +273,16 @@ public class TestDriver {
                 try {
                     // Hard Coded converter
                     String convertedTestString = Convert(testString);
+
+                    // JsonDoc converter
+                    if (testCaseName.startsWith("json-doc")) {
+                        String uri = StringUtils.substringBetween(convertedTestString, "('", "')");
+                        String jsonDocFilename = URItoPathLookupTable.get(uri);
+                        String fullAbsoluteJsonDocPath = testsRepositoryDirectoryPath.resolve("fn/" + jsonDocFilename).toString();
+                        // TODO Think about handling the ' in hardcoded manner before in convert!
+                        convertedTestString = convertedTestString.replace("'" + uri + "'",
+                                                             "\"" + "file:" + fullAbsoluteJsonDocPath + "\"");
+                    }
 
                     // Execute query
                     List<Item> resultAsList = runQuery(convertedTestString);
@@ -368,6 +401,8 @@ public class TestDriver {
                 return Assert(resultAsList, assertion);
             case "assert-eq":
                 return AssertEq(resultAsList, assertion);
+            case "assert-deep-eq":
+                return AssertDeepEq(resultAsList, assertion);
             case "assert-true":
                 return AssertTrue(resultAsList);
             case "assert-false":
@@ -383,6 +418,17 @@ public class TestDriver {
             default:
                 return false;
         }
+    }
+
+    private boolean AssertDeepEq(List<Item> resultAsList, XdmNode assertion) {
+        String assertExpression = assertion.getStringValue();
+        List<String> lines = resultAsList.stream().map(x -> x.serialize()).collect(Collectors.toList());
+
+        String deepAssertExpression = "deep-equal(" + assertExpression + "," + lines.get(0) + ")";
+
+        List<Item> nestedResult = runQuery(deepAssertExpression);
+
+        return AssertTrue(nestedResult);
     }
 
     private boolean AssertAnyOf(List<Item> resultAsList, XdmNode assertion) throws UnsupportedTypeException {
@@ -445,6 +491,9 @@ public class TestDriver {
         // What was found in fn/abs.xml and math/math-acos.xml is now replaced with convert types
         testString = ConvertTypes(testString);
 
+        // Verify this
+        testString = testString.replace("'", "\"");
+
         // Replace with Regex Checks
         testString = testString.replace("fn:","");
         testString = testString.replace("math:","");
@@ -454,9 +503,10 @@ public class TestDriver {
         //testString = testString.replace("prod:",""); // doesn't exist
 
         // Found in math acos, asin, atan, cos, exp, exp10, log, log10, pow, sin, sqrt, tan (tests 7, 8, 9 usually)
-        testString = testString.replace("double('NaN')", "double(\"NaN\")");
-        testString = testString.replace("double('INF')", "double(\"Infinity\")");
-        testString = testString.replace("double('-INF')", "double(\"-Infinity\")");
+        //testString = testString.replace("double('NaN')", "double(\"NaN\")");
+        //testString = testString.replace("double('INF')", "double(\"Infinity\")");
+        //testString = testString.replace("double('-INF')", "double(\"-Infinity\")");
+        testString = testString.replace("INF", "Infinity");
 
         return testString;
     }
