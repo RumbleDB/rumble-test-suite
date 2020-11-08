@@ -420,8 +420,8 @@ public class TestDriver {
         }
     }
 
-    private boolean AssertDeepEq(List<Item> resultAsList, XdmNode assertion) {
-        String assertExpression = assertion.getStringValue();
+    private boolean AssertDeepEq(List<Item> resultAsList, XdmNode assertion) throws UnsupportedTypeException {
+        String assertExpression = Convert(assertion.getStringValue());
         List<String> lines = resultAsList.stream().map(x -> x.serialize()).collect(Collectors.toList());
 
         String deepAssertExpression = "deep-equal(" + assertExpression + "," + lines.get(0) + ")";
@@ -442,8 +442,8 @@ public class TestDriver {
         return false;
     }
 
-    private boolean AssertEq(List<Item> resultAsList, XdmNode assertion) {
-        String assertExpression = assertion.getStringValue();
+    private boolean AssertEq(List<Item> resultAsList, XdmNode assertion) throws UnsupportedTypeException {
+        String assertExpression = Convert(assertion.getStringValue());
         List<String> lines = resultAsList.stream().map(x -> x.serialize()).collect(Collectors.toList());
 
         assertExpression += "=" + lines.get(0);
@@ -453,9 +453,9 @@ public class TestDriver {
         return AssertTrue(nestedResult);
     }
 
-    private boolean Assert(List<Item> resultAsList, XdmNode assertion) {
+    private boolean Assert(List<Item> resultAsList, XdmNode assertion) throws UnsupportedTypeException {
         // TODO maybe work with XdmNode instead of strings??? Really tricky to convert Rumble result to XdmValue...
-        String assertExpression = assertion.getStringValue();
+        String assertExpression = Convert(assertion.getStringValue());
         // I cannot extract value as string... getStringValue throws exception if not string and I cannot cast it
         //assertExpression = assertExpression.replace("$" + resultVariableName, resultAsList.get(0).getStringValue());
 
@@ -479,9 +479,9 @@ public class TestDriver {
         return resultAsList.size() == 0;
     }
 
-    private boolean AssertStringValue(List<Item> resultAsList, XdmNode assertion) {
+    private boolean AssertStringValue(List<Item> resultAsList, XdmNode assertion) throws UnsupportedTypeException {
         // TODO maybe both to lower string
-        String assertExpression = assertion.getStringValue();
+        String assertExpression = Convert(assertion.getStringValue());
         List<String> lines = resultAsList.stream().map(x -> x.serialize()).collect(Collectors.toList());
         return assertExpression.equals(String.join("\n", lines));
     }
@@ -624,6 +624,7 @@ public class TestDriver {
         // List complies with Supported Types list available at https://rumble.readthedocs.io/en/latest/JSONiq/
         testString = testString.replace("xs:atomic","atomic");
         testString = testString.replace("xs:anyURI","anyURI");
+        testString = testString.replace("xs:base64Binary","base64Binary");
         testString = testString.replace("xs:boolean","boolean");
         if (testString.contains("xs:byte")) throw new UnsupportedTypeException();
         testString = testString.replace("xs:date","date");
@@ -657,6 +658,8 @@ public class TestDriver {
         if (testString.contains("xs:unsignedShort")) throw new UnsupportedTypeException();
         testString = testString.replace("xs:yearMonthDuration","yearMonthDuration");
 
+        // Not mentioned in the list but existing in the tests
+        if (testString.contains("xs:untypedAtomic")) throw new UnsupportedTypeException();
         return testString;
     }
 
