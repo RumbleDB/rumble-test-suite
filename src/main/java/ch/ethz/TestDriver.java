@@ -422,14 +422,8 @@ public class TestDriver {
     }
 
     private boolean AssertDeepEq(List<Item> resultAsList, XdmNode assertion) throws UnsupportedTypeException {
-        String assertExpression = Convert(assertion.getStringValue());
-        List<String> lines = resultAsList.stream().map(x -> x.serialize()).collect(Collectors.toList());
-
-        String deepAssertExpression = "deep-equal(" + assertExpression + "," + lines.get(0) + ")";
-
-        List<Item> nestedResult = runQuery(deepAssertExpression, rumbleInstance);
-
-        return AssertTrue(nestedResult);
+        String assertExpression = "deep-equal(" + Convert(assertion.getStringValue()) + ",$result)";
+        return runNestedQuery(resultAsList, assertExpression);
     }
 
     private boolean AssertAnyOf(List<Item> resultAsList, XdmNode assertion) throws UnsupportedTypeException {
@@ -444,63 +438,32 @@ public class TestDriver {
     }
 
     private boolean AssertEq(List<Item> resultAsList, XdmNode assertion) throws UnsupportedTypeException {
-        String assertExpression = Convert(assertion.getStringValue());
-        List<String> lines = resultAsList.stream().map(x -> x.serialize()).collect(Collectors.toList());
-
-        assertExpression += "=" + lines.get(0);
-
-        List<Item> nestedResult = runQuery(assertExpression, rumbleInstance);
-
-        return AssertTrue(nestedResult);
-//        RumbleRuntimeConfiguration configuration = new RumbleRuntimeConfiguration(
-//                new String[]{
-//                        "--output-format","json"
-//                });
-//
-//        configuration.setExternalVariableValue(
-//                Name.createVariableInNoNamespace("result"),
-//                resultAsList);
-//
-//        String expectedResult = Convert(assertion.getStringValue());
-//        String assertExpression = "declare variable $result external;" +
-//                                  "$result eq " + expectedResult;
-//
-//        Rumble rumbleInstance = new Rumble(configuration);
-//
-//        List<Item> nestedResult = runQuery(assertExpression, rumbleInstance);
-//
-//        return AssertTrue(nestedResult);
+        String expectedResult = "$result eq " + Convert(assertion.getStringValue());
+        return runNestedQuery(resultAsList, expectedResult);
     }
 
     private boolean Assert(List<Item> resultAsList, XdmNode assertion) throws UnsupportedTypeException {
-//        // TODO maybe work with XdmNode instead of strings??? Really tricky to convert Rumble result to XdmValue...
-        String assertExpression = Convert(assertion.getStringValue());
-        // I cannot extract value as string... getStringValue throws exception if not string and I cannot cast it
-        //assertExpression = assertExpression.replace("$" + resultVariableName, resultAsList.get(0).getStringValue());
+        String expectedResult = Convert(assertion.getStringValue());
+        return runNestedQuery(resultAsList, expectedResult);
+    }
 
-        assertExpression = assertExpression.replace("$" + resultVariableName, singleItemToString(resultAsList));
+    private boolean runNestedQuery(List<Item> resultAsList, String expectedResult){
+        RumbleRuntimeConfiguration configuration = new RumbleRuntimeConfiguration(
+                new String[]{
+                        "--output-format","json"
+                });
+
+        configuration.setExternalVariableValue(
+                Name.createVariableInNoNamespace(resultVariableName),
+                resultAsList);
+
+        String assertExpression = "declare variable $result external;" + expectedResult;
+
+        Rumble rumbleInstance = new Rumble(configuration);
 
         List<Item> nestedResult = runQuery(assertExpression, rumbleInstance);
 
         return AssertTrue(nestedResult);
-//        RumbleRuntimeConfiguration configuration = new RumbleRuntimeConfiguration(
-//                new String[]{
-//                        "--output-format","json"
-//                });
-//
-//        configuration.setExternalVariableValue(
-//                Name.createVariableInNoNamespace(resultVariableName),
-//                resultAsList);
-//
-//        String expectedResult = Convert(assertion.getStringValue());
-//        String assertExpression = "declare variable $result external; " +
-//                                  expectedResult;
-//
-//        Rumble rumbleInstance = new Rumble(configuration);
-//
-//        List<Item> nestedResult = runQuery(assertExpression, rumbleInstance);
-//
-//        return AssertTrue(nestedResult);
     }
 
     private boolean AssertTrue(List<Item> resultAsList){
@@ -521,10 +484,15 @@ public class TestDriver {
         String assertExpression = Convert(assertion.getStringValue());
         List<String> lines = resultAsList.stream().map(x -> x.serialize()).collect(Collectors.toList());
         return assertExpression.equals(String.join("\n", lines));
+
+//        return AssertEq(resultAsList, assertion);
+//
+//        String expectedResult = "string($result) eq " + "\"" + Convert(assertion.getStringValue() + "\"");
+//        return runNestedQuery(resultAsList, expectedResult);
     }
 
     private String Convert(String testString) throws UnsupportedTypeException {
-        // TODO check for Converting assertions as well!
+        // Converting assertion is done in all respective assert methods
         // What was found in fn/abs.xml and math/math-acos.xml is now replaced with convert types
         testString = ConvertTypes(testString);
 
