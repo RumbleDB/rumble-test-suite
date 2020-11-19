@@ -8,6 +8,7 @@ import org.rumbledb.api.Item;
 import org.rumbledb.api.Rumble;
 import org.rumbledb.api.SequenceOfItems;
 import org.rumbledb.config.RumbleRuntimeConfiguration;
+import org.rumbledb.context.Name;
 import org.rumbledb.exceptions.RumbleException;
 
 import java.io.BufferedReader;
@@ -24,7 +25,7 @@ public class TestDriver {
     // Set this field if you want to run a specific test set that starts with string below
     private String testSetToTest = ""; // json
     // Set this field if you want to run a specific test case that starts with string below
-    private String testCaseToTest = ""; // json-doc-002
+    private String testCaseToTest = ""; // math-acos-005, json-doc-002, math-acos-002
     private SparkSession sparkSession;
     private Rumble rumbleInstance;
     private int numberOfFails;
@@ -285,7 +286,7 @@ public class TestDriver {
                     }
 
                     // Execute query
-                    List<Item> resultAsList = runQuery(convertedTestString);
+                    List<Item> resultAsList = runQuery(convertedTestString, rumbleInstance);
 
                     TestPassOrFail(checkAssertion(resultAsList, assertion), testCaseName, convertedTestString.equals(testString));
                 } catch (UnsupportedTypeException ute) {
@@ -426,7 +427,7 @@ public class TestDriver {
 
         String deepAssertExpression = "deep-equal(" + assertExpression + "," + lines.get(0) + ")";
 
-        List<Item> nestedResult = runQuery(deepAssertExpression);
+        List<Item> nestedResult = runQuery(deepAssertExpression, rumbleInstance);
 
         return AssertTrue(nestedResult);
     }
@@ -448,22 +449,58 @@ public class TestDriver {
 
         assertExpression += "=" + lines.get(0);
 
-        List<Item> nestedResult = runQuery(assertExpression);
+        List<Item> nestedResult = runQuery(assertExpression, rumbleInstance);
 
         return AssertTrue(nestedResult);
+//        RumbleRuntimeConfiguration configuration = new RumbleRuntimeConfiguration(
+//                new String[]{
+//                        "--output-format","json"
+//                });
+//
+//        configuration.setExternalVariableValue(
+//                Name.createVariableInNoNamespace("result"),
+//                resultAsList);
+//
+//        String expectedResult = Convert(assertion.getStringValue());
+//        String assertExpression = "declare variable $result external;" +
+//                                  "$result eq " + expectedResult;
+//
+//        Rumble rumbleInstance = new Rumble(configuration);
+//
+//        List<Item> nestedResult = runQuery(assertExpression, rumbleInstance);
+//
+//        return AssertTrue(nestedResult);
     }
 
     private boolean Assert(List<Item> resultAsList, XdmNode assertion) throws UnsupportedTypeException {
-        // TODO maybe work with XdmNode instead of strings??? Really tricky to convert Rumble result to XdmValue...
+//        // TODO maybe work with XdmNode instead of strings??? Really tricky to convert Rumble result to XdmValue...
         String assertExpression = Convert(assertion.getStringValue());
         // I cannot extract value as string... getStringValue throws exception if not string and I cannot cast it
         //assertExpression = assertExpression.replace("$" + resultVariableName, resultAsList.get(0).getStringValue());
 
         assertExpression = assertExpression.replace("$" + resultVariableName, singleItemToString(resultAsList));
 
-        List<Item> nestedResult = runQuery(assertExpression);
+        List<Item> nestedResult = runQuery(assertExpression, rumbleInstance);
 
         return AssertTrue(nestedResult);
+//        RumbleRuntimeConfiguration configuration = new RumbleRuntimeConfiguration(
+//                new String[]{
+//                        "--output-format","json"
+//                });
+//
+//        configuration.setExternalVariableValue(
+//                Name.createVariableInNoNamespace(resultVariableName),
+//                resultAsList);
+//
+//        String expectedResult = Convert(assertion.getStringValue());
+//        String assertExpression = "declare variable $result external; " +
+//                                  expectedResult;
+//
+//        Rumble rumbleInstance = new Rumble(configuration);
+//
+//        List<Item> nestedResult = runQuery(assertExpression, rumbleInstance);
+//
+//        return AssertTrue(nestedResult);
     }
 
     private boolean AssertTrue(List<Item> resultAsList){
@@ -594,7 +631,7 @@ public class TestDriver {
         }
     }
 
-    private List<Item> runQuery(String query){
+    private List<Item> runQuery(String query, Rumble rumbleInstance){
         // Coppied from JsoniqQueryExecutor.java - 150th line of code
         SequenceOfItems queryResult = rumbleInstance.runQuery(query);
         List<Item> resultAsList = new ArrayList<>();
