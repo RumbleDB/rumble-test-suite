@@ -90,12 +90,10 @@ public class TestDriver {
 
     private void initializeSparkAndRumble() {
         // Initialize configuration - the instance will be the same as in org.rumbledb.cli.Main.java (one for shell)
-        // TODO RumbleRuntimeConfiguration rumbleConf = new RumbleRuntimeConfiguration() // I added init() in default ctor
         RumbleRuntimeConfiguration rumbleConf = new RumbleRuntimeConfiguration(
                 new String[]{
                         "--output-format","json"
                 });
-
 
         // Initialize Spark - not needed when I have part of code from org.rumbledb.cli.JsoniqQueryExecutor.java
         sparkSession = SparkSession.builder()
@@ -111,7 +109,6 @@ public class TestDriver {
     }
 
     private void processCatalog(File catalogFile) throws SaxonApiException {
-        // TODO: Different initialization from Saxon, check if it is okay
         Processor testDriverProcessor = new Processor(false);
 
         // TODO check if it is okay to use the default Tiny tree or not
@@ -129,21 +126,11 @@ public class TestDriver {
         for (XdmNode testSet : catalogNode.select(Steps.descendant("test-set")).asList()) {
             this.processTestSet(catalogBuilder, xpc, testSet);
         }
-
-        // TODO Learn this Java simplification or leave it here for example
-//        Iterator testSetIterator = catalogNode.select(Steps.descendant("test-set")).asList().iterator();
-//
-//        while(testSetIterator.hasNext()) {
-//            XdmNode testSet = (XdmNode)testSetIterator.next();
-//            this.processTestSet(catalogBuilder, xpc, testSet);
-//        }
     }
 
     private void processTestSet(DocumentBuilder catalogBuilder, XPathCompiler xpc, XdmNode testSetNode) throws SaxonApiException{
 
-        // TODO skip single test dependency and multiple test dependencies for now
-
-        // TODO skip creating an Environment
+        // TODO skip creating an Environment - its mainly for HE, EE, PE I think
 
         String testSetFileName = testSetNode.attribute("file");
         File testSetFile = new File(testsRepositoryDirectoryPath.resolve(testSetFileName).toString());
@@ -209,8 +196,7 @@ public class TestDriver {
                     // Prevent executing any query that has dependencies that we do not fulfill
 
                     List<XdmNode> dependencies = testCase.select(Steps.child("dependency")).asList();
-                    // TODO check what happens when we include dependencies on the TEST SET LEVEL
-                    //dependencies.addAll(testCase.getParent().select(Steps.child("dependency")).asList());
+                    dependencies.addAll(testCase.getParent().select(Steps.child("dependency")).asList());
 
                     if (dependencies != null && dependencies.size() != 0) {
                         boolean allDependenciesSatisfied = false;
@@ -218,44 +204,125 @@ public class TestDriver {
                             String type = dependencyNode.attribute("type");
                             String value = dependencyNode.attribute("value");
                             if (type == null || value == null){
-                                // TODO Maybe separate in another file in future (or just contain all skips in one)
-                                Constants.SKIPPED_TESTS_SB.append(testCaseName + dependencyNode.toString() + "\n");
-                                numberOfSkipped++;
+                                // Should never happen
+                                LogSkipped(testCaseName + dependencyNode.toString());
                                 return;
                             }
 
-                            // TODO implement all possible dependency check
+                            // In Saxon they implemented it within ensureDependencySatisfied
+                            // Here we are referring to instructions provided by Ghislain Fourny on Mon 11/9, 12:16 PM
                             switch (type){
-                                // Check if not the XSLT (isApplicable original method)
-                                case "spec" :
+                                case "calendar" :
                                 {
-                                    //if (!value.contains("XSLT") && !value.contains("XT")) {
-                                    if (!(value.contains("XQ") || value.contains("XP"))){
-                                        Constants.SKIPPED_TESTS_SB.append(testCaseName + dependencyNode.toString() + "\n");
-                                        numberOfSkipped++;
-                                        return;
-                                    }
-                                    else {
-                                        allDependenciesSatisfied = true;
-                                        break;
-                                    }
+                                    // CB - I don't think we support any other calendar
+                                    LogDependency(testCaseName + dependencyNode.toString());
+                                    return;
                                 }
-                                case "higherOrderFunctions" :
+                                case "unicode-version" :
                                 {
-                                    // Supported by Rumble
-                                    allDependenciesSatisfied = true;
+                                    // 7.0,3.1.1,5.2,6.0,6.2 - We will need to look at the tests. I am not sure which unicode Java 8 supports. For now you can keep them all.
+
+                                    break;
+                                }
+                                case "unicode-normalization-form" :
+                                {
+                                    // NFD,NFKD,NFKC,FULLY-NORMALIZED - We will need to play it by ear.
+                                    LogDependency(testCaseName + dependencyNode.toString());
+                                    return;
+                                }
+                                case "format-integer-sequence" :
+                                {
+                                    // ⒈,Α,α -  I am not sure what this is, I would need to see the tests.
+                                    LogDependency(testCaseName + dependencyNode.toString());
+                                    return;
+
+                                }
+                                case "xml-version" :
+                                {
+                                    // Rumble doesn't care about xml version, its XML specific
+                                    // TODO maybe it influences Saxon environment processor (check 197 in QT3TestDriverHE)
+
                                     break;
                                 }
                                 case "xsd-version" :
                                 {
-                                    // Rumble doesn't care about schema
-                                    allDependenciesSatisfied = true;
+                                    // Rumble doesn't care about schema, its XML specific
+                                    // TODO maybe it influences Saxon environment processor (check 221 in QT3TestDriverHE)
+
                                     break;
+                                }
+                                case "feature" :
+                                {
+//                                    schemaValidation (XML specific)
+//                                    schemaImport (XML specific)
+//                                    advanced-uca-fallback (we don't support other collations)
+//                                    non_empty_sequence_collection (we don't support collection() yet)
+//                                    collection-stability (we don't support collection() yet)
+//                                    directory-as-collection-uri (we don't support collection() yet)
+//                                    non_unicode_codepoint_collation (we don't support other collations)
+//                                    staticTyping (not supported yet)
+//                                    simple-uca-fallback (we don't support other collations)
+//                                    olson-timezone (not supported yet)
+//                                    fn-format-integer-CLDR (not supported yet)
+//                                    xpath-1.0-compatibility (we are not backwards compatible with XPath 1.0)
+//                                    fn-load-xquery-module (not supported yet)
+//                                    fn-transform-XSLT (not supported yet)
+//                                    namespace-axis (XML specific)
+//                                    infoset-dtd (XML specific)
+//                                    serialization
+//                                    fn-transform-XSLT30 (not supported yet)
+//                                    remote_http (not sure what this is, do you have an example?)
+//                                    typedData (not sure what this is, do you have an example?)
+//                                    schema-location-hint (XML specific)
+                                    // Only three below are supported by Rumble.
+                                    if (!(value.contains("higherOrderFunctions") || value.contains("moduleImport") || value.contains("arbitraryPrecisionDecimal"))){
+                                        LogDependency(testCaseName + dependencyNode.toString());
+                                        return;
+                                    }
+
+                                    break;
+                                }
+                                case "default-language" :
+                                {
+                                    // fr-CA not supported - we just support en
+                                    if (!value.contains("en")){
+                                        LogDependency(testCaseName + dependencyNode.toString());
+                                        return;
+                                    }
+
+                                    break;
+                                }
+                                case "language" :
+                                {
+                                    // xib,de,fr,it not supported - we just support en
+                                    if (!value.contains("en")){
+                                        LogDependency(testCaseName + dependencyNode.toString());
+                                        return;
+                                    }
+
+                                    break;
+                                }
+                                // Check if not the XSLT (isApplicable original method)
+                                case "spec" :
+                                {
+                                    // XP30+,XQ10+,XQ30+,XQ30,XQ31+,XP31+,XP31,XQ31,XP20,XQ10,XP20+,XP30 is ok, XT30+ not
+                                    //if (!value.contains("XSLT") && !value.contains("XT")) {
+                                    if (!(value.contains("XQ") || value.contains("XP"))){
+                                        LogDependency(testCaseName + dependencyNode.toString());
+                                        return;
+                                    }
+
+                                    break;
+                                }
+                                case "limit" :
+                                {
+                                    // year_lt_0 - I am not sure I don't think we have this limit.
+                                    LogDependency(testCaseName + dependencyNode.toString());
+                                    return;
                                 }
                                 default:
                                 {
-                                    Constants.DEPENDENCY_TESTS_SB.append(testCaseName + dependencyNode.toString() + "\n");
-                                    numberOfDependencies++;
+                                    LogDependency(testCaseName + dependencyNode.toString());
                                     return;
                                 }
                             }
@@ -277,12 +344,10 @@ public class TestDriver {
 
                     // JsonDoc converter
                     if (testCaseName.startsWith("json-doc")) {
-                        String uri = StringUtils.substringBetween(convertedTestString, "('", "')");
+                        String uri = StringUtils.substringBetween(convertedTestString, "(\"", "\")");
                         String jsonDocFilename = URItoPathLookupTable.get(uri);
                         String fullAbsoluteJsonDocPath = testsRepositoryDirectoryPath.resolve("fn/" + jsonDocFilename).toString();
-                        // TODO Think about handling the ' in hardcoded manner before in convert!
-                        convertedTestString = convertedTestString.replace("'" + uri + "'",
-                                                             "\"" + "file:" + fullAbsoluteJsonDocPath + "\"");
+                        convertedTestString = convertedTestString.replace(uri,"file:" + fullAbsoluteJsonDocPath);
                     }
 
                     // Execute query
@@ -290,13 +355,11 @@ public class TestDriver {
 
                     TestPassOrFail(checkAssertion(resultAsList, assertion), testCaseName, convertedTestString.equals(testString));
                 } catch (UnsupportedTypeException ute) {
-                    numberOfUnsupportedTypes++;
-                    Constants.UNSUPPORTED_TYPE_SB.append(testCaseName + "\n");
+                    LogUnsupportedType(testCaseName);
                 } catch (RumbleException re) {
                     CheckForErrorCode(re, assertion, testCaseName);
                 } catch (Exception e){
-                        numberOfCrashes++;
-                        Constants.CRASHED_TESTS_SB.append(testCaseName + "\n");
+                    LogCrash(testCaseName);
                 }
             }
             // TODO check this results value
@@ -310,8 +373,8 @@ public class TestDriver {
 //                        .exists();
         }
         else {
-            // Not logging these as they are only in the list below!
-            numberOfSkipped++;
+            // Also visible in the list skipTestCaseList below
+            LogSkipped(testCaseName);
         }
     }
 
@@ -319,17 +382,54 @@ public class TestDriver {
         // Was merged into single code for both AssertError and also the part in processTestCase.
         if (conditionToEvaluate) {
             if (isQueryUnchanged) {
-                numberOfSuccess++;
-                Constants.SUCCESS_TESTS_SB.append(testCaseName + "\n");
+                LogSuccess(testCaseName);
             }
             else{
-                numberOfManaged++;
-                Constants.MANAGED_TESTS_SB.append(testCaseName + "\n");
+                LogManaged(testCaseName);
             }
         } else {
-            numberOfFails++;
-            Constants.FAILED_TESTS_SB.append(testCaseName + "\n");
+            LogFail(testCaseName);
         }
+    }
+
+    private void LogSuccess(String lineText) {
+        numberOfSuccess++;
+        Constants.SUCCESS_TESTS_SB.append(lineText + "\n");
+    }
+
+    private void LogManaged(String lineText) {
+        numberOfManaged++;
+        Constants.MANAGED_TESTS_SB.append(lineText + "\n");
+    }
+
+    private void LogFail(String lineText) {
+        numberOfFails++;
+        Constants.FAILED_TESTS_SB.append(lineText + "\n");
+    }
+
+    private void LogSkipped(String lineText){
+        numberOfSkipped++;
+        Constants.SKIPPED_TESTS_SB.append(lineText + "\n");
+    }
+
+    private void LogDependency(String lineText){
+        numberOfDependencies++;
+        Constants.DEPENDENCY_TESTS_SB.append(lineText + "\n");
+    }
+
+    private void LogCrash(String lineText){
+        numberOfCrashes++;
+        Constants.CRASHED_TESTS_SB.append(lineText + "\n");
+    }
+
+    private void LogUnsupportedType(String lineText){
+        numberOfUnsupportedTypes++;
+        Constants.UNSUPPORTED_TYPE_SB.append(lineText + "\n");
+    }
+
+    private void LogUnsupportedErrorCode(String lineText){
+        numberOfUnsupportedErrorCodes++;
+        Constants.UNSUPPORTED_ERRORS_SB.append(lineText + "\n");
     }
 
     private void CheckForErrorCode(RumbleException e, XdmNode assertion, String testCaseName) {
@@ -359,31 +459,27 @@ public class TestDriver {
                 }
             }
             if (foundSingleMatch){
-                numberOfSuccess++;
+                LogSuccess(testCaseName);
                 return;
             }
             else if (seenUnsupportedCode){
-                numberOfUnsupportedErrorCodes++;
-                Constants.UNSUPPORTED_ERRORS_SB.append(testCaseName + "\n");
+                LogUnsupportedErrorCode(testCaseName);
                 return;
             }
             else if (seenSingleErrorInAny){
-                numberOfFails++;
-                Constants.FAILED_TESTS_SB.append(testCaseName + "\n");
+                LogFail(testCaseName);
                 return;
             }
 
             // If it has any but we are not supposed to compare Error codes (did not see single one), then it is a Crash
         }
-        numberOfCrashes++;
-        Constants.CRASHED_TESTS_SB.append(testCaseName + "\n");
+        LogCrash(testCaseName);
     }
 
     private void AssertError(XdmNode assertion, String testCaseName, String errorCode) {
         String expectedError = assertion.attribute("code");
         if (!Arrays.asList(supportedErrorCodes).contains(expectedError)){
-            numberOfUnsupportedErrorCodes++;
-            Constants.UNSUPPORTED_ERRORS_SB.append(testCaseName + "\n");
+            LogUnsupportedErrorCode(testCaseName);
         }
         else {
             TestPassOrFail(errorCode.equals(expectedError), testCaseName, true);
@@ -496,7 +592,7 @@ public class TestDriver {
         // What was found in fn/abs.xml and math/math-acos.xml is now replaced with convert types
         testString = ConvertTypes(testString);
 
-        // Verify this
+        // TODO Verify this
         testString = testString.replace("'", "\"");
 
         // Replace with Regex Checks
@@ -619,7 +715,7 @@ public class TestDriver {
             "math-exp10-007", // We need to also somehow convert the assertion to JSONiq xs:double('INF') vs Infinity
             "math-log-008", // We need to also somehow convert the assertion to JSONiq xs:double('INF') vs Infinity
             "math-log10-008", // We need to also somehow convert the assertion to JSONiq xs:double('INF') vs Infinity
-            "json-doc-error-028" // Exception in Spark when populating list
+            // "json-doc-error-028" // Exception in Spark when populating list, but whole json-doc is ignored now
             // "math-pow.xml" // Has a lot of xs:double('INF')
             // "abs.xml" // Abs always returns double and he wants Integer
 
