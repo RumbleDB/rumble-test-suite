@@ -227,8 +227,9 @@ public class TestDriver {
                                 case "unicode-normalization-form" :
                                 {
                                     // NFD,NFKD,NFKC,FULLY-NORMALIZED - We will need to play it by ear.
-                                    LogDependency(testCaseName + dependencyNode.toString());
-                                    return;
+                                    //LogDependency(testCaseName + dependencyNode.toString());
+                                    //return;
+                                    break;
                                 }
                                 case "format-integer-sequence" :
                                 {
@@ -590,7 +591,7 @@ public class TestDriver {
     private String Convert(String testString) throws UnsupportedTypeException {
         // Converting assertion is done in all respective assert methods
         // What was found in fn/abs.xml and math/math-acos.xml is now replaced with convert types
-        testString = ConvertTypes(testString);
+        testString = ConvertAtomicTypes(testString);
 
         // TODO Verify this
         testString = testString.replace("'", "\"");
@@ -624,75 +625,10 @@ public class TestDriver {
     }
 
     private boolean AssertType(List<Item> resultAsList, XdmNode assertion) throws UnsupportedTypeException {
-        String assertExpression = assertion.getStringValue();
-        switch (assertExpression){
-            case "xs:atomic":
-                return resultAsList.get(0).isAtomic();
-            case "xs:anyURI":
-                return resultAsList.get(0).isAnyURI();
-            case "xs:boolean":
-                return resultAsList.get(0).isBoolean();
-            case "xs:byte":
-                throw new UnsupportedTypeException();
-            case "xs:date":
-                return resultAsList.get(0).isDate();
-            case "xs:dateTime":
-                return resultAsList.get(0).isDateTime();
-            case "xs:dateTimeStamp":
-                throw new UnsupportedTypeException();
-            case "xs:dayTimeDuration":
-                return resultAsList.get(0).isDayTimeDuration();
-            case "xs:decimal":
-                return resultAsList.get(0).isDecimal();
-            case "xs:double":
-                return resultAsList.get(0).isDouble();
-            case "xs:duration":
-                return resultAsList.get(0).isDuration();
-            case "xs:float":
-                throw new UnsupportedTypeException();
-            case "xs:gDay":
-                throw new UnsupportedTypeException();
-            case "xs:gMonth":
-                throw new UnsupportedTypeException();
-            case "xs:gYear":
-                throw new UnsupportedTypeException();
-            case "xs:gYearMonth":
-                throw new UnsupportedTypeException();
-            case "xs:hexBinary":
-                return resultAsList.get(0).isHexBinary();
-            case "xs:int":
-                return resultAsList.get(0).isInt();
-            case "xs:integer":
-                return resultAsList.get(0).isInteger();
-            case "xs:long":
-                throw new UnsupportedTypeException();
-            case "xs:negativeInteger":
-                throw new UnsupportedTypeException();
-            case "xs:nonPositiveInteger":
-                throw new UnsupportedTypeException();
-            case "xs:nonNegativeInteger":
-                throw new UnsupportedTypeException();
-            case "xs:positiveInteger":
-                throw new UnsupportedTypeException();
-            case "xs:short":
-                throw new UnsupportedTypeException();
-            case "xs:string":
-                return resultAsList.get(0).isString();
-            case "xs:time":
-                return resultAsList.get(0).isTime();
-            case "xs:unsignedByte":
-                throw new UnsupportedTypeException();
-            case "xs:unsignedInt":
-                throw new UnsupportedTypeException();
-            case "xs:unsignedLong":
-                throw new UnsupportedTypeException();
-            case "xs:unsignedShort":
-                throw new UnsupportedTypeException();
-            case "xs:yearMonthDuration":
-                return resultAsList.get(0).isYearMonthDuration();
-            default:
-                throw new UnsupportedTypeException();
-        }
+        // Convert will already take care of not allowed conversions and throw Unsupported Type error Exception
+        // We do not need the same Switch case here as if no Exception is thrown, we can simply run the query
+        String expectedResult = "$result instance of " + Convert(assertion.getStringValue());
+        return runNestedQuery(resultAsList, expectedResult);
     }
 
     private List<Item> runQuery(String query, Rumble rumbleInstance){
@@ -721,7 +657,7 @@ public class TestDriver {
 
     };
 
-    private String ConvertTypes(String testString) throws UnsupportedTypeException {
+    private String ConvertAtomicTypes(String testString) throws UnsupportedTypeException {
         // List complies with Supported Types list available at https://rumble.readthedocs.io/en/latest/JSONiq/
         testString = testString.replace("xs:atomic","atomic");
         testString = testString.replace("xs:anyURI","anyURI");
