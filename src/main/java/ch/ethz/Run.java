@@ -33,11 +33,14 @@ public class Run {
                     Arrays.sort(allLogDirectories, Comparator.reverseOrder());
                     Path lastSuccessPath = allLogDirectories[0].toPath().resolve(Constants.SUCCESS_TESTS_FILENAME);
                     Path lastManagedPath = allLogDirectories[0].toPath().resolve(Constants.MANAGED_TESTS_FILENAME);
+                    Path lastCrashesPath = allLogDirectories[0].toPath().resolve(Constants.CRASHED_TESTS_FILENAME);
                     Charset charset = Charset.defaultCharset();
                     List<String> allPreviousPassedTests = null;
+                    List<String> allPreviousCrashedTests = null;
                     try {
                          allPreviousPassedTests = Files.readAllLines(lastSuccessPath, charset);
                          allPreviousPassedTests.addAll(Files.readAllLines(lastManagedPath, charset));
+                         allPreviousCrashedTests = Files.readAllLines(lastCrashesPath, charset);
                     } catch (IOException e) {
                         // First time it will fail and we will check for null
                     }
@@ -51,6 +54,16 @@ public class Run {
                                 Constants.BROKEN_TESTS_SB.append(passedTest + "\n");
                             }
                         }
+                    }
+
+                    // Slightly repetitive, might be refactored
+                    List<String> allCurrentCrashedTests = new ArrayList<String>(Arrays.asList(Constants.CRASHED_TESTS_SB.toString().split("\n")));
+                    if (allPreviousCrashedTests != null){
+                        Constants.BROKEN_TESTS_SB.append("\n" + "New crashed tests:" + "\n");
+                        for (String crashedTest : allCurrentCrashedTests)
+                            if (!allPreviousCrashedTests.contains(crashedTest) && !crashedTest.contains("List of all test cases")){
+                                Constants.BROKEN_TESTS_SB.append(crashedTest + "\n");
+                            }
                     }
 
                     // Create directory for new statistics

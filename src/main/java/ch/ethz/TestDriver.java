@@ -261,7 +261,6 @@ public class TestDriver {
 //                                    collection-stability (we don't support collection() yet)
 //                                    directory-as-collection-uri (we don't support collection() yet)
 //                                    non_unicode_codepoint_collation (we don't support other collations)
-//                                    staticTyping (not supported yet)
 //                                    simple-uca-fallback (we don't support other collations)
 //                                    olson-timezone (not supported yet)
 //                                    fn-format-integer-CLDR (not supported yet)
@@ -275,8 +274,9 @@ public class TestDriver {
 //                                    remote_http (not sure what this is, do you have an example?)
 //                                    typedData (not sure what this is, do you have an example?)
 //                                    schema-location-hint (XML specific)
-                                    // Only three below are supported by Rumble.
-                                    if (!(value.contains("higherOrderFunctions") || value.contains("moduleImport") || value.contains("arbitraryPrecisionDecimal"))){
+                                    // Only three below are supported by Rumble. Included staticTyping myself as +20 pass, 30 fail, 20 unsupported types but no crashes!
+                                    if (!(value.contains("higherOrderFunctions") || value.contains("moduleImport") ||
+                                            value.contains("arbitraryPrecisionDecimal") || value.contains("staticTyping"))){
                                         LogDependency(testCaseName + dependencyNode.toString());
                                         return;
                                     }
@@ -592,6 +592,7 @@ public class TestDriver {
         // Converting assertion is done in all respective assert methods
         // What was found in fn/abs.xml and math/math-acos.xml is now replaced with convert types
         testString = ConvertAtomicTypes(testString);
+        testString = ConvertNonAtomicTypes(testString);
 
         // TODO Verify this
         testString = testString.replace("'", "\"");
@@ -697,6 +698,43 @@ public class TestDriver {
 
         // Not mentioned in the list but existing in the tests
         if (testString.contains("xs:untypedAtomic")) throw new UnsupportedTypeException();
+        return testString;
+    }
+
+    private String ConvertNonAtomicTypes(String testString) throws UnsupportedTypeException {
+        // testString = testString.replace("array()","array"); // TODO check single file ArrowPostfix-022
+        // Also array(+), array(?), array()*, array()+, array()? do not exist
+        testString = testString.replace("array(*)","array*");
+
+        // Will cover all the subclasses - item()+, item()* and item()+. item(anything here) does not exist
+        testString = testString.replace("item()","item");
+
+        // These are not types but instantiations of boolean handled differently
+        testString = testString.replace("true()","true*");
+        testString = testString.replace("false()","false*");
+
+
+        // 7 kinds of XML nodes // TODO how to do regex check because in between can be something different than *
+        if (testString.contains("document()")) throw new UnsupportedTypeException();
+        if (testString.contains("document(*)")) throw new UnsupportedTypeException();
+        if (testString.contains("element()")) throw new UnsupportedTypeException();
+        if (testString.contains("element(*)")) throw new UnsupportedTypeException();
+        if (testString.contains("attribute()")) throw new UnsupportedTypeException();
+        if (testString.contains("attribute(*)")) throw new UnsupportedTypeException();
+        if (testString.contains("text()")) throw new UnsupportedTypeException();
+        if (testString.contains("text(*)")) throw new UnsupportedTypeException(); // '*' is not allowed inside text()
+        if (testString.contains("comment()")) throw new UnsupportedTypeException();
+        if (testString.contains("comment(*)")) throw new UnsupportedTypeException(); // '*' is not allowed inside text()
+        if (testString.contains("processing-instruction()")) throw new UnsupportedTypeException();
+        if (testString.contains("processing-instruction(*)")) throw new UnsupportedTypeException(); // '*' is not allowed inside text()
+        if (testString.contains("xs:QName")) throw new UnsupportedTypeException(); // The xs:QName constructor function must be passed exactly one argument, not zero.
+
+        // TODO some more that I found out
+        if (testString.contains("map(*)")) throw new UnsupportedTypeException();
+        if (testString.contains("node()")) throw new UnsupportedTypeException();
+        if (testString.contains("empty-sequence()")) throw new UnsupportedTypeException();
+        if (testString.contains("xs:NOTATION")) throw new UnsupportedTypeException();
+
         return testString;
     }
 
