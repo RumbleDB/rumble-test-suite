@@ -435,7 +435,8 @@ public class TestDriver {
 
     private void CheckForErrorCode(RumbleException e, XdmNode assertion, String testCaseName) {
         String tag = assertion.getNodeName().getLocalName();
-        if (tag.equals("error")){
+        // Logic for even though we only support SENR0001
+        if (tag.equals("error") || tag.equals("assert-serialization-error")){
             AssertError(assertion, testCaseName, e.getErrorCode());
             return;
         }
@@ -447,10 +448,10 @@ public class TestDriver {
 
             while (childIterator.hasNext() && !foundSingleMatch)
             {
-                seenSingleErrorInAny = true;
                 XdmNode childNode = (XdmNode)childIterator.next();
                 String childTag = childNode.getNodeName().getLocalName();
-                if (childTag.equals("error")){
+                if (childTag.equals("error") || childTag.equals("assert-serialization-error")){
+                    seenSingleErrorInAny = true;
                     // We cannot use AsserError as we can check for multiple error codes and then log for each of them
                     String expectedError = assertion.attribute("code");
                     if (!Arrays.asList(supportedErrorCodes).contains(expectedError))
@@ -513,9 +514,28 @@ public class TestDriver {
                 return AssertAnyOf(resultAsList, assertion);
             case "assert-type":
                 return AssertType(resultAsList, assertion);
+            case "assert-count":
+                return AssertCount(resultAsList, assertion);
+            case "not":
+                return AssertNot(resultAsList, assertion);
+                // error codes are not handled here as they always cause exceptions
+                // "assert-message", "assert-warning", "assert-result-document", "assert-serialization" do not exist
+                // "assert-xml", "serialization-matches", "assert-permutation" missing
             default:
                 return false;
         }
+    }
+
+    private boolean AssertNot(List<Item> resultAsList, XdmNode assertion) throws UnsupportedTypeException {
+        // According to analysis and way QT3 Test Suite was implemented, it is always one!
+        XdmNode childUnderNot = assertion.select(Steps.child("*")).asList().get(0);
+        return !checkAssertion(resultAsList, childUnderNot);
+    }
+
+    private boolean AssertCount(List<Item> resultAsList, XdmNode assertion) {
+        // I do not know how to create nested query here
+        int assertExpression = Integer.parseInt(assertion.getStringValue());
+        return  resultAsList.size() == assertExpression;
     }
 
     private boolean AssertDeepEq(List<Item> resultAsList, XdmNode assertion) throws UnsupportedTypeException {
@@ -648,14 +668,9 @@ public class TestDriver {
     }
 
     private String[] skipTestCaseList = new String[]{
-            "math-exp-008",  // We need to also somehow convert the assertion to JSONiq xs:double('INF') vs Infinity
-            "math-exp10-007", // We need to also somehow convert the assertion to JSONiq xs:double('INF') vs Infinity
-            "math-log-008", // We need to also somehow convert the assertion to JSONiq xs:double('INF') vs Infinity
-            "math-log10-008", // We need to also somehow convert the assertion to JSONiq xs:double('INF') vs Infinity
             // "json-doc-error-028" // Exception in Spark when populating list, but whole json-doc is ignored now
             // "math-pow.xml" // Has a lot of xs:double('INF')
             // "abs.xml" // Abs always returns double and he wants Integer
-
     };
 
     private String ConvertAtomicTypes(String testString) throws UnsupportedTypeException {
