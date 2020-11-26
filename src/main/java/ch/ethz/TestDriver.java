@@ -333,7 +333,31 @@ public class TestDriver {
                     // This exception means there are no dependencies and we can proceed with running the query
                 }
 
-                String testString = testNode.getStringValue();
+                String testString = "";
+
+                List<XdmNode> environments = testCase.select(Steps.child("environment")).asList();
+
+                if (environments != null && environments.size() > 0) {
+                    XdmNode environment = environments.get(0);
+                    Iterator externalVariables = environment.children("param").iterator();
+                    if (externalVariables.hasNext()) {
+                        while (externalVariables.hasNext()) {
+                            XdmNode param = (XdmNode) externalVariables.next();
+                            String name = param.attribute("name");
+                            String source = param.attribute("source");
+
+                            // TODO Check what source is for to handle in else
+                            if (source == null) {
+                                String select = param.attribute("select");
+                                //value = xpc.evaluate(select, (XdmItem) null);
+                                testString += "let $" + name + " := " + select + " ";
+                            }
+                        }
+                        testString += "return ";
+                    }
+                }
+
+                testString += testNode.getStringValue();
 
                 // TODO figure out alternative results afterwards - this is if then else or...
                 // Place above try catch block to have assertion available in the catch!
@@ -725,8 +749,8 @@ public class TestDriver {
         testString = testString.replace("item()","item");
 
         // These are not types but instantiations of boolean handled differently
-        testString = testString.replace("true()","true*");
-        testString = testString.replace("false()","false*");
+        testString = testString.replace("true()","true");
+        testString = testString.replace("false()","false");
 
 
         // 7 kinds of XML nodes // TODO how to do regex check because in between can be something different than *
