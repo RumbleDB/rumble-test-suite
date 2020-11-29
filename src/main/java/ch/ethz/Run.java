@@ -59,9 +59,9 @@ public class Run {
                     // Slightly repetitive, might be refactored
                     List<String> allCurrentCrashedTests = new ArrayList<String>(Arrays.asList(Constants.CRASHED_TESTS_SB.toString().split("\n")));
                     if (allPreviousCrashedTests != null){
-                        Constants.BROKEN_TESTS_SB.append("\n" + "New crashed tests:" + "\n");
+                        Constants.BROKEN_TESTS_SB.append("\n" + "Tests that were not crashing before, but are now and not in list above:" + "\n");
                         for (String crashedTest : allCurrentCrashedTests)
-                            if (!allPreviousCrashedTests.contains(crashedTest) && !crashedTest.contains("List of all test cases")){
+                            if (!allPreviousCrashedTests.contains(crashedTest) && !crashedTest.contains("List of all test cases") && !allPreviousPassedTests.contains(crashedTest)){
                                 Constants.BROKEN_TESTS_SB.append(crashedTest + "\n");
                             }
                     }
@@ -82,7 +82,7 @@ public class Run {
                     Log(Constants.SKIPPED_TESTS_FILENAME, "List of all test cases:\n", Constants.SKIPPED_TESTS_SB);
                     Log(Constants.SUCCESS_TESTS_FILENAME, "List of all test cases:\n", Constants.SUCCESS_TESTS_SB);
                     Log(Constants.MANAGED_TESTS_FILENAME, "List of all test cases:\n", Constants.MANAGED_TESTS_SB);
-                    Log(Constants.BROKEN_TESTS_FILENAME, "List of all test cases:\n", Constants.BROKEN_TESTS_SB);
+                    Log(Constants.BROKEN_TESTS_FILENAME, "List of test cases that were passing before but not anymore:\n", Constants.BROKEN_TESTS_SB);
                 }
             }
         });
