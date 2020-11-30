@@ -1,0 +1,24 @@
+List of test cases that were passing before but not anymore:
+K2-NumericDivide-9
+K2-NumericDivide-11
+K2-NumericDivide-15
+K2-NumericDivide-16
+cbcl-adjust-dateTime-to-timezone-004
+fn-stringdbl1args-1
+fn-stringdbl1args-3
+K2-NumericMod-25
+K2-NumericMod-26
+cbcl-castable-int-003
+cbcl-castable-int-004
+casthc13
+CastAs201
+
+Tests that were not crashing before, but are now and not in list above:
+K-DayTimeDurationDivide-4
+K-DayTimeDurationDivide-6
+cbcl-divide-dayTimeDuration-001
+cbcl-divide-yearMonthDuration-by-yearMonthDuration-001
+K-DayTimeDurationMultiply-7
+K-DayTimeDurationMultiply-8
+K2-NumericMod-5
+FOAR0001_9
