@@ -62,3 +62,9 @@ git checkout research-project-stevan-mihajlovic
 14. ctrl-x, ctrl-s, ctrl-x, ctrl-c - UNTIL HERE NOT NEEDED
 15. nano ~/.zshrc - verify that last line is export PATH=/usr/local/opt/openjdk@11/libexec/openjdk.jdk/Contents/Home/bin/:/usr/local/Cellar/apache-spark/3.0.1/libexec/bin/:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
 16. ctrl-x, y, return
+
+# More additions
+sudo ln -sfn /usr/local/opt/openjdk@11/libexec/openjdk.jdk /Library/Java/JavaVirtualMachines/openjdk-11.jdk
+export CPPFLAGS="-I/usr/local/opt/openjdk@11/include"
+export JAVA_HOME=$(/usr/libexec/java_home) >> ~/.zshrc
+echo 'export PATH="/usr/local/opt/scala@2.11/bin:$PATH"' >> ~/.zshrc 
