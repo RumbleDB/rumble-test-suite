@@ -621,19 +621,8 @@ public class TestDriver {
     }
 
     private boolean AssertStringValue(List<Item> resultAsList, XdmNode assertion) throws UnsupportedTypeException {
-        // TODO maybe both to lower string
-        String assertExpression = Convert(assertion.getStringValue());
-        List<String> lines = resultAsList.stream().map(x -> x.serialize()).collect(Collectors.toList());
-        return assertExpression.equals(String.join(" ", lines));
-
-//        Does not work at all
-//        return AssertEq(resultAsList, assertion);
-
-        // Works whenever we have string that is not returned as sequence. However on sequence we cannot call string() and crashes. We also cannot check without it
-        // fn-trace-3 was a failing one before but not crashing. It failed before as we join string on \n and it looses spaces
-        // we had to surround assertion with "" as it doest not have it in value. getStringValue() just copy paste it
-        // String expectedResult = "string($result) eq " + "\"" + Convert(assertion.getStringValue() + "\"");
-        // return runNestedQuery(resultAsList, expectedResult);
+         String expectedResult = "string-join($result ! string($$), \" \") eq " + "\"" + Convert(assertion.getStringValue() + "\"");
+         return runNestedQuery(resultAsList, expectedResult);
     }
 
     private String Convert(String testString) throws UnsupportedTypeException {
@@ -658,6 +647,9 @@ public class TestDriver {
         //testString = testString.replace("double('INF')", "double(\"Infinity\")");
         //testString = testString.replace("double('-INF')", "double(\"-Infinity\")");
         testString = testString.replace("INF", "Infinity");
+
+        // XML notation
+        testString = testString.replace(". ","$$ ");
 
         return testString;
     }
