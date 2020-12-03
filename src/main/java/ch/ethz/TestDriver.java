@@ -136,10 +136,8 @@ public class TestDriver {
         File testSetFile = new File(testsRepositoryDirectoryPath.resolve(testSetFileName).toString());
         XdmNode testSetDocNode = catalogBuilder.build(testSetFile);
 
-        // TODO remove the skip once https://github.com/RumbleDB/rumble/issues/805 is fixed
         if (testSetFileName.contains(jsonDocName))
-            return;
-            //prepareJsonDocEnvironment(testSetDocNode);
+            prepareJsonDocEnvironment(testSetDocNode);
 
         if (testSetToTest.equals("") || testSetFileName.contains(testSetToTest)) {
             resetCounters();
