@@ -44,3 +44,21 @@ git checkout research-project-stevan-mihajlovic
 14. Click again on the + sign. Select JAR or directories.
 15. Go to src->main->saxon->command select all 4 .jar files and click okay
 16. Right click debug Run  
+
+# Added as I could not RunQuery
+1. arch -x86_64 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
+2. arch -x86_64 brew install scala@2.11
+3. arch -x86_64 brew install apache-spark will first install java 11 and then it will download spark 3.0.1 as I failed to specify the version
+4. echo export SPARK_HOME=/usr/local/Cellar/apache-spark/3.0.1/libexec >> ~/.zshrc
+5. echo export PATH="$SPARK_HOME/bin/:$PATH" >> ~/.zshrc
+6. echo export JAVA_HOME=/usr/local/opt/openjdk@11/libexec/openjdk.jdk/Contents/Home >> ~/.zshrc
+7. echo export PATH="$JAVA_HOME/bin/:$PATH" >> ~/.zshrc
+8. source ~/.zshrc 
+9. chmod +x /usr/local/Cellar/apache-spark/3.0.1/libexec/bin/*
+10. arch -x86_64 brew install emacs  - NOT NEEDED
+11. emacs .profile
+12. export SPARK_HOME=/usr/local/Cellar/apache-spark/3.0.1/libexec
+13. export PATH="$SPARK_HOME/bin/:$PATH"
+14. ctrl-x, ctrl-s, ctrl-x, ctrl-c - UNTIL HERE NOT NEEDED
+15. nano ~/.zshrc - verify that last line is export PATH=/usr/local/opt/openjdk@11/libexec/openjdk.jdk/Contents/Home/bin/:/usr/local/Cellar/apache-spark/3.0.1/libexec/bin/:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+16. ctrl-x, y, return
