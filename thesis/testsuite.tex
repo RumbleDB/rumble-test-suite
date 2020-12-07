@@ -1,0 +1,23 @@
+\chapter{XQuery/XPath 3.* Test Suite(QT3TS)}
+\section{Analysis}
+\todo{We need to show how Saxon implementation is verified using the test suite. The we need to show the class that we want to reproduce. We need to mention that everything is XML and that we will reuse Saxon for parsing the XML, backwards compatibility with everything except XSLT}
+In this chapter, we will discuss design decisions that we have made during the development of Test Driver. The idea is to develop Test Driver completely independently from Rumble by maintaining the code outside of Rumble. We view Rumble as black-box and the single point of communication with Rumble should only be via the Rumble Java public API. Therefore, we have decided to implement Test Driver as Java Console Application. Furthermore, as Rumble is also written in Java, it is probably the best option in case that not everything is possible to be achieved by treating Rumble as the black-box.
+
+The XQuery/XPath 3.* Test Suite (QT3TS) is publicly available at W3C Public CVS Repository under module name 2011/QT3-test-suite \cite{TestSuiteCVSRepository}. Since April 1st 2019, CVS tree has been discontinued and the repository has been migrated to W3C Public GitHub repository \cite{TestSuiteGitHubRepository}. The tests are published as a set of files - test sets containing in total more than 30000 test cases. The tests are published as a set of files, mostly in XML format. W3C does not supply a Test Driver for executing the tests. Instead, for each implementation a Test Driver should be written. As these test sets are mostly written in XML format, the first component that our Test Driver will require is the XML parser. 
+
+For parsing XML, we have decided to use Saxon \cite{Saxon} - Open Source XSLT \& XQuery processor developed by Saxonica Limited. First of all, Saxon itself is one of the implementations for which Test Driver was also implemented. Based on Results Report \cite{SaxonReport}, it passes more than 99,9\% of the QT3TS test. Furthermore, Saxons implementation of the Test Driver can be used as a baseline for developing our own Test Driver. 
+
+\section{Phases 1 Implementation}
+\todo{Here we should write that  in the first implementation we only had separation on 3 possible cases. Fail Success and Crash. We will put the picture of the first slide in the Architecture presentation and explain what is the idea behind. We have the information about number of passed tests in the dividing the test cases.}
+
+\section{Phase 2 Implementation}
+\todo{Architecture remains the same, we need to then document the second part of the dividing the test cases}
+
+\section{Phase 3 implementation}
+\todo{Converter we separate. Create a new architecture diagram where Converter outputs the JSONiq test suite. Emphasize that language is not converted. Emphasize that for Converter itself we need a plugin architecture. So that you can include and exclude some conversion. ALso we will introcu}
+
+
+
+
+\section{JSONiq}
+The JSONiq extension to XQuery allows processing XML and JSON natively and with a single language. This extension is based on the same data model as the core JSONiq and is based on the same logical concepts. Because of the complexity of the XQuery grammar, the JSONiq extension to XQuery has a less pleasant syntax that the JSONiq core. When designing the Test Converter, we could have decided to use either XML or JSON as the under-laying language. However, as our Test Driver was already implemented in the previous phase and was expecting XML as input and using the before mentioned Saxon for parsing it, we have decided to keep the same language for output of the Test Converter.
