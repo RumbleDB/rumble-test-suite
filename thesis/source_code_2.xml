@@ -1,0 +1,6 @@
+<test>math:acos(0)</test>
+<result>
+   <assert>
+      abs($result - 1.5707963267948966e0) lt 1e-14
+   </assert>
+</result>
