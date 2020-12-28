@@ -1,6 +1,5 @@
 \chapter{XQuery/XPath 3.* Test Suite(QT3TS)}
 \section{Analysis}
-\todo{We need to show how Saxon implementation is verified using the test suite. The we need to show the class that we want to reproduce. We need to mention that everything is XML and that we will reuse Saxon for parsing the XML, backwards compatibility with everything except XSLT}
 In this chapter, we will discuss design decisions that we have made during the development of Test Driver. The core idea is to develop Test Driver completely independently from Rumble by maintaining the code outside of Rumble.
 
 \subsection{Programming Language}
@@ -225,7 +224,7 @@ During Phase 1, we were performing iterations with goal to overall improve Test 
 \todo{MAYBE CITE SOMETHING} Regression testing (rarely non-regression testing[1]) is re-running functional and non-functional tests to ensure that previously developed and tested software still performs after a change.[2] If not, that would be called a regression. 
 \todo{Copied from Wikipedia}. During iterations, it was noticed that our approach of fixing and improving the application is highly exposed to changes that require regression testing. 
 
-While performing iterations, we had to ensure that any further implementation would not break the test-cases that were passing before. Thus, with every new iteration, we have performed a check that compared whether all the passed tests from the previous implementation were also contained in the new implementation or not. \todo{fix this text when you are inspired. Explain Comparing for new crashes and tests from OneNote}For each iteration we have maintained log files of all Success and Crashed test-cases. In every next iteration we have done two comparison between new and previous log files. By doing so we have created "List of test cases that were passing before but not anymore" and "Tests that were not crashing before, but are now and not in list above".
+While performing iterations, we had to ensure that any further implementation would not break the test-cases that were passing before and at the same time not introduce new test-cases that are Crashing. Thus, for each iteration we have maintained log files of all Passed (Success + Managed) and Crashed test-cases. In every next iteration we have done two comparison between new and previous log files. We have performed a check that compared whether all the passed test-cases from the previous implementation were also contained in the new implementation or not and created "List of test cases that were passing before but not anymore". For Crashes, we did opposite check and created list of "Tests that were not crashing before, but are now and not in list above". 
 
 \subsection{Architecture}
 The overview of scenario described in \ref{Phase2_Description} can be seen in Figure \ref{fig:Phase2_Architecture}
@@ -313,15 +312,36 @@ Final goal was to identify test-cases that fail but can be converted to JSONiq. 
 		spec                               & only "XT30+" not supported   \\
 		limits                             & not supported yet           
 	\end{tabular}
-	caption{Supported Dependency List }
+	\caption{Supported Dependency List }
 	\label{tab:Phase2_DependencyList}
 \end{table}
 
 \section{Phase 3 implementation}
-\todo{Converter we separate. Create a new architecture diagram where Converter outputs the JSONiq test suite. Emphasize that language is not converted. Emphasize that for Converter itself we need a plugin architecture. So that you can include and exclude some conversion. ALso we will introcu}
+\todo{ Emphasize that for Converter itself we need a plugin architecture and draw it. So that you can include and exclude some conversion. }
 \subsection{Description}
 \label{Phase3_Description}
-The main issue of Converter described in Section \ref{Phase2_Converter} was that it was performed via Java String.replace method. 
+The main issue of Converter described in Section \ref{Phase2_Converter} was that it was hard-coded conversion using Java String.replace method. Such implementation can be very unstable. For example, we can look at 5th item of "other conversions" mentioned in Section \ref{Phase2_Converter} - replacing ' with ". For example, test-case Literals009 is verifying whether "test' is a valid String Literal. With our hard-coded conversion, we will make this test-case valid String Literal instead of it causing an Error Code XPST0003. Therefore, we have decided to implement Test Converter as separate module. It's main purpose is to generalize the hard-coded conversion. It would take QT3TS as Input and generate pure JSONiq Test Suite as output.
+
+For implementing Test Converter we decided to create following classification of test-cases:
+\begin{enumerate}
+	\item Fails, as expected and should not be converted to JSONiq. It will never be supported
+	\item Fails, as expected since it is not supported yet
+	\item Fails, but can be rescued with simple conversion. Any simple conversion like removing the "fn" prefix 
+	\item Fails, but can be converted to JSONiq. Any complicated conversion like XML to JSON
+	\item Fails, because it is bug in Rumble
+	\item Succeeds
+\end{enumerate}
+
+With this classification, we want to reuse most of Phase 2 Implementation Results presented in Table \ref{tab:Phase2_ResultTable}.
+
+If we compare above described classification with classification in Table \ref{tab:Phase2_ResultTable}, we can notice that Fail corresponds to Item 5. Item 6 corresponds to Success. Managed corresponds to Item 3. Item 2 corresponds to Unsupported and Dependency. Skipped correspond to Item 1. 
+
+Performing iterations in Phase 1, we want to distribute all Crashes into some of Item 4 or 1. Of course, it is in our interest to identify as many test-cases as possible as Item 4 and perform conversion in Test Converter. Everything that we cannot convert, we will classify as Item 1. 
+
+Items 1 and 2 will be excluded from Test Converter output. However, we also need to take into account that over time, as Rumble implementation improves, tests from Item 1 will be distributed into 4 other categories. Therefore, we want to make highly modular and extensible architecture. We have decided to maintain a list of conversions that need to be performed. This list will be compiled by using all results obtained so far. The architecture with work as a "plugin". It will allow us to specify what conversions we will perform and what we will include or exclude from output. The important design decision remaining is the Data Format of the Test Converted output.
+
+\subsubsection{JSONiq and Test Converter Data Format}
+The JSONiq extension to XQuery allows processing XML and JSON natively and with a single language. This extension is based on the same data model as the core JSONiq and is based on the same logical concepts. Because of the complexity of the XQuery grammar, the JSONiq extension to XQuery has a less pleasant syntax that the JSONiq core. \todo{maybe cite something}. When designing the Test Converter, we could have decided to use either XML or JSON as the under-laying language. However, as our Test Driver was already implemented in the previous phase and was expecting XML as input and using the before mentioned Saxon for parsing it, we have decided to keep the same language for output of the Test Converter. 
 
 \subsection{Architecture}
 The overview of scenario described in \ref{Phase3_Description} can be seen in Figure \ref{fig:Phase3_Architecture}
@@ -332,7 +352,3 @@ The overview of scenario described in \ref{Phase3_Description} can be seen in Fi
 	\caption{Phase 1 Architecture Overview}
 	\label{fig:Phase3_Architecture}
 \end{figure}
-
-
-\section{JSONiq and Test Converter Data Format}
-The JSONiq extension to XQuery allows processing XML and JSON natively and with a single language. This extension is based on the same data model as the core JSONiq and is based on the same logical concepts. Because of the complexity of the XQuery grammar, the JSONiq extension to XQuery has a less pleasant syntax that the JSONiq core. When designing the Test Converter, we could have decided to use either XML or JSON as the under-laying language. However, as our Test Driver was already implemented in the previous phase and was expecting XML as input and using the before mentioned Saxon for parsing it, we have decided to keep the same language for output of the Test Converter.
