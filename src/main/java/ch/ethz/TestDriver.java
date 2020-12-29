@@ -25,7 +25,7 @@ public class TestDriver {
     // Set this field if you want to run a specific test set that starts with string below
     private String testSetToTest = ""; // json
     // Set this field if you want to run a specific test case that starts with string below
-    private String testCaseToTest = ""; // math-acos-005, json-doc-002, math-acos-002
+    private String testCaseToTest = ""; // fn-insert-before-mix-args-001
     private SparkSession sparkSession;
     private Rumble rumbleInstance;
     private int numberOfFails;
@@ -644,7 +644,7 @@ public class TestDriver {
         //testString = testString.replace("double('NaN')", "double(\"NaN\")");
         //testString = testString.replace("double('INF')", "double(\"Infinity\")");
         //testString = testString.replace("double('-INF')", "double(\"-Infinity\")");
-        testString = testString.replace("INF", "Infinity");
+        //testString = testString.replace("INF", "Infinity");
 
         // XML notation
         testString = testString.replace(". ","$$ ");
