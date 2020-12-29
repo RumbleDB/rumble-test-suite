@@ -68,3 +68,8 @@ sudo ln -sfn /usr/local/opt/openjdk@11/libexec/openjdk.jdk /Library/Java/JavaVir
 export CPPFLAGS="-I/usr/local/opt/openjdk@11/include"
 export JAVA_HOME=$(/usr/libexec/java_home) >> ~/.zshrc
 echo 'export PATH="/usr/local/opt/scala@2.11/bin:$PATH"' >> ~/.zshrc 
+
+# More additions
+It seems that M1 chip is not quite running fast with JAVA SDK. That is why we should download ZULU SDK from [here](https://cdn.azul.com/zulu/bin/zulu11.43.1021-ca-jdk11.0.9.1-macosx_aarch64.dmg)
+Once downloaded, it will be available in Intellij.
+Go to Project Structure and add it as SDK for all modules!
