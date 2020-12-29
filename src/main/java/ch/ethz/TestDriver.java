@@ -23,9 +23,9 @@ public class TestDriver {
     private String catalogFileName = "catalog.xml";
     private Path testsRepositoryDirectoryPath;
     // Set this field if you want to run a specific test set that starts with string below
-    private String testSetToTest = ""; // json
+    private String testSetToTest = ""; //
     // Set this field if you want to run a specific test case that starts with string below
-    private String testCaseToTest = ""; // fn-insert-before-mix-args-001
+    private String testCaseToTest = ""; //
     private SparkSession sparkSession;
     private Rumble rumbleInstance;
     private int numberOfFails;
@@ -561,7 +561,7 @@ public class TestDriver {
     }
 
     private boolean AssertDeepEq(List<Item> resultAsList, XdmNode assertion) throws UnsupportedTypeException {
-        String assertExpression = "deep-equal(" + Convert(assertion.getStringValue()) + ",$result)";
+        String assertExpression = "deep-equal((" + Convert(assertion.getStringValue()) + "),$result)";
         return runNestedQuery(resultAsList, assertExpression);
     }
 
