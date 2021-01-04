@@ -25,7 +25,7 @@ public class TestDriver {
     // Set this field if you want to run a specific test set that starts with string below
     private String testSetToTest = ""; //
     // Set this field if you want to run a specific test case that starts with string below
-    private String testCaseToTest = ""; //
+    private String testCaseToTest = "numberformat321"; //
     private SparkSession sparkSession;
     private Rumble rumbleInstance;
     private int numberOfFails;
@@ -350,6 +350,10 @@ public class TestDriver {
                                 //value = xpc.evaluate(select, (XdmItem) null);
                                 testString += "let $" + name + " := " + select + " ";
                             }
+                            else{
+                                //runNestedQuery(source, assertion);
+                                // Variable name should be the name and not hardcoded result
+                            }
                         }
                         testString += "return ";
                     }
@@ -637,6 +641,7 @@ public class TestDriver {
         testString = testString.replace("math:","");
         testString = testString.replace("map:","");
         testString = testString.replace("array:","");
+        testString = testString.replace("xs:",""); // This should be handled with all the types before
         //testString = testString.replace("op:",""); // doesn't exist
         //testString = testString.replace("prod:",""); // doesn't exist
 
@@ -729,8 +734,22 @@ public class TestDriver {
         if (testString.contains("xs:unsignedShort")) throw new UnsupportedTypeException();
         testString = testString.replace("xs:yearMonthDuration","yearMonthDuration");
 
-        // Not mentioned in the list but existing in the tests
+        // Not mentioned in the list but existing in the tests. Not sure whether these are atomic types
         if (testString.contains("xs:untypedAtomic")) throw new UnsupportedTypeException();
+        if (testString.contains("xs:dateTimeStamp")) throw new UnsupportedTypeException();
+        if (testString.contains("xs:anyAtomicType")) throw new UnsupportedTypeException();
+        if (testString.contains("xs:error")) throw new UnsupportedTypeException();
+        if (testString.contains("xs:normalizedString")) throw new UnsupportedTypeException();
+        if (testString.contains("xs:numeric")) throw new UnsupportedTypeException();
+        if (testString.contains("xs:token")) throw new UnsupportedTypeException();
+        if (testString.contains("xs:NMTOKEN")) throw new UnsupportedTypeException();
+        if (testString.contains("xs:NCName")) throw new UnsupportedTypeException();
+        if (testString.contains("xs:Name")) throw new UnsupportedTypeException();
+        if (testString.contains("xs:language")) throw new UnsupportedTypeException();
+        if (testString.contains("xs:ENTITY")) throw new UnsupportedTypeException();
+        if (testString.contains("xs:ID")) throw new UnsupportedTypeException();
+        if (testString.contains("xs:IDREF")) throw new UnsupportedTypeException();
+
         return testString;
     }
 
@@ -760,10 +779,12 @@ public class TestDriver {
         if (testString.contains("comment(*)")) throw new UnsupportedTypeException(); // '*' is not allowed inside text()
         if (testString.contains("processing-instruction()")) throw new UnsupportedTypeException();
         if (testString.contains("processing-instruction(*)")) throw new UnsupportedTypeException(); // '*' is not allowed inside text()
-        if (testString.contains("xs:QName")) throw new UnsupportedTypeException(); // The xs:QName constructor function must be passed exactly one argument, not zero.
+        if (testString.contains("QName")) throw new UnsupportedTypeException(); // The xs:QName constructor function must be passed exactly one argument, not zero.
 
         // TODO some more that I found out
         if (testString.contains("map(*)")) throw new UnsupportedTypeException();
+        testString = testString.replace("map(","object(");
+        testString = testString.replace("map{","{");
         if (testString.contains("node()")) throw new UnsupportedTypeException();
         if (testString.contains("empty-sequence()")) throw new UnsupportedTypeException();
         if (testString.contains("xs:NOTATION")) throw new UnsupportedTypeException();
