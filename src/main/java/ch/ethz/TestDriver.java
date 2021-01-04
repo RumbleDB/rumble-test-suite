@@ -25,7 +25,7 @@ public class TestDriver {
     // Set this field if you want to run a specific test set that starts with string below
     private String testSetToTest = ""; //
     // Set this field if you want to run a specific test case that starts with string below
-    private String testCaseToTest = "numberformat321"; //
+    private String testCaseToTest = ""; //
     private SparkSession sparkSession;
     private Rumble rumbleInstance;
     private int numberOfFails;
@@ -749,6 +749,17 @@ public class TestDriver {
         if (testString.contains("xs:ENTITY")) throw new UnsupportedTypeException();
         if (testString.contains("xs:ID")) throw new UnsupportedTypeException();
         if (testString.contains("xs:IDREF")) throw new UnsupportedTypeException();
+        if (testString.contains("xs:anyType")) throw new UnsupportedTypeException();
+        if (testString.contains("xs:anySimpleType")) throw new UnsupportedTypeException();
+        if (testString.contains("xs:untyped")) throw new UnsupportedTypeException();
+        if (testString.contains("xs:doesNotExist")) throw new UnsupportedTypeException();
+        if (testString.contains("xs:NOTEXIST")) throw new UnsupportedTypeException();
+        if (testString.contains("xs:doesNotExistExampleCom")) throw new UnsupportedTypeException();
+        if (testString.contains("xs:name")) throw new UnsupportedTypeException();
+        if (testString.contains("xs:untypedAny")) throw new UnsupportedTypeException();
+        if (testString.contains("xs:undefinedType")) throw new UnsupportedTypeException();
+        if (testString.contains("xs:unknownType")) throw new UnsupportedTypeException();
+        if (testString.contains("xs:qname")) throw new UnsupportedTypeException();
 
         return testString;
     }
@@ -785,6 +796,7 @@ public class TestDriver {
         if (testString.contains("map(*)")) throw new UnsupportedTypeException();
         testString = testString.replace("map(","object(");
         testString = testString.replace("map{","{");
+        testString = testString.replace("map {"," {");
         if (testString.contains("node()")) throw new UnsupportedTypeException();
         if (testString.contains("empty-sequence()")) throw new UnsupportedTypeException();
         if (testString.contains("xs:NOTATION")) throw new UnsupportedTypeException();

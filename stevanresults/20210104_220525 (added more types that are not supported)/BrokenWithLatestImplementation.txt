@@ -1,0 +1,16 @@
+List of test cases that were passing before but not anymore:
+K2-CodepointEqual-1
+K2-SeqExprCast-180
+K-ForExprWithout-28
+K-ForExprWithout-31
+K-ForExprWithout-34
+ForExprType007
+ForExprType008
+K2-ExternalVariablesWith-24
+K2-ExternalVariablesWith-25
+K2-ExternalVariablesWith-26
+K2-ExternalVariablesWith-27
+fn-current-date-9
+K-ForExprWithout-25
+
+Tests that were not crashing before, but are now and not in list above:
