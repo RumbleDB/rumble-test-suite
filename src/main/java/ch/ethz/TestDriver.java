@@ -544,12 +544,37 @@ public class TestDriver {
                 return AssertCount(resultAsList, assertion);
             case "not":
                 return AssertNot(resultAsList, assertion);
+            case "assert-permutation":
+                return AssertPermutation(resultAsList, assertion);
                 // error codes are not handled here as they always cause exceptions
                 // "assert-message", "assert-warning", "assert-result-document", "assert-serialization" do not exist
-                // "assert-xml", "serialization-matches", "assert-permutation" missing
+                // "assert-xml", "serialization-matches" missing
             default:
                 return false;
         }
+    }
+
+    private boolean AssertPermutation(List<Item> resultAsList, XdmNode assertion) throws UnsupportedTypeException {
+        String assertExpression =
+            "declare function allpermutations($sequence as item*) as array* {\n" +
+                " if(count($sequence) le 1)\n" +
+                " then\n" +
+                "   [ $sequence ]\n" +
+                " else\n" +
+                "   for $i in 1 to count($sequence)\n" +
+                "   let $first := $sequence[$i]\n" +
+                "   let $others :=\n" +
+                "     for $s in $sequence\n" +
+                "     count $c\n" +
+                "     where $c ne $i\n" +
+                "     return $s\n" +
+                "   for $recursive in allpermutations($others)\n" +
+                "   return [ $first, $recursive[]]\n" +
+                "};\n" +
+                "\n" +
+                "some $a in allpermutations($result) " +
+                    "satisfies deep-equal($a[], ((" + Convert(assertion.getStringValue()) + ")))";
+        return runNestedQuery(resultAsList, assertExpression);
     }
 
     private boolean AssertNot(List<Item> resultAsList, XdmNode assertion) throws UnsupportedTypeException {
@@ -691,9 +716,7 @@ public class TestDriver {
     }
 
     private String[] skipTestCaseList = new String[]{
-            // "json-doc-error-028" // Exception in Spark when populating list, but whole json-doc is ignored now
-            // "math-pow.xml" // Has a lot of xs:double('INF')
-            // "abs.xml" // Abs always returns double and he wants Integer
+            "fn-distinct-values-2"
     };
 
     private String ConvertAtomicTypes(String testString) throws UnsupportedTypeException {
