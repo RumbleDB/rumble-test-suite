@@ -1,6 +1,5 @@
 package converter;
 
-import net.sf.saxon.om.NodeInfo;
 import net.sf.saxon.s9api.*;
 import net.sf.saxon.s9api.streams.Steps;
 
@@ -23,6 +22,7 @@ public class TestConverter {
     private static Path outputSubDirectoryPath;
     private int testSetsOutputted = 0;
     private String nameSpace = "http://www.w3.org/2010/09/qt-fots-catalog";
+    private int testCasesOutputted = 0;
 
     void execute() {
         getTestsRepository();
@@ -111,13 +111,15 @@ public class TestConverter {
         // Yes we do need Namespace. It is required to run evaluateSingle and luckily it is hardcoded in QT3TestDriverHE
         xpc.declareNamespace("", nameSpace);
 
-        System.out.println("Skipped: " + testSetsToSkip.size());
+        System.out.println("Skipped Test Sets: " + testSetsToSkip.size());
+        System.out.println("Skipped Test Cases: " + testCasesToSkip.size());
         for (XdmNode testSet : catalogNode.select(Steps.descendant("test-set")).asList()) {
             this.processTestSet(catalogBuilder, xpc, testSet);
         }
-        System.out.println("Included: " + testSetsOutputted);
-        System.out.println("Misspelled: " + testSetsToSkip);
-    }
+        System.out.println("Included Test Sets: " + testSetsOutputted);
+        System.out.println("Included Test Cases: " + testCasesOutputted);
+        System.out.println("Misspelled Test Sets: " + testSetsToSkip);
+        System.out.println("Misspelled Test Sets: " + testCasesToSkip);    }
 
     private void processTestSet(DocumentBuilder catalogBuilder, XPathCompiler xpc, XdmNode testSetNode) throws SaxonApiException{
 
@@ -129,18 +131,56 @@ public class TestConverter {
 
         if (!testSetsToSkip.contains(testSetFileName)) {
             testSetsOutputted++;
-            if (Constants.PRODUCE_OUTPUT)
-                createOutputXMLFile(testSetFileName, testSetDocNode, xpc);
-            for (XdmNode testCase : testSetDocNode.select(Steps.descendant("test-case")).asList()) {
-                this.processTestCase(testCase, xpc);
+            StringBuffer testSetBody = new StringBuffer();
+            XdmNode root = testSetDocNode.children().iterator().next();
+
+            // TODO This does not quite help us
+//            XdmNode description = (XdmNode) xpc.evaluateSingle("description", root);
+//            printWriter.write(description.toString());
+
+            // TODO we can separate them like this
+//            for (XdmNode environment : root.select(Steps.child("link")).asList()) {
+//                printWriter.write(environment.toString());
+//            }
+//            for (XdmNode environment : root.select(Steps.child("description")).asList()) {
+//                printWriter.write(environment.toString());
+//            }
+//            for (XdmNode environment : root.select(Steps.child("environment")).asList()) {
+//                printWriter.write(environment.toString());
+//            }
+
+            // TODO checkout if we can use this to better do toString()
+//            NodeInfo testDocNodeInfo = testSetDocNode.getUnderlyingNode();
+//            int testDocNode = testDocNodeInfo.getNodeKind();
+//            int rootNode = root.getUnderlyingNode().getNodeKind();
+//            int environment = root.select(Steps.child("environment")).asList().get(0).getUnderlyingNode().getNodeKind();
+//            int testcase = testSetDocNode.select(Steps.descendant("test-case")).asList().get(0).getUnderlyingNode().getNodeKind();
+
+
+            // TODO can't make a new Node
+//            QName bla = root.getNodeName();
+//            XdmNode a = new XdmNode()
+
+            for (XdmNode child : root.children()){
+                if (child.getUnderlyingNode().getDisplayName().equals("test-case"))
+                //if (child.getNodeName().getLocalName().equals("test-case"))
+                    testSetBody.append(this.processTestCase(child, xpc));
+                else {
+                    String otherNode = child.toString();
+                    otherNode = otherNode.replace(" xmlns=\"" + nameSpace + "\"", "");
+                    testSetBody.append(otherNode);
+                }
             }
+
+            if (Constants.PRODUCE_OUTPUT)
+                createOutputXMLFile(testSetFileName, testSetBody);
         }
         else {
             testSetsToSkip.remove(testSetFileName);
         }
     }
 
-    private void createOutputXMLFile(String testSetFileName, XdmNode testSetDocNode, XPathCompiler xpc) {
+    private void createOutputXMLFile(String testSetFileName, StringBuffer testSetBody) {
         try {
             String [] directoryAndFile = testSetFileName.split("/");
             Path testSetOutputDirectoryPath = outputSubDirectoryPath.resolve(directoryAndFile[0]);
@@ -152,56 +192,48 @@ public class TestConverter {
             PrintWriter printWriter = new PrintWriter(testSetOutputFilePath.toString());
 
             // TODO check if I can copy it somehow without hardcoding
+//            Pattern pattern = Pattern.compile("<test-set(.*?)>");
+//            Matcher matcher = pattern.matcher(testSet);
+//            if (matcher.find())
+//            {
+//                System.out.println(matcher.group(1));
+//            }
             String header = "<?xml version=\"1.0\" encoding=\"us-ascii\"?>\n" +
-                            "<test-set xmlns=\"" + nameSpace + "\" name=\"" + directoryAndFile[1] + "\">";
+                            "<test-set xmlns=\"" + nameSpace + "\" name=\"" + directoryAndFile[1] + "\">\n";
             printWriter.write(header);
-
-            XdmNode root = testSetDocNode.children().iterator().next();
-//            XdmNode description = (XdmNode) xpc.evaluateSingle("description", root);
-//            printWriter.write(description.toString());
-
-//            for (XdmNode environment : root.select(Steps.child("link")).asList()) {
-//                printWriter.write(environment.toString());
-//            }
-//            for (XdmNode environment : root.select(Steps.child("description")).asList()) {
-//                printWriter.write(environment.toString());
-//            }
-//            for (XdmNode environment : root.select(Steps.child("environment")).asList()) {
-//                printWriter.write(environment.toString());
-//            }
-
-            // TODO check if it is test-case and then find test and result and covert them.
-            // TODO For everything else, remove the XSLMNS
-
-            for (XdmNode children : root.children()){
-                printWriter.write(children.toString());
-            }
-
-            // TODO checkout if we can use this to better do toString()
-//            NodeInfo testDocNodeInfo = testSetDocNode.getUnderlyingNode();
-//            int testDocNode = testDocNodeInfo.getNodeKind();
-//            int rootNode = root.getUnderlyingNode().getNodeKind();
-//            int environment = root.select(Steps.child("environment")).asList().get(0).getUnderlyingNode().getNodeKind();
-//            int testcase = testSetDocNode.select(Steps.descendant("test-case")).asList().get(0).getUnderlyingNode().getNodeKind();
-
-
-            // TODO can't make a new Node
-            //QName bla = root.getNodeName();
-            //XdmNode a = new XdmNode()
-
             printWriter.close();
-            //Files.write(Paths.get(testSetOutputFilePath), stringBuffer.toString().getBytes(), StandardOpenOption.APPEND);
+            Files.write(Paths.get(testSetOutputFilePath.toString()), testSetBody.toString().getBytes(), StandardOpenOption.APPEND);
+            String endRootTag = "</test-set>";
+            Files.write(Paths.get(testSetOutputFilePath.toString()), endRootTag.getBytes(), StandardOpenOption.APPEND);
         }
         catch (Exception e){
-            System.out.println(e.getMessage());
             e.printStackTrace();
         }
     }
 
-    private void processTestCase(XdmNode testCase, XPathCompiler xpc) {
+    private String processTestCase(XdmNode testCase, XPathCompiler xpc) throws SaxonApiException {
         String testCaseName = testCase.attribute("name");
         if (!testCasesToSkip.contains(testCaseName)) {
+            testCasesOutputted++;
+            String testCaseBody = testCase.toString();
+            XdmNode testNode = testCase.select(Steps.child("test")).asNode();
+            String convertedTestString = this.Convert(testNode.getStringValue());
+            XdmNode assertion = (XdmNode) xpc.evaluateSingle("result/*[1]", testCase);
+            String expectedResult = Convert(assertion.getStringValue());
 
+            // TODO maybe same issue like with header
+            testCaseBody = testCaseBody.replace(" xmlns=\"" + nameSpace + "\"", "");
+            testCaseBody = testCaseBody.replace("<test>([^<]*)</test>", "<test>" + convertedTestString + "</test>");
+            testCaseBody = testCaseBody.replace("<result>([^<]*)</result>", "<result>\n" + expectedResult + "\n</result>");
+            return testCaseBody;
         }
+        else{
+            testCasesToSkip.remove(testCaseName);
+            return "";
+        }
+    }
+
+    private String Convert(String testString){
+        return testString;
     }
 }
