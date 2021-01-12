@@ -13,7 +13,10 @@ import org.rumbledb.exceptions.RumbleException;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -38,6 +41,7 @@ public class TestDriver {
     private int numberOfUnsupportedErrorCodes;
     private int numberOfProcessedTestCases;
     private int numberOfManaged;
+    private List<String> testSetsToSkip;
 
     // For JSON-doc
     private Map<String, String> URItoPathLookupTable = new HashMap<>();
@@ -48,8 +52,11 @@ public class TestDriver {
         initializeSparkAndRumble();
 
         try {
+            // TODO in future this will be only list for 2, not supported yet. Test Converted will output them but not 1
+            testSetsToSkip = Files.readAllLines(converter.Constants.WORKING_DIRECTORY_PATH.resolve
+                    ("TestSetsToSkip.txt"), Charset.defaultCharset());
             processCatalog(new File(testsRepositoryDirectoryPath.resolve(catalogFileName).toString()));
-        } catch (SaxonApiException e) {
+        } catch (SaxonApiException | IOException e) {
             e.printStackTrace();
         }
 
@@ -142,7 +149,10 @@ public class TestDriver {
         if (testSetToTest.equals("") || testSetFileName.contains(testSetToTest)) {
             resetCounters();
             for (XdmNode testCase : testSetDocNode.select(Steps.descendant("test-case")).asList()) {
-                this.processTestCase(testCase, xpc);
+                if (!testSetsToSkip.contains(testSetFileName))
+                    this.processTestCase(testCase, xpc);
+                else
+                    LogSkipped(testCase.attribute("name"));
                 numberOfProcessedTestCases++;
             }
             System.out.println(testSetFileName + " Success: " + numberOfSuccess + " Managed: " + numberOfManaged + " Fails: " + numberOfFails +
