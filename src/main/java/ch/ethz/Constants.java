@@ -6,8 +6,12 @@ import java.nio.file.Paths;
 public class Constants {
     public static final Path WORKING_DIRECTORY_PATH = Paths.get("").toAbsolutePath();
 
+    // Use of converted TestSuite
+    public static final boolean USE_CONVERTED_TEST_SUITE = true;
+    public static final String OUTPUT_TEST_SUITE_DIRECTORY = "Output_Test_Suite";
+
     // Enables producing log files
-    public static final boolean PRODUCE_LOGS = false;
+    public static final boolean PRODUCE_LOGS = true;
 
     // Log files here
     public static final String TEST_CASE_HEADER = "TestSetFileName,Success,Managed,Fails,Skipped,Dependencies,Crashes," +

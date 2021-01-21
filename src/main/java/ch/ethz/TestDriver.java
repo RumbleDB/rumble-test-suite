@@ -4,6 +4,7 @@ import net.sf.saxon.s9api.*;
 import net.sf.saxon.s9api.streams.Steps;
 import org.apache.commons.lang.StringUtils;
 import org.apache.spark.sql.SparkSession;
+import org.apache.http.impl.client.HttpClients;
 import org.rumbledb.api.Item;
 import org.rumbledb.api.Rumble;
 import org.rumbledb.api.SequenceOfItems;
@@ -53,8 +54,7 @@ public class TestDriver {
 
         try {
             // TODO in future this will be only list for 2, not supported yet. Test Converted will output them but not 1
-            testSetsToSkip = Files.readAllLines(converter.Constants.WORKING_DIRECTORY_PATH.resolve
-                    ("TestSetsToSkip.txt"), Charset.defaultCharset());
+            testSetsToSkip = Files.readAllLines(Constants.WORKING_DIRECTORY_PATH.resolve("TestSetsToSkip.txt"), Charset.defaultCharset());
             processCatalog(new File(testsRepositoryDirectoryPath.resolve(catalogFileName).toString()));
         } catch (SaxonApiException | IOException e) {
             e.printStackTrace();
@@ -63,36 +63,44 @@ public class TestDriver {
     }
 
     private void getTestsRepository(){
-        System.out.println("Running sh script to obtain the required tests repository!");
-        try {
-            ProcessBuilder pb = new ProcessBuilder(Constants.WORKING_DIRECTORY_PATH.resolve(testsRepositoryScriptFileName).toString());
-
-            Process p = pb.start();
-            final int exitValue = p.waitFor();
-
-            BufferedReader stdout = new BufferedReader(new InputStreamReader(p.getInputStream()));
-            BufferedReader stderr = new BufferedReader(new InputStreamReader(p.getErrorStream()));
-            String line = "";
-            String testsDirectory = "";
-
-            if (exitValue == 0) {
-                while ((line = stdout.readLine()) != null) {
-                    System.out.println(line);
-
-                    // Name of the directory is parametrized in testsRepositoryScriptName
-                    testsDirectory = line;
-                }
-            } else {
-                while ((line = stderr.readLine()) != null) {
-                    System.out.println(line);
-                }
-            }
-            testsRepositoryDirectoryPath = Constants.WORKING_DIRECTORY_PATH.resolve(testsDirectory);
-            System.out.println(testsRepositoryDirectoryPath);
-        } catch (Exception e) {
-            e.printStackTrace();
+        if (Constants.USE_CONVERTED_TEST_SUITE){
+            Path convertedTestSuitesDirectory = Constants.WORKING_DIRECTORY_PATH.resolve(Constants.OUTPUT_TEST_SUITE_DIRECTORY);
+            File[] allConvertedTestSuiteDirectories = new File(convertedTestSuitesDirectory.toString()).listFiles();
+            Arrays.sort(allConvertedTestSuiteDirectories, Comparator.reverseOrder());
+            testsRepositoryDirectoryPath = allConvertedTestSuiteDirectories[0].toPath();
         }
-        System.out.println("Tests repository obtained!");
+        else {
+            System.out.println("Running sh script to obtain the required tests repository!");
+            try {
+                ProcessBuilder pb = new ProcessBuilder(Constants.WORKING_DIRECTORY_PATH.resolve(testsRepositoryScriptFileName).toString());
+
+                Process p = pb.start();
+                final int exitValue = p.waitFor();
+
+                BufferedReader stdout = new BufferedReader(new InputStreamReader(p.getInputStream()));
+                BufferedReader stderr = new BufferedReader(new InputStreamReader(p.getErrorStream()));
+                String line = "";
+                String testsDirectory = "";
+
+                if (exitValue == 0) {
+                    while ((line = stdout.readLine()) != null) {
+                        System.out.println(line);
+
+                        // Name of the directory is parametrized in testsRepositoryScriptName
+                        testsDirectory = line;
+                    }
+                } else {
+                    while ((line = stderr.readLine()) != null) {
+                        System.out.println(line);
+                    }
+                }
+                testsRepositoryDirectoryPath = Constants.WORKING_DIRECTORY_PATH.resolve(testsDirectory);
+                System.out.println(testsRepositoryDirectoryPath);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            System.out.println("Tests repository obtained!");
+        }
     }
 
     private void initializeSparkAndRumble() {
