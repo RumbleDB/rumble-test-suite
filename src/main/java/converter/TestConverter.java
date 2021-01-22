@@ -172,9 +172,18 @@ public class TestConverter {
 
             XQueryExecutable xqe = xqc.compile("declare function local:convert($x)\n" +
                                                      "{ $x };\n" +
+                                                     "declare function local:transform($nodes as node()*) as node()*\n" +
+                                                     "{\n" +
+                                                     "for $n in $nodes return\n" +
+                                                     "typeswitch ($n)\n" +
+                                                     "case element (test) return <test>{local:convert($n/string())}</test>\n" +
+                                                     "case element (result) return <result>{local:convert($n/string())}</result>\n" +
+                                                     "case element () return element { fn:node-name($n) } {local:transform($n/node())} \n" +
+                                                     "default return $n\n" +
+                                                     "};" +
                                                      "declare variable $test-set external;\n" +
                                                      "let $y := $test-set\n" +
-                                                     "return local:convert($y)");
+                                                     "return local:transform($y)");
             XQueryEvaluator xQueryEvaluator = xqe.load();
             xQueryEvaluator.setExternalVariable(new QName("test-set"), root);
             xQueryEvaluator.iterator();
