@@ -170,20 +170,13 @@ public class TestConverter {
             while (!root.children().iterator().hasNext())
                 root = iterator.next();
 
-            // Works
-            //XQueryExecutable xqe = xqc.compile("let $y := 1\n" +
-            //        "return if ($y = 1 and $y = 2) then \"yes\" else \"no\"");
-
-            // Doesn't work
-//            XQueryExecutable xqe = xqc.compile("declare variable $test-set external;\n" +
-//                                                     "return $test-set");
-            XQueryExecutable xqe = xqc.compile("declare variable $test external;\n" +
-                                                     "let $y := $test\n" +
-                                                     "return $y");
+            XQueryExecutable xqe = xqc.compile("declare function local:convert($x)\n" +
+                                                     "{ $x };\n" +
+                                                     "declare variable $test-set external;\n" +
+                                                     "let $y := $test-set\n" +
+                                                     "return local:convert($y)");
             XQueryEvaluator xQueryEvaluator = xqe.load();
-            xQueryEvaluator.setExternalVariable(new QName("test"), root);
-            //xQueryEvaluator.setDestinationBaseURI();
-            //xQueryEvaluator.run();
+            xQueryEvaluator.setExternalVariable(new QName("test-set"), root);
             xQueryEvaluator.iterator();
             for (XdmValue result : xQueryEvaluator) {
                 System.out.println("YAY");
