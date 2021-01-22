@@ -128,18 +128,8 @@ public class TestConverter {
         catalogBuilder.setLineNumbering(true);
         XdmNode catalogNode = catalogBuilder.build(catalogFile);
         catalogContent = catalogNode.toString();
+
         XQueryCompiler xqc = testDriverProcessor.newXQueryCompiler();
-        // declare function local:convert-test($x) { $x };
-        XQueryExecutable xqe = xqc.compile("let $y := 1\n" +
-                "return if ($y = 1 and $y = 2) then \"yes\" else \"no\"");
-        XQueryEvaluator xQueryEvaluator = xqe.load();
-        //xQueryEvaluator.setExternalVariable(new QName("test"), catalogNode);
-        //xQueryEvaluator.setDestinationBaseURI();
-        //xQueryEvaluator.run();
-        xQueryEvaluator.iterator();
-        for (XdmValue result : xQueryEvaluator) {
-            System.out.println("YAY");
-        }
 
         XPathCompiler xpc = testDriverProcessor.newXPathCompiler();
         xpc.setLanguageVersion("3.1");
@@ -150,7 +140,7 @@ public class TestConverter {
         System.out.println("Skipped Test Sets: " + testSetsToSkip.size());
         System.out.println("Skipped Test Cases: " + testCasesToSkip.size());
         for (XdmNode testSet : catalogNode.select(Steps.descendant("test-set")).asList()) {
-            this.processTestSet(catalogBuilder, xpc, testSet);
+            this.processTestSet(catalogBuilder, xpc, xqc, testSet);
         }
         System.out.println("Included Test Sets: " + testSetsOutputted);
         System.out.println("Included Test Cases: " + testCasesOutputted);
@@ -161,7 +151,7 @@ public class TestConverter {
             createOutputCatalog();
     }
 
-    private void processTestSet(DocumentBuilder catalogBuilder, XPathCompiler xpc, XdmNode testSetNode) throws SaxonApiException{
+    private void processTestSet(DocumentBuilder catalogBuilder, XPathCompiler xpc, XQueryCompiler xqc, XdmNode testSetNode) throws SaxonApiException{
 
         // TODO skip creating an Environment - its mainly for HE, EE, PE I think
 
@@ -179,6 +169,25 @@ public class TestConverter {
             // testSetBody.append("<test-set xmlns=\"" + nameSpace + "\" name=\"" + testSetFileName.split("/")[1] + "\">\n");
             while (!root.children().iterator().hasNext())
                 root = iterator.next();
+
+            // Works
+            //XQueryExecutable xqe = xqc.compile("let $y := 1\n" +
+            //        "return if ($y = 1 and $y = 2) then \"yes\" else \"no\"");
+
+            // Doesn't work
+//            XQueryExecutable xqe = xqc.compile("declare variable $test-set external;\n" +
+//                                                     "return $test-set");
+            XQueryExecutable xqe = xqc.compile("declare variable $test external;\n" +
+                                                     "let $y := $test\n" +
+                                                     "return $y");
+            XQueryEvaluator xQueryEvaluator = xqe.load();
+            xQueryEvaluator.setExternalVariable(new QName("test"), root);
+            //xQueryEvaluator.setDestinationBaseURI();
+            //xQueryEvaluator.run();
+            xQueryEvaluator.iterator();
+            for (XdmValue result : xQueryEvaluator) {
+                System.out.println("YAY");
+            }
 
             String testSetContent = root.toString();
             Matcher testSetHeader = Pattern.compile("<test-set([^<]*)>", Pattern.DOTALL).matcher(testSetContent);
