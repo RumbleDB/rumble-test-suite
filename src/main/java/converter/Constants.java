@@ -8,5 +8,5 @@ public class Constants {
     public static final String TEST_SETS_TO_SKIP_FILENAME = "TestSetsToSkip.txt";
     public static final String TEST_CASES_TO_SKIP_FILENAME = "TestCasesToSkip.txt";
     public static final String OUTPUT_TEST_SUITE_DIRECTORY = "Output_Test_Suite";
-    public static final boolean PRODUCE_OUTPUT = true;
+    public static final boolean PRODUCE_OUTPUT = false;
 }
