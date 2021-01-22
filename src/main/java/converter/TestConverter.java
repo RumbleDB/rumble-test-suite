@@ -169,7 +169,6 @@ public class TestConverter {
             // testSetBody.append("<test-set xmlns=\"" + nameSpace + "\" name=\"" + testSetFileName.split("/")[1] + "\">\n");
             while (!root.children().iterator().hasNext())
                 root = iterator.next();
-
             XQueryExecutable xqe = xqc.compile("declare function local:convert($x)\n" +
                                                      "{ $x };\n" +
                                                      "declare function local:transform($nodes as node()*) as node()*\n" +
@@ -178,7 +177,7 @@ public class TestConverter {
                                                      "typeswitch ($n)\n" +
                                                      "case element (test) return <test>{local:convert($n/string())}</test>\n" +
                                                      "case element (result) return <result>{local:convert($n/string())}</result>\n" +
-                                                     "case element () return element { fn:node-name($n) } {local:transform($n/node())} \n" +
+                                                     "case element () return element { fn:node-name($n) } {$n/@*, local:transform($n/node())} \n" +
                                                      "default return $n\n" +
                                                      "};" +
                                                      "declare variable $test-set external;\n" +
