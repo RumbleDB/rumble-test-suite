@@ -121,6 +121,7 @@ public class TestConverter {
         catalogContent = catalogNode.toString();
 
         XQueryCompiler xqc = testDriverProcessor.newXQueryCompiler();
+        xqc.declareNamespace("", nameSpace);
 
         XPathCompiler xpc = testDriverProcessor.newXPathCompiler();
         xpc.setLanguageVersion("3.1");
@@ -156,22 +157,41 @@ public class TestConverter {
             // testSetBody.append("<test-set xmlns=\"" + nameSpace + "\" name=\"" + testSetFileName.split("/")[1] + "\">\n");
             while (!root.children().iterator().hasNext())
                 root = iterator.next();
-            XQueryExecutable xqe = xqc.compile("declare function local:convert($x)\n" +
-                                                     "{ $x };\n" +
-                                                     "declare function local:transform($nodes as node()*) as node()*\n" +
-                                                     "{\n" +
-                                                     "for $n in $nodes return\n" +
-                                                     "typeswitch ($n)\n" +
-                                                     "case element (test) return <test>{local:convert($n/string())}</test>\n" +
-                                                     "case element (result) return <result>{local:convert($n/string())}</result>\n" +
-                                                     "case element () return element { fn:node-name($n) } {$n/@*, local:transform($n/node())} \n" +
-                                                     "default return $n\n" +
-                                                     "};" +
-                                                     "declare variable $test-set external;\n" +
-                                                     "let $y := $test-set\n" +
-                                                     "return local:transform($y)");
+
+            // Can't access children of results because sometimes it has all-of or any-of. Also error code is attribute
+            // Will be handled separately, but not all of assertions!
+            // assert               can have any nested expression, usually uses ' instead of " as JSONiq wants it
+            // assert-eq            can have instantiations like xs:double for instance
+            // assert-deep-eq       can have expressions containing CDATA
+            // assert-string-value  can have paths //.../... ; however there is high potential that it doesn't need conv
+            // assert-type          all have xs: prefix if nothing else
+            // assert-permutation   can have instantiations like xs:double for instance
+            // assert-xml           is always XML file with CDATA or something
+            //serialization-matches is always XML file with CDATA or something
+            XQueryExecutable xqe = xqc.compile(
+        "declare function local:convert($x)\n" +
+              "{ $x };\n" +
+              "declare function local:transform($nodes as node()*) as node()*\n" +
+              "{\n" +
+              "for $n in $nodes return\n" +
+              "typeswitch ($n)\n" +
+              "case element (test) return <test>{local:convert($n/string())}</test>\n" +
+              "case element (assert) return <assert>{local:convert($n/string())}</assert>\n" +
+              "case element (assert-eq) return <assert-eq>{local:convert($n/string())}</assert-eq>\n" +
+              "case element (assert-deep-eq) return <assert-deep-eq>{local:convert($n/string())}</assert-deep-eq>\n" +
+              "case element (assert-string-value) return <assert-string-value>{local:convert($n/string())}</assert-string-value>\n" +
+              "case element (assert-type) return <assert-type>{local:convert($n/string())}</assert-type>\n" +
+              "case element (assert-permutation) return <assert-permutation>{local:convert($n/string())}</assert-permutation>\n" +
+              "case element (assert-xml) return <assert-xml>{local:convert($n/string())}</assert-xml>\n" +
+              "case element (serialization-matches) return <serialization-matches>{local:convert($n/string())}</serialization-matches>\n" +
+              "case element () return element { fn:node-name($n) } {$n/@*, local:transform($n/node())} \n" +
+              "default return $n\n" +
+              "};" +
+              "declare variable $test-set external;\n" +
+              "let $y := $test-set//test-set\n" +
+              "return local:transform($y)");
             XQueryEvaluator xQueryEvaluator = xqe.load();
-            xQueryEvaluator.setExternalVariable(new QName("test-set"), root);
+            xQueryEvaluator.setExternalVariable(new QName("test-set"), testSetDocNode);
             xQueryEvaluator.iterator();
             for (XdmValue result : xQueryEvaluator) {
                 XdmNode output = (XdmNode) result;

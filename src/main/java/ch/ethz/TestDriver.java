@@ -564,7 +564,7 @@ public class TestDriver {
                 return AssertNot(resultAsList, assertion);
             case "assert-permutation":
                 return AssertPermutation(resultAsList, assertion);
-                // error codes are not handled here as they always cause exceptions
+                // error codes and serialization-error codes are not handled here as they always cause exceptions
                 // "assert-message", "assert-warning", "assert-result-document", "assert-serialization" do not exist
                 // "assert-xml", "serialization-matches" missing
             default:
