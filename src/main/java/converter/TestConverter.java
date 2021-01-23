@@ -2,23 +2,16 @@ package converter;
 
 import net.sf.saxon.s9api.*;
 import net.sf.saxon.s9api.streams.Steps;
-import net.sf.saxon.trans.XPathException;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang3.StringEscapeUtils;
 
 import java.io.*;
 import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Iterator;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class TestConverter {
     private String testsRepositoryScriptFileName = "get-tests-repository.sh";
@@ -122,8 +115,6 @@ public class TestConverter {
     private void processCatalog(File catalogFile) throws SaxonApiException {
         Processor testDriverProcessor = new Processor(false);
 
-        // TODO check if it is okay to use the default Tiny tree or not
-        // catalogBuilder.setTreeModel(this.treeModel);
         DocumentBuilder catalogBuilder = testDriverProcessor.newDocumentBuilder();
         catalogBuilder.setLineNumbering(true);
         XdmNode catalogNode = catalogBuilder.build(catalogFile);
@@ -152,16 +143,12 @@ public class TestConverter {
     }
 
     private void processTestSet(DocumentBuilder catalogBuilder, XPathCompiler xpc, XQueryCompiler xqc, XdmNode testSetNode) throws SaxonApiException{
-
-        // TODO skip creating an Environment - its mainly for HE, EE, PE I think
-
         String testSetFileName = testSetNode.attribute("file");
         File testSetFile = new File(testsRepositoryDirectoryPath.resolve(testSetFileName).toString());
         XdmNode testSetDocNode = catalogBuilder.build(testSetFile);
 
         if (!testSetsToSkip.contains(testSetFileName)) {
             testSetsOutputted++;
-            StringBuffer testSetBody = new StringBuffer();
             Iterator<XdmNode> iterator = testSetDocNode.children().iterator();
             XdmNode root = iterator.next();
 
@@ -187,56 +174,10 @@ public class TestConverter {
             xQueryEvaluator.setExternalVariable(new QName("test-set"), root);
             xQueryEvaluator.iterator();
             for (XdmValue result : xQueryEvaluator) {
-                System.out.println("YAY");
+                XdmNode output = (XdmNode) result;
+                if (Constants.PRODUCE_OUTPUT)
+                    createOutputXMLFile(testSetFileName, output);
             }
-
-            String testSetContent = root.toString();
-            Matcher testSetHeader = Pattern.compile("<test-set([^<]*)>", Pattern.DOTALL).matcher(testSetContent);
-            if (testSetHeader.find())
-                testSetBody.append("<test-set" + testSetHeader.group(1) + ">");
-            else
-                System.exit(1);
-
-            // TODO This does not quite help us
-//            XdmNode description = (XdmNode) xpc.evaluateSingle("description", root);
-//            printWriter.write(description.toString());
-
-            // TODO we can separate them like this
-//            for (XdmNode environment : root.select(Steps.child("link")).asList()) {
-//                printWriter.write(environment.toString());
-//            }
-//            for (XdmNode environment : root.select(Steps.child("description")).asList()) {
-//                printWriter.write(environment.toString());
-//            }
-//            for (XdmNode environment : root.select(Steps.child("environment")).asList()) {
-//                printWriter.write(environment.toString());
-//            }
-
-            // TODO checkout if we can use this to better do toString()
-//            NodeInfo testDocNodeInfo = testSetDocNode.getUnderlyingNode();
-//            int testDocNode = testDocNodeInfo.getNodeKind();
-//            int rootNode = root.getUnderlyingNode().getNodeKind();
-//            int environment = root.select(Steps.child("environment")).asList().get(0).getUnderlyingNode().getNodeKind();
-//            int testcase = testSetDocNode.select(Steps.descendant("test-case")).asList().get(0).getUnderlyingNode().getNodeKind();
-
-
-            // TODO can't make a new Node
-//            QName bla = root.getNodeName();
-//            XdmNode a = new XdmNode()
-
-            for (XdmNode child : root.children()){
-                if (child.getUnderlyingNode().getDisplayName().equals("test-case"))
-                //if (child.getNodeName().getLocalName().equals("test-case"))
-                    testSetBody.append(this.processTestCase(child, xpc));
-                else {
-                    String otherNode = child.toString();
-                    otherNode = otherNode.replace(" xmlns=\"" + nameSpace + "\"", "");
-                    testSetBody.append(otherNode);
-                }
-            }
-
-            if (Constants.PRODUCE_OUTPUT)
-                createOutputXMLFile(testSetFileName, testSetBody);
         }
         else {
             String regex = testSetFileName.replace("/", "\\/");
@@ -246,74 +187,7 @@ public class TestConverter {
         }
     }
 
-    private String processTestCase(XdmNode testCase, XPathCompiler xpc) throws SaxonApiException {
-        String testCaseName = testCase.attribute("name");
-        if (!testCasesToSkip.contains(testCaseName)) {
-            testCasesOutputted++;
-            String testCaseBody = testCase.toString();
-//            XdmNode testNode = testCase.select(Steps.child("test")).asNode();
-//            String convertedTestString = this.Convert(testNode.getStringValue());
-//            XdmNode assertion = (XdmNode) xpc.evaluateSingle("result/*[1]", testCase);
-//            //String expectedResult = Convert(assertion.getStringValue());
-//            String expectedResult = Convert(assertion.toString());
-            // TODO try to perform these regex operations with xpc.evaluate()
-
-//            if (convertedTestString.contains("<![CDATA["))
-//                System.out.println("CDATA FOUND");
-
-//            if (testCaseName.equals("fn-codepoint-equal-22")) {
-//                System.out.println("& FOUND");
-//                String check = testCase.getUnderlyingNode().getStringValue();
-//                Charset iso = Charset.forName("ISO-8859-1");
-//                //testCaseBody = testCaseBody.replace("&", "\\&");
-//                XdmNode testNode = testCase.select(Steps.child("test")).asNode();
-//                String convertedTestString = this.Convert(testNode.getStringValue());
-//                String escapedHTML = StringEscapeUtils.escapeHtml4(convertedTestString);
-//                //String escaped = new String(convertedTestString, Charset.forName(new String("ISO-8859-1")));
-//                try {
-//                    StringBuilder sb = HtmlEncoder.escapeNonLatin(convertedTestString, new StringBuilder());
-//                    String Jean = net.sf.saxon.query.QueryResult.serialize(testCase.getUnderlyingNode());
-//                    String escaped = sb.toString();
-//
-//                    //byte[] latin1 = new String(convertedTestString.getBytes(StandardCharsets.UTF_8), "UTF-8").getBytes("ISO-8859-1");
-//                    //String latin1 = new String(convertedTestString.getBytes(StandardCharsets.UTF_8), "ISO-8859-1");
-//                    String latin2 = new String(convertedTestString.getBytes(StandardCharsets.ISO_8859_1), "UTF-8");
-//                    String test = latin2.toString();
-//
-//                    System.out.println("& FOUND");
-//                } catch (IOException | XPathException e) {
-//                    e.printStackTrace();
-//                }
-//                System.out.println("& FOUND");
-//            }
-            // TODO maybe same issue like with header
-            Pattern testRegex = Pattern.compile("<test>(.*)<\\/test>", Pattern.DOTALL);
-            Matcher testMatcher = testRegex.matcher(testCaseBody);
-            // TODO figure out files <test file="normalize-unicode/fn-normalize-unicode-11.xq"/>
-            if (!testMatcher.find())
-                return "";
-            String convertedTestString = this.Convert(testMatcher.group(1));
-            testCaseBody = testMatcher.replaceAll(Matcher.quoteReplacement("<test>" + convertedTestString + "</test>"));
-            Pattern resultRegex = Pattern.compile("<result>(.*)<\\/result>", Pattern.DOTALL);
-            Matcher resultMatcher = resultRegex.matcher(testCaseBody);
-            if (!resultMatcher.find())
-                System.exit(1);
-            String expectedResult = this.Convert(resultMatcher.group(1));
-            testCaseBody = resultMatcher.replaceAll(Matcher.quoteReplacement("<result>" + expectedResult + "</result>"));
-            testCaseBody = testCaseBody.replace(" xmlns=\"" + nameSpace + "\"", "");
-            return testCaseBody;
-        }
-        else{
-            testCasesToSkip.remove(testCaseName);
-            return "";
-        }
-    }
-
-    private String Convert(String testString){
-        return testString;
-    }
-
-    private void createOutputXMLFile(String testSetFileName, StringBuffer testSetBody) {
+    private void createOutputXMLFile(String testSetFileName, XdmNode testSetBody) {
         try {
             // It uses / in the filename found in catalog.xml file. It is independent from platform
             String [] directoryAndFile = testSetFileName.split("/");
@@ -325,13 +199,9 @@ public class TestConverter {
             Path testSetOutputFilePath = testSetOutputDirectoryPath.resolve(directoryAndFile[1]);
             PrintWriter printWriter = new PrintWriter(testSetOutputFilePath.toString());
 
-            // TODO check if I can extract it from some property as it is sometimes UTF-8 encoding
-            String header = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
-            printWriter.write(header);
+            String content = net.sf.saxon.query.QueryResult.serialize(testSetBody.getUnderlyingNode());
+            printWriter.write(content);
             printWriter.close();
-            Files.write(Paths.get(testSetOutputFilePath.toString()), testSetBody.toString().getBytes(), StandardOpenOption.APPEND);
-            String endRootTag = "</test-set>";
-            Files.write(Paths.get(testSetOutputFilePath.toString()), endRootTag.getBytes(), StandardOpenOption.APPEND);
         }
         catch (Exception e){
             e.printStackTrace();
