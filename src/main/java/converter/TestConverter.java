@@ -22,6 +22,7 @@ public class TestConverter {
     private static Path outputSubDirectoryPath;
     private int testSetsOutputted = 0;
     private String nameSpace = "http://www.w3.org/2010/09/qt-fots-catalog";
+    private String bindingNameSpace = "http://bindingfunctions.com/";
     private int testCasesOutputted = 0;
     private String catalogContent;
 
@@ -115,6 +116,9 @@ public class TestConverter {
     private void processCatalog(File catalogFile) throws SaxonApiException {
         Processor testDriverProcessor = new Processor(false);
 
+        ExtensionFunction converter = createConvertExtensionFunction();
+        testDriverProcessor.registerExtensionFunction(converter);
+
         DocumentBuilder catalogBuilder = testDriverProcessor.newDocumentBuilder();
         catalogBuilder.setLineNumbering(true);
         XdmNode catalogNode = catalogBuilder.build(catalogFile);
@@ -122,17 +126,13 @@ public class TestConverter {
 
         XQueryCompiler xqc = testDriverProcessor.newXQueryCompiler();
         xqc.declareNamespace("", nameSpace);
-
-        XPathCompiler xpc = testDriverProcessor.newXPathCompiler();
-        xpc.setLanguageVersion("3.1");
-        xpc.setCaching(true);
-        // Yes we do need Namespace. It is required to run evaluateSingle and luckily it is hardcoded in QT3TestDriverHE
-        xpc.declareNamespace("", nameSpace);
+        // We need a separate namespace for Extension Function. If we try calling without namespace it doesn't work
+        xqc.declareNamespace("bf", bindingNameSpace);
 
         System.out.println("Skipped Test Sets: " + testSetsToSkip.size());
         System.out.println("Skipped Test Cases: " + testCasesToSkip.size());
         for (XdmNode testSet : catalogNode.select(Steps.descendant("test-set")).asList()) {
-            this.processTestSet(catalogBuilder, xpc, xqc, testSet);
+            this.processTestSet(catalogBuilder, xqc, testSet);
         }
         System.out.println("Included Test Sets: " + testSetsOutputted);
         System.out.println("Included Test Cases: " + testCasesOutputted);
@@ -143,7 +143,43 @@ public class TestConverter {
             createOutputCatalog();
     }
 
-    private void processTestSet(DocumentBuilder catalogBuilder, XPathCompiler xpc, XQueryCompiler xqc, XdmNode testSetNode) throws SaxonApiException{
+    private ExtensionFunction createConvertExtensionFunction(){
+        ExtensionFunction convert = new ExtensionFunction() {
+            @Override
+            public QName getName() {
+                return new QName(bindingNameSpace, "convert");
+            }
+
+            @Override
+            public SequenceType[] getArgumentTypes() {
+                return new SequenceType[]{
+                    SequenceType.makeSequenceType(
+                            ItemType.STRING, OccurrenceIndicator.ONE
+                )};
+            }
+
+            @Override
+            public XdmValue call(XdmValue[] arguments) throws SaxonApiException {
+                String arg = ((XdmAtomicValue)arguments[0].itemAt(0)).getStringValue();
+                String result = Convert(arg);
+                return new XdmAtomicValue(result);
+            }
+
+            @Override
+            public SequenceType getResultType() {
+                return SequenceType.makeSequenceType(
+                        ItemType.STRING, OccurrenceIndicator.ONE
+                );
+            }
+        };
+        return convert;
+    }
+
+    private String Convert(String testString){
+        return testString;
+    }
+
+    private void processTestSet(DocumentBuilder catalogBuilder, XQueryCompiler xqc, XdmNode testSetNode) throws SaxonApiException{
         String testSetFileName = testSetNode.attribute("file");
         File testSetFile = new File(testsRepositoryDirectoryPath.resolve(testSetFileName).toString());
         XdmNode testSetDocNode = catalogBuilder.build(testSetFile);
@@ -169,21 +205,19 @@ public class TestConverter {
             // assert-xml           is always XML file with CDATA or something
             //serialization-matches is always XML file with CDATA or something
             XQueryExecutable xqe = xqc.compile(
-        "declare function local:convert($x)\n" +
-              "{ $x };\n" +
               "declare function local:transform($nodes as node()*) as node()*\n" +
               "{\n" +
               "for $n in $nodes return\n" +
               "typeswitch ($n)\n" +
-              "case element (test) return <test>{local:convert($n/string())}</test>\n" +
-              "case element (assert) return <assert>{local:convert($n/string())}</assert>\n" +
-              "case element (assert-eq) return <assert-eq>{local:convert($n/string())}</assert-eq>\n" +
-              "case element (assert-deep-eq) return <assert-deep-eq>{local:convert($n/string())}</assert-deep-eq>\n" +
-              "case element (assert-string-value) return <assert-string-value>{local:convert($n/string())}</assert-string-value>\n" +
-              "case element (assert-type) return <assert-type>{local:convert($n/string())}</assert-type>\n" +
-              "case element (assert-permutation) return <assert-permutation>{local:convert($n/string())}</assert-permutation>\n" +
-              "case element (assert-xml) return <assert-xml>{local:convert($n/string())}</assert-xml>\n" +
-              "case element (serialization-matches) return <serialization-matches>{local:convert($n/string())}</serialization-matches>\n" +
+              "case element (test) return <test>{bf:convert($n/string())}</test>\n" +
+              "case element (assert) return <assert>{bf:convert($n/string())}</assert>\n" +
+              "case element (assert-eq) return <assert-eq>{bf:convert($n/string())}</assert-eq>\n" +
+              "case element (assert-deep-eq) return <assert-deep-eq>{bf:convert($n/string())}</assert-deep-eq>\n" +
+              "case element (assert-string-value) return <assert-string-value>{bf:convert($n/string())}</assert-string-value>\n" +
+              "case element (assert-type) return <assert-type>{bf:convert($n/string())}</assert-type>\n" +
+              "case element (assert-permutation) return <assert-permutation>{bf:convert($n/string())}</assert-permutation>\n" +
+              "case element (assert-xml) return <assert-xml>{bf:convert($n/string())}</assert-xml>\n" +
+              "case element (serialization-matches) return <serialization-matches>{bf:convert($n/string())}</serialization-matches>\n" +
               "case element () return element { fn:node-name($n) } {$n/@*, local:transform($n/node())} \n" +
               "default return $n\n" +
               "};" +
