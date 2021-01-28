@@ -49,6 +49,25 @@ On the brand new Laptop, when running IntelliJ, you might need to setup SDK:
 
 It seems that M1 chip is not quite running fast with JAVA SDK. That is why we should download ZULU SDK from [here](https://cdn.azul.com/zulu/bin/zulu11.43.1021-ca-jdk11.0.9.1-macosx_aarch64.dmg). Once downloaded, it will be available in Intellij, just repeat same steps choosing the ZULU one
 
+#### Maven and ANT
+Rumble required us to install mvn and ant:
+```
+arch -x86_64 brew install maven
+echo export PATH="/usr/local/Cellar/maven/3.6.3_1/bin/:$PATH" >> ~/.zshrc
+arch -x86_64 brew install ant
+echo export PATH="/usr/local/Cellar/ant/1.10.9/bin/:$PATH" >> ~/.zshrc
+```
+
+In order to build grammar lexer classes using ant run:
+```
+ant -buildfile build_antlr_parser.xml generate-parser
+```
+
+In order to build .jar file using mvn run:
+```
+mvn clean compile assembly:single
+```
+
 # 07.10.2020 How to setup PRE-REQUIREMENTS on BRAND NEW Ubuntu 18.04 LTS
 0. Download [spark-2.4.6-bin-hadoop2.7.tgz](https://archive.apache.org/dist/spark/spark-2.4.6/spark-2.4.6-bin-hadoop2.7.tgz) 
 ```
