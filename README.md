@@ -61,6 +61,9 @@ echo export PATH="/usr/local/Cellar/ant/1.10.9/bin/:$PATH" >> ~/.zshrc
 In order to build grammar lexer classes using ant run:
 ```
 ant -buildfile build_antlr_parser.xml generate-parser
+cd src/main/java/org/rumbledb/parser
+ant -buildfile build_antlr_parser.xml generate-xquery-parser
+ant -buildfile build_antlr_parser.xml generate-xquery-lexer
 ```
 
 In order to build .jar file using mvn run:
