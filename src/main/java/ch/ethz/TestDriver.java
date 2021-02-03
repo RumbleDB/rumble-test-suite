@@ -43,6 +43,7 @@ public class TestDriver {
     private int numberOfProcessedTestCases;
     private int numberOfManaged;
     private List<String> testSetsToSkip;
+    private String queryToTest = "1 + 1";
 
     // For JSON-doc
     private Map<String, String> URItoPathLookupTable = new HashMap<>();
@@ -51,15 +52,23 @@ public class TestDriver {
     void execute() {
         getTestsRepository();
         initializeSparkAndRumble();
-
-        try {
-            // TODO in future this will be only list for 2, not supported yet. Test Converted will output them but not 1
-            testSetsToSkip = Files.readAllLines(Constants.WORKING_DIRECTORY_PATH.resolve("TestSetsToSkip.txt"), Charset.defaultCharset());
-            processCatalog(new File(testsRepositoryDirectoryPath.resolve(catalogFileName).toString()));
-        } catch (SaxonApiException | IOException e) {
-            e.printStackTrace();
+        if (!queryToTest.equals(""))
+        {
+            List<Item> resultAsList = runQuery(queryToTest, rumbleInstance);
+            List<String> lines = resultAsList.stream().map(x -> x.serialize()).collect(Collectors.toList());
+            System.out.println(String.join(" ", lines));
+            return;
         }
 
+        else {
+            try {
+                // TODO in future this will be only list for 2, not supported yet. Test Converted will output them but not 1
+                testSetsToSkip = Files.readAllLines(Constants.WORKING_DIRECTORY_PATH.resolve("TestSetsToSkip.txt"), Charset.defaultCharset());
+                processCatalog(new File(testsRepositoryDirectoryPath.resolve(catalogFileName).toString()));
+            } catch (SaxonApiException | IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     private void getTestsRepository(){
