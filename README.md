@@ -71,6 +71,22 @@ In order to build .jar file using mvn run:
 mvn clean compile assembly:single
 ```
 
+In order to debug .jar file you need to:
+First create the alias and run the command run_rumble_no_static_analysis. This will launch the Rumble in terminal
+```
+echo alias run_rumble_no_static_analysis="export SPARK_SUBMIT_OPTS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005; spark-submit target/spark-rumble-[0-9.]*-jar-with-dependencies.jar --shell yes" >> ~/.zshrc
+run_rumble_no_static_analysis
+```
+In IntelliJ do following:
+1. Click Edit Configuration
+2. Command+N
+3. From dropdown select Remote JVM Debug
+4. It should be prefilled with Host:localhost, Port:5005, Command Line Arguments for remote JVM: -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005
+5. Just input the Name and click okay
+6. Select the just created configuration and click debug
+7. Input something in Rumble and it will hit the breakpoint!
+
+
 # 07.10.2020 How to setup PRE-REQUIREMENTS on BRAND NEW Ubuntu 18.04 LTS
 0. Download [spark-2.4.6-bin-hadoop2.7.tgz](https://archive.apache.org/dist/spark/spark-2.4.6/spark-2.4.6-bin-hadoop2.7.tgz) 
 ```
