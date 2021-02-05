@@ -58,6 +58,7 @@ arch -x86_64 brew install ant
 echo export PATH="/usr/local/Cellar/ant/1.10.9/bin/:$PATH" >> ~/.zshrc
 ```
 
+###### All the commands below need to be run within rumble directory (cd ~/Documents/rumble-test-suite/rumble)
 In order to build grammar lexer classes using ant run:
 ```
 ant -buildfile build_antlr_parser.xml generate-parser
