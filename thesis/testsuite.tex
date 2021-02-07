@@ -227,6 +227,7 @@ During Phase 1, we were performing iterations with goal to overall improve Test 
 While performing iterations, we had to ensure that any further implementation would not break the test-cases that were passing before and at the same time not introduce new test-cases that are Crashing. Thus, for each iteration we have maintained log files of all Passed (Success + Managed) and Crashed test-cases. In every next iteration we have done two comparison between new and previous log files. We have performed a check that compared whether all the passed test-cases from the previous implementation were also contained in the new implementation or not and created "List of test cases that were passing before but not anymore". For Crashes, we did opposite check and created list of "Tests that were not crashing before, but are now and not in list above". 
 
 \subsection{Architecture}
+\todo{Maybe the Exceptions arhictecutre here as well}
 The overview of scenario described in \ref{Phase2_Description} can be seen in Figure \ref{fig:Phase2_Architecture}
 \begin{figure}[h!]
 	\vspace*{-5mm}
