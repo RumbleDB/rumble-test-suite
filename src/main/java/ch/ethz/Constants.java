@@ -6,6 +6,10 @@ import java.nio.file.Paths;
 public class Constants {
     public static final Path WORKING_DIRECTORY_PATH = Paths.get("").toAbsolutePath();
 
+    // Disable Converter when testing the XQuery parser for Rumble
+    public static final boolean TO_CONVERT = false;
+
+
     // Use of converted TestSuite
     public static final boolean USE_CONVERTED_TEST_SUITE = true;
     public static final String OUTPUT_TEST_SUITE_DIRECTORY = "Output_Test_Suite";

@@ -43,7 +43,9 @@ public class TestDriver {
     private int numberOfProcessedTestCases;
     private int numberOfManaged;
     private List<String> testSetsToSkip;
-    private String queryToTest = "1 + 1";
+
+    // For running a specific query when testing the XQuery parser for Rumble
+    private String queryToTest = "fn:abs(xs:int(\"-2147483648\"))";
 
     // For JSON-doc
     private Map<String, String> URItoPathLookupTable = new HashMap<>();
@@ -680,6 +682,9 @@ public class TestDriver {
     }
 
     private String Convert(String testString) throws UnsupportedTypeException {
+        if (!Constants.TO_CONVERT)
+            return testString;
+
         // Converting assertion is done in all respective assert methods
         // What was found in fn/abs.xml and math/math-acos.xml is now replaced with convert types
         testString = ConvertAtomicTypes(testString);
