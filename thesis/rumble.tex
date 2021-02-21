@@ -176,6 +176,7 @@ As explained by Irimescu in \cite{RumbleThesis}: "Clauses can be mapped to a set
 \end{table}
 
 \subsection{General Architecture}
+\label{sec:RumbleArchitecture}
 So far, we were referring to Rumble as an engine. Essentially it is a compiler implemented in Java and as such it follows basic Compiler Design principles. In order not to break declarative property of JSONiq query language, it requires a proper separation of concerns. Irimescu in his thesis \cite{RumbleThesis} proposed the layered architecture described in Figure \ref{fig:Rumble_General_Architecture}. It consists of 4 main phases:
 \begin{enumerate}
 	\item Lexer and Parser take JSONiq query as an input and produce Abstract Syntax Tree - AST as the output 
@@ -192,6 +193,7 @@ So far, we were referring to Rumble as an engine. Essentially it is a compiler i
 \end{figure}
 
 \subsubsection{Lexer and Parser}
+\label{sec:RumbleLexerParser}
 The first steps in analyzing source code, in this case query written in JSONiq query language, are Lexical and Syntax analysis's performed by Lexer and Parser modules respectively. For rather simple languages, such as JSONiq is, these two modules can be automatically generated from grammar of language. Thus, Another Tool for Language Recognition - ANTLR v4 framework \cite{ANTLR} is used. ANTLR needs grammar (.g4) file with definitions of all language constructs as the input. For Rumble, JSONiq.g4 file was implemented and using it ANTLR auto-generated Parser and Lexer together with BaseVisitor (implements visitor pattern) Java classes. In the code, you can now use first Lexer class that takes JSONiq query stream as input and then pass it to Parser class which will generate AST and conclude the so called "front-end" part of compiler.
 
 \subsubsection{Translator}

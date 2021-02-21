@@ -1,12 +1,158 @@
 
 \chapter{Test Converter}
+In Figure \ref{fig:Phase3_Architecture} we have represented architecture that proposes implementing Test Converter as separate module. The main idea driving us was having a clean architecture that would make the Test Driver easily maintainable and extensible. However, In Section \ref{Phase3_Description}, we have explained the down sides of hard-coded conversion using Java String.replace method. Just having the clean architecture would not solve the hard-coding issues in Test Converter. And ultimately, we want to produce purely JSONiq Test Suite similar to QT3TS for XQuery. Such Test Suite would be available for everyone to use and verify other JSONiq implementations such as Zorba \cite{Zorba}, IBM WebSphere \cite{WebSphere}, Xidel \cite{Xidel}.
 
+\section{Architecture}
+First we need to think about achieving a clean XQuery to JSONiq conversion without hard-coding. Let us recall Rumble and its entire Section \ref{sec:RumbleArchitecture}. We said that in order to finally execute the query, we are performing conversion from Expression Tree to tree of runtime iterators. The Expression Tree itself is a higher-level abstraction of JSONiq functional language that is composed of expressions. The entire Node Class Hierarchy that was implemented in Rumble is used to represent the Expression Tree.
+
+If we are able to create Expression Tree from a query that is written in XQuery, it would mean that we have created JSONiq Expression Tree. Instead of creating the runtime iterator and executing the query, we can simply serialize Expression Tree to JSONiq query directly. We will reuse parts of Rumble and extends it's architecture so that it supports parsing queries written in XQuery. 
+
+In Figure \ref{fig:Rumble_General_Architecture_With_XQuery} we have represented that will enable us to achieve the target. In the following sub sections we will explain the implementation details of XQuery Lexer \& Parser and Translator together with Serialization part. 
+
+\begin{figure}[h!]
+	\includegraphics[width=\linewidth]{double_parsing_architecture.png}
+	\vspace*{-5mm}
+	\caption{Rumble General Architecture with XQuery}
+	\label{fig:Rumble_General_Architecture_With_XQuery}
+\end{figure}
+
+\section{Rumble Extension}
+Here we will go in details of implementation of each and every modification that has been performed in Rumble in order for us to be able to re-use the already existing classes in the Node Class Hierarchy. 
+
+\subsection{Lexer and Parser}
+If we recall Section \ref{sec:RumbleLexerParser}, for simple languages, these two modules can be automatically generated from grammar of language. XQuery is 95\% similar to JSONiq, therefore we just need to create a grammar file) similar to JSONiq.g4. 
+
+The initial approach was to implement the XQuery.g4 file ourselves based on already implemented JSONiq.g4 file in Rumble. However, XQuery is older than JSONiq and it was logical that such file was already implemented. Indeed, we managed to find an ANTLR4 implementation of xqDoc for XQuery \cite{XqueryGrammar}. It is licensed under the same Apache License 2.0 like Rumble and we can re-use it. The grammar is stable and it was not changed for more than 10 months so we we do not expect it to be updated. Also it is compliant with XQuery 3.1 W3C Recommendation \cite{XQueryRecommendation}. 
+
+Names of certain labels in grammar file were changed in order to match the code of TranslationVisitor class. This class will be reused to implement XQueryTranslationVisitor and using the same labels would make it easier for us. The structure remains the same except for couple of modifications that we will document here:
+\begin{enumerate}
+	\item module was not according to the W3C Recommendation \cite{XQueryRecommendation} and allowed for multiple mainModules. See below the comparison between old and new module implementation.
+	
+	module : xqDocComment? versionDecl? xqDocComment? (libraryModule $|$ (mainModule (SEMICOLON versionDecl? mainModule)*));
+	
+	module : xqDocComment? versionDecl? xqDocComment? (libraryModule $|$ mainModule) ;
+	\item moduleDecl was changed to use uriLiteral instead of stringLiteral in order to match the implementation of TranslationVisitor class. This does not affect structure as uriLiteral comes down to stringLiteral in next level of nesting (uriLiteral: stringLiteral)
+	\item prolog was changed to use annotatedDecl in order to match the implementation of TranslationVisitor class. This does not affect structure as annotatedDecl offers the same options that were originally in prolog:
+	
+	annotatedDecl: varDecl $|$ functionDecl	$|$ contextItemDecl $|$ optionDecl;
+	
+	\item functionDecl and varDecl were not according to the W3C Recommendation \cite{XQueryRecommendation}. It allowed for (annotations $|$ ncName) while the ncName is under annotations but on 3 levels below in nesting
+ 	
+	\item varDecl was not according to the W3C Recommendation \cite{XQueryRecommendation}. varValue and varDefaultValue were defined as expr instead of exprSingle and it allowed them to be surrounded by \{ \}. See below the comparison between old and new varDecl implementation.
+	
+	varDecl: KW\_DECLARE annotations KW\_VARIABLE DOLLAR varName typeDeclaration?
+	(
+	(COLON\_EQ varValue)
+	$|$ (KW\_EXTERNAL (COLON\_EQ varDefaultValue)?)
+	$|$ (LBRACE varValue RBRACE)
+	$|$ (KW\_EXTERNAL(LBRACE varDefaultValue RBRACE)?)
+	) ; 
+	
+	varDecl: KW\_DECLARE annotations KW\_VARIABLE DOLLAR varName typeDeclaration?
+	((COLON\_EQ varValue)
+	$|$ (KW\_EXTERNAL (COLON\_EQ varDefaultValue)?)) ;
+	
+	varValue: expr ; $->$ varValue: exprSingle ;
+	
+	varDefaultValue: expr ; $->$ varDefaultValue: exprSingle ;
+	
+	\item squareArrayConstructor was changed to use expr instead of exprSingle (COMMA exprSingle)* in order to match the implementation of TranslationVisitor class. This does not affect structure as it is equivalent in next level of nesting (expr: exprSingle (COMMA exprSingle)* ;)
+	
+	\item arrowExpr was changed to use complexArrow instead of arrowFunctionSpecifier argumentList in order to match the implementation of TranslationVisitor class. This does not affect structure as it is equivalent in next level of nesting (complexArrow: arrowFunctionSpecifier argumentList;)
+	\todo{insert about simpleMapExpr}
+\end{enumerate}
+
+We have also implemented another script for handling the XQuery.g4 and using it ANTLR auto-generated XQueryParser and XQueryLexer together with its corresponding XQueryParserBaseVisitor base class.
+
+\subsection{Translator}
+The second part requires us to implement XQueryTranslationVisitor that extends the generated XQueryParserBaseVisitor class and wraps around Node class. With proper implementation we would be able to achieve converting XQuery into the JSONiq Expression Tree. The implementation is mainly based on the already implemented JSONiq TranslationVisitor with modifications that we will document here.
+
+Of course, not everything can be converted to JSONiq and it should not be converted. Below we will list the conversions that we have left out as they will never be supported:
+\begin{itemize}
+	\item schemaImport
+	\item copyNamespacesDecl
+	\item constructionDecl
+	\item boundarySpaceDecl
+	\item optionDecl
+	\item nodeComp
+	\item unionExpr
+	\item intersectExceptExpr
+	\item parenthesizedExpr within the arrowFunctionSpecifier of arrowExpr
+	\item URIQualifiedName
+	\item validateExpr, extensionExpr within valueExpr of unaryExpr
+	\item nodeConstructor within primaryExpr
+	\item kindTest, typedMapTest, typedArrayTest within itemType
+\end{itemize}
+
+In addition to that, there are conversions that we are yet not able to perform as the implementation is missing in Rumble. Unfortunately, here we are again introducing dependency on Rumble. But it was the best approach in order to perform the clean conversion without hard-coding. Following conversions are classified as out of scope of the thesis and will be supported in future once Rumble is upgraded.
+\begin{itemize}
+	\item defaultNamespaceDecl
+	\item decimalFormatDecl
+	\item baseURIDecl
+	\item contextItemDecl
+	\item existUpdateExpr within exprSingle
+	\item parenthesizedExpr and STAR object lookup within keySpecifier of lookup
+	\item orderedExpr and unorderedExpr within primaryExpr
+	\item windowClause within initialClause of flworExpr
+	\item functionTest within itemType
+\end{itemize}
+
+For the versions that we support, since the grammar file is based on the XQuery 3.1 W3C Recommendation \cite{XQueryRecommendation}, we have decided to support XQuery versions 1.0, 3.0 and 3.1 as version  3.1 is backward compatible.
+
+For annotations, for now we only support single public annotations without prefix. Single since we can see from QT3TS in the prod/ModuleImport.xml, tests modules-pub-priv-29 to 36, we can see that "It is an error if a variable's annotations contains any combination of two annotations". In addition, according to the W3C Recommendation \cite{XQueryRecommendation} it is said that "If no prefix is present, the name is in thehttp://www.w3.org/2012/xquery namespace". This results in following implementation of annotation handling:
+\begin{enumerate}
+	\item Throw an error if there is more than 1 annotation in the annotations list
+	\item Otherwise, extract the EQName
+	\item Throw an error if prefix is not equal to http://www.w3.org/2012/xquery 
+	\item Otherwise, throw an error if local name is not public
+	\item Otherwise, let the query with annotations to be converted
+\end{enumerate}
+
+Handling the Literals is slightly different. If we compare JSONiq with XQuery, we will see that true, false and null literals do not exist in XQuery. Instead they will be added as function calls.
+
+The itemType of XQuery covers more possibilities compared to the JSONiq itemType and below we will observe the differences:
+
+itemType: kindTest
+$|$ (KW\_ITEM LPAREN RPAREN)
+$|$ functionTest
+$|$ mapTest
+$|$ arrayTest
+$|$ atomicOrUnionType
+$|$ parenthesizedItemTest ;
+
+itemType                : Kitem
+$|$ atomicType;
+$|$ Kobject
+$|$ Karray
+$|$ Kjson;
+
+In JSONiq TranslationVisitor implementation, it was enough to call getItemTypeByName method and pass the parsed context. In XQuery implementation, this is only possible for the atomicOrUnionType. For all others, we have to handle it differently. First of all, kindTest will throw an error as it corresponds to the 7 complex (non-atomic) types that should not be converted (document, element etc.). The, functionTest is not yet supported in Rumble and it is out of the scope of thesis. The mapTest and arrayTest correspond to AtomicItemType.Object and AtomicItemType.Array item type of JSON if they are untyped, otherwise we throw an error. Item is the AtomicItemType.item while parenthesizedItemTest recursively calls the same method.
+
+When it comes to arrayConstructor, there is a slight problem. JSONiq and XQuery do not have the same data model - there is a data model mismatch. XQuery allows us to have Sequence of Items as array members or object values. JSONiq does not support that and requires single items instead. The only way to store Sequence of Items in the JSONiq data model is using arrays. In order to overcome the dependency mismatch, we introduce mapping between two data models and we map nested Sequence of Items of XQuery to JSONiq array. In the case of squareArrayConstructor of XQuery, we recursively iterate over the exprSingle in expression and perform visitExprSingle. Each expression returned by visitExprSingle, is then wrapped into an array constructor. Finally all these array constructors are wrapped into Comma Expression that is then wrapped in the main array constructor. In the case of curlyArrayConstructor, we first obtain the content by calling visitExpr. Then we instantiate new Context Item Expression and wrap it into an array constructor. We combine these two by instantiating new Simple Map Expression that is then wrapped in the main array constructor.
+
+\subsection{Serialize to JSONiq}
+Instead of running the query and returning the iterator over the resulting Sequence of Items, we need to perform serialization. Serialization is basically inverted process of parsing. We have declared a new method serializeToJSONiq in the abstract class Node. All other classes that are used to create the JSONiq Expression Tree are derived from Node and in those classes we need to implement the method. We are now peeking into the XQuery.g4 grammar file in order to recreate the String representation of each and every Expression. In each implementation, we use the appropriate keywords and recursively call serializeToJSONiq for each nested Expression. 
+
+In Section \ref{sec:RumbleArchitecture}, we have presented the 4 phases that Rumble goes through as a compiler. If we further analyze these phases through the code of Java Rumble API, we can identify following steps that are required in order to execute the query:
+\begin{enumerate}
+	\item Instantiate Lexer from the input stream - this is the complete query
+	\item Instantiate Parser using the Lexer from Step 1
+	\item Instantiate Static Context  (map between variable names and sequence types) using the URI file - this is the input file on which the query is executed 
+	\item Instantiate Translation Visitor using Static Context from Step 3
+	\item Instantiate MainModule by calling visit method of Translation Visitor and passing the main module extracted by the Parser as the argument
+	\item In the runQuery method of Java Rumble API, first 5 Steps are performed by calling parseMainModuleFromQuery method that returns Main Module from Step 5
+	\item Instantiate Dynamic Context (mapping between variable names and actual sequences of items) using returned Main Module from Step 6
+	\item Instantiate RunTimeIterator using returned Main Module from Step 6
+	\item Return the Sequence of Items result instantiated using the Iterator from Step 8 and Dynamic Context from Step 7
+\end{enumerate}
+
+To perform only serialization without obtaining results of the query, we have extended Java Rumble API with additional method serializeToJSONiq. This method performs the first same first 6 Steps described above. After that, we simply call the implementation of serializeToJSONiq of abstract Node class via Main Module from Step 6. We pass String Buffer as the argument which gets populated and then the Java Rumble API serializeToJSONiq method returns it as a String. Such implementation allowed Rumble to provide conversion out of the box via JSONiq Expression Tree.
+
+\section{Implementation}
+Fails, as expected and should not be converted to JSONiq. It will never be supported. \todo{insert the EXCEL that me and Fourny classified in the Polybox}For this we have created simple 
 \todo{Explain that this is a separate Java Application and that the idea is to output JSONiq test suite that can be used to verify any JSONiq implementation and not just Rumble. Clearly Emphasize the separation of Group 1 and Group 3 from the Phase 3 of Implementation}
 
 \todo{Draw a new architecture of this java application if needed and exaplain how we have 2 lists for skipping - one is used in testdriver because we know it will fail and the other will be used in testconverter because it is not JSONiq}
 
-\todo{Insert a step  from commented link below - Steps of Inputs of Understanding Rumble. Explain where do we want to reuse Rumble and how in order to achieve the conversion. How the Expression tree will provide it out of the box and simply we will be able to serialize to JSONiq} %https://onedrive.live.com/view.aspx?resid=22DCF06E2163AB78%2118160&id=documents&wd=target%28Thesis%2FFor%20the%20report.one%7C8A456F7A-5A75-43D6-87A7-91CC6306A144%2FUnderstanding%20Rumble%7C32B67BA3-8D6F-4849-BEC0-C8C513BE148A%2F%29}
 
-\todo{Explain that we create a new grammar file because we now want to parse XQuery instead. Explain that grammar is complete and that no modifications were needed except labels and couple of things that I have listed}
-
-\todo{Cover everything that was documented in the 11.02 meeting at the end there is chapter for report}
+\todo{Add bingind of the JAVA method to Saxon}
