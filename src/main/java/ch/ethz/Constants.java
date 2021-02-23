@@ -9,6 +9,7 @@ public class Constants {
     // Disable Converter when testing the XQuery parser for Rumble
     public static final boolean TO_CONVERT = false;
 
+    public static final String TEST_SETS_TO_SKIP_FILENAME = "TestSetsToSkip_Item2.txt";
 
     // Use of converted TestSuite
     public static final boolean USE_CONVERTED_TEST_SUITE = true;

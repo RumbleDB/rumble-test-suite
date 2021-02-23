@@ -45,7 +45,7 @@ public class TestDriver {
     private List<String> testSetsToSkip;
 
     // For running a specific query when testing the XQuery parser for Rumble
-    private String queryToTest = "fn:abs(xs:int(\"-2147483648\"))";
+    private String queryToTest = "";
 
     // For JSON-doc
     private Map<String, String> URItoPathLookupTable = new HashMap<>();
@@ -64,8 +64,7 @@ public class TestDriver {
 
         else {
             try {
-                // TODO in future this will be only list for 2, not supported yet. Test Converted will output them but not 1
-                testSetsToSkip = Files.readAllLines(Constants.WORKING_DIRECTORY_PATH.resolve("TestSetsToSkip.txt"), Charset.defaultCharset());
+                testSetsToSkip = Files.readAllLines(Constants.WORKING_DIRECTORY_PATH.resolve(Constants.TEST_SETS_TO_SKIP_FILENAME), Charset.defaultCharset());
                 processCatalog(new File(testsRepositoryDirectoryPath.resolve(catalogFileName).toString()));
             } catch (SaxonApiException | IOException e) {
                 e.printStackTrace();
