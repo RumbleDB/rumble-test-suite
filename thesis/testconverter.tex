@@ -82,6 +82,9 @@ Of course, not everything can be converted to JSONiq and it should not be conver
 	\item validateExpr, extensionExpr within valueExpr of unaryExpr
 	\item nodeConstructor within primaryExpr
 	\item kindTest, typedMapTest, typedArrayTest within itemType
+	\item axisStep within stepExpr
+	\item multiple stepExpr within relativePathExpr
+	\item single or double dash preceding relativePathExpr within pathExpr
 \end{itemize}
 
 In addition to that, there are conversions that we are yet not able to perform as the implementation is missing in Rumble. Unfortunately, here we are again introducing dependency on Rumble. But it was the best approach in order to perform the clean conversion without hard-coding. Following conversions are classified as out of scope of the thesis and will be supported in future once Rumble is upgraded.

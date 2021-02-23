@@ -317,8 +317,8 @@ Final goal was to identify test-cases that fail but can be converted to JSONiq. 
 	\label{tab:Phase2_DependencyList}
 \end{table}
 
+\todo{somehow introduce pagebreak here so that table comes before text about Phase 3 implementation}
 \section{Phase 3 implementation}
-\todo{ Emphasize that for Converter itself we need a plugin architecture and draw it. So that you can include and exclude some conversion. }
 \subsection{Description}
 \label{Phase3_Description}
 The main issue of Converter described in Section \ref{Phase2_Converter} was that it was hard-coded conversion using Java String.replace method. Such implementation can be very unstable. For example, we can look at 5th item of "other conversions" mentioned in Section \ref{Phase2_Converter} - replacing ' with ". For example, test-case Literals009 is verifying whether "test' is a valid String Literal. With our hard-coded conversion, we will make this test-case valid String Literal instead of it causing an Error Code XPST0003. Therefore, we have decided to implement Test Converter as separate module. It's main purpose is to generalize the hard-coded conversion. It would take QT3TS as Input and generate pure JSONiq Test Suite as output.
@@ -339,7 +339,7 @@ If we compare above described classification with classification in Table \ref{t
 
 Performing iterations in Phase 1, we want to distribute all Crashes into some of Item 4 or 1. Of course, it is in our interest to identify as many test-cases as possible as Item 4 and perform conversion in Test Converter. Everything that we cannot convert, we will classify as Item 1. 
 
-Items 1 and 2 will be excluded from Test Converter output. However, we also need to take into account that over time, as Rumble implementation improves, tests from Item 1 will be distributed into 4 other categories. Therefore, we want to make highly modular and extensible architecture. We have decided to maintain a list of conversions that need to be performed. This list will be compiled by using all results obtained so far. The architecture with work as a "plugin". It will allow us to specify what conversions we will perform and what we will include or exclude from output. The important design decision remaining is the Data Format of the Test Converted output. \todo{We do not have Plugin anymore, we have lists of test cases that we will excluded or included. We should put that Item 2 will be distributed into 4 categories. Only Item 1 will be excluded from the output}
+Items 1 will be excluded from Test Converter output. Items 2 on the other hand, will be excluded from Test Driver input. However, we also need to take into account that over time, as Rumble implementation improves, tests from Item 2 will be distributed into 4 other categories. Therefore, we want to make highly modular and extensible architecture. The important design decision remaining is the Data Format of the Test Converted output.
 
 \subsubsection{JSONiq and Test Converter Data Format}
 The JSONiq extension to XQuery allows processing XML and JSON natively and with a single language. This extension is based on the same data model as the core JSONiq and is based on the same logical concepts. Because of the complexity of the XQuery grammar, the JSONiq extension to XQuery has a less pleasant syntax that the JSONiq core. \todo{maybe cite something}. When designing the Test Converter, we could have decided to use either XML or JSON as the under-laying language. However, as our Test Driver was already implemented in the previous phase and was expecting XML as input and using the before mentioned Saxon for parsing it, we have decided to keep the same language for output of the Test Converter. 
@@ -353,3 +353,113 @@ The overview of scenario described in \ref{Phase3_Description} can be seen in Fi
 	\caption{Phase 1 Architecture Overview}
 	\label{fig:Phase3_Architecture}
 \end{figure}
+
+\subsection{Results}
+After carefully analyzing the complete QT3TS, we have concluded that out of 424 test-sets QT3TS consists of, total of 143 can be classified of belonging in the Item 1 or Item 2 of classification documented in this phase of implementation. More specifically, we have assigned 61 test-sets to Item 1 presented in Table \ref{tab:Phase3_Item1} and 84 test-sets to Item 2 presented in Table \ref{tab:Phase3_Item2}.
+
+In addition to test-sets assigned to Item 2, we are adding the Unsupported and Dependency. Furthermore, several bugs were fixed in Rumble between Phase 2 and Phase 3 Implementation resulting in:
+
+\begin{table}[h!]
+	\centering
+	\begin{tabular}{|l|r|r|}
+		\hline
+		\multicolumn{1}{|c|}{Scenario} & \multicolumn{1}{c|}{Total test-cases} & \multicolumn{1}{c|}{\% of all test-cases} \\ \hline
+		Item 1                         & 3675                                  & 11.65                                     \\ \hline
+		Item 2                         & 12751                                 & 40.41                                     \\ \hline
+		Item 3                         & 7007                                  & 22.20                                     \\ \hline
+		Item 4                         & 4424                                  & 14.02                                     \\ \hline
+		Item 5                         & 999                                   & 3.17                                      \\ \hline
+		Item 6                         & 2701                                  & 8.56                                      \\ \hline
+	\end{tabular}
+	\caption{Phase 3 Results Overview}
+	\label{tab:Phase3_ResultTable}
+\end{table}
+
+\begin{table}[]
+	\centering
+	\begin{tabular}{ll}
+		fn/base-uri.xml                                                                 & prod/AxisStep.ancestor-or-self.xml                                                  \\
+		fn/doc.xml                                                                      & prod/AxisStep.following.xml                                                         \\
+		fn/document-uri.xml                                                             & prod/AxisStep.following-sibling.xml                                                 \\
+		fn/element-with-id.xml                                                          & prod/AxisStep.preceding.xml                                                         \\
+		fn/generate-id.xml                                                              & prod/AxisStep.preceding-sibling.xml                                                 \\
+		fn/has-children.xml                                                             & prod/AxisStep.static-typing.xml                                                     \\
+		fn/id.xml                                                                       & prod/AxisStep.unabbr.xml                                                            \\
+		fn/idref.xml                                                                    & prod/BoundarySpaceDecl.xml                                                          \\
+		fn/innermost.xml                                                                & prod/CompAttrConstructor.xml                                                        \\
+		fn/in-scope-prefixes.xml                                                        & prod/CompDocConstructor.xml                                                         \\
+		fn/json-to-xml.xml                                                              & prod/CompCommentConstructor.xml                                                     \\
+		fn/lang.xml                                                                     & prod/CompElemConstructor.xml                                                        \\
+		fn/name.xml                                                                     & prod/CompNamespaceConstructor.xml                                                   \\
+		fn/namespace-uri.xml                                                            & prod/CompPIConstructor.xml                                                          \\
+		fn/namespace-uri-for-prefix.xml                                                 & prod/CompTextConstructor.xml                                                        \\
+		fn/nilled.xml                                                                   & prod/ConstructionDecl.xml                                                           \\
+		fn/node-name.xml                                                                & prod/ConstructionDecl.schema.xml                                                    \\
+		fn/outermost.xml                                                                & prod/Comment.xml                                                                    \\
+		fn/parse-xml.xml                                                                & prod/CopyNamespacesDecl.xml                                                         \\
+		fn/parse-xml-fragment.xml                                                       & prod/DirAttributeList.xml                                                           \\
+		fn/path.xml                                                                     & prod/DirectConstructor.xml                                                          \\
+		fn/resolve-QName.xml                                                            & prod/DirElemConstructor.xml                                                         \\
+		fn/root.xml                                                                     & prod/DirElemContent.xml                                                             \\
+		fn/xml-to-json.xml                                                              & prod/DirElemContent.namespace.xml                                                   \\
+		xs/token.xml                                                                    & prod/DirElemContent.whitespace.xml                                                  \\
+		op/except.xml                                                                   & prod/NameTest.xml                                                                   \\
+		op/intersect.xml                                                                & prod/NodeTest.xml                                                                   \\
+		op/is-same-node.xml                                                             & prod/SchemaImport.xml                                                               \\
+		prod/AxisStep.xml                                                               & prod/StepExpr.xml                                                                   \\
+		prod/AxisStep.abbr.xml                                                          & prod/ValidateExpr.xml                                                               \\
+		prod/AxisStep.ancestor.xml                                                      &                                                                                    
+	\end{tabular}
+	\caption{Item 1 - Fails, as expected and should not be converted to JSONiq. It will never be supported}
+	\label{tab:Phase3_Item1}
+\end{table}
+
+\begin{table}[]
+	\centering
+	\begin{tabular}{ll}
+		fn/compare.xml                            & map/size.xml                               \\
+		fn/analyze-string.xml                     & map/put.xml                                \\
+		fn/collation-key.xml                      & map/remove.xml                             \\
+		fn/contains-token.xml                     & map/for-each.xml                           \\
+		fn/data.xml                               & array/append.xml                           \\
+		fn/default-collation.xml                  & array/filter.xml                           \\
+		fn/default-language.xml                   & array/fold-left.xml                        \\
+		fn/environment-variable.xml               & array/fold-right.xml                       \\
+		fn/escape-html-uri.xml                    & array/for-each.xml                         \\
+		fn/filter.xml                             & array/for-each-pair.xml                    \\
+		fn/fold-left.xml                          & array/get.xml                              \\
+		fn/fold-right.xml                         & array/head.xml                             \\
+		fn/for-each.xml                           & array/insert-before.xml                    \\
+		fn/for-each-pair.xml                      & array/join.xml                             \\
+		fn/format-integer.xml                     & array/put.xml                              \\
+		fn/format-number.xml                      & array/remove.xml                           \\
+		fn/function-lookup.xml                    & array/reverse.xml                          \\
+		fn/function-arity.xml                     & array/sort.xml                             \\
+		fn/function-name.xml                      & array/subarray.xml                         \\
+		fn/implicit-timezone.xml                  & array/tail.xml                             \\
+		fn/iri-to-uri.xml                         & xs/dateTimeStamp.xml                       \\
+		fn/load-xquery-module.xml                 & xs/error.xml                               \\
+		fn/local-name.xml                         & xs/normalizedString.xml                    \\
+		fn/local-name-from-QName.xml              & xs/numeric.xml                             \\
+		fn/namespace-uri-from-QName.xml           & op/bang.xml                                \\
+		fn/parse-ietf-date.xml                    & op/QName-equal.xml                         \\
+		fn/parse-json.xml                         & prod/Annotation.xml                        \\
+		fn/prefix-from-QName.xml                  & prod/BaseURIDecl.xml                       \\
+		fn/QName.xml                              & prod/ContextItemDecl.xml                   \\
+		fn/random-number-generator.xml            & prod/ContextItemExpr.xml                   \\
+		fn/resolve-uri.xml                        & prod/DefaultCollationDecl.xml              \\
+		fn/sort.xml                               & prod/DefaultNamespaceDecl.xml              \\
+		fn/static-base-uri.xml                    & prod/EQName.xml                            \\
+		fn/unparsed-text.xml                      & prod/ExtensionExpr.xml                     \\
+		fn/unparsed-text-available.xml            & prod/ModuleImport.xml                      \\
+		fn/unparsed-text-lines.xml                & prod/NamedFunctionRef.xml                  \\
+		map/merge.xml                             & prod/NamespaceDecl.xml                     \\
+		prod/MapConstructor.xml                   & prod/OptionDecl.xml                        \\
+		map/contains.xml                          & prod/OptionDecl.serialization.xml          \\
+		map/find.xml                              & prod/UnaryLookup.xml                       \\
+		map/get.xml                               & prod/VersionDecl.xml                       \\
+		map/entry.xml                             & prod/WindowClause.xml                     
+	\end{tabular}
+	\caption{Item 2 - Fails, as expected since it is not supported yet}
+	\label{tab:Phase3_Item2}
+\end{table}
