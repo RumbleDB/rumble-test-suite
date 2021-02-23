@@ -59,7 +59,6 @@ Names of certain labels in grammar file were changed in order to match the code 
 	\item squareArrayConstructor was changed to use expr instead of exprSingle (COMMA exprSingle)* in order to match the implementation of TranslationVisitor class. This does not affect structure as it is equivalent in next level of nesting (expr: exprSingle (COMMA exprSingle)* ;)
 	
 	\item arrowExpr was changed to use complexArrow instead of arrowFunctionSpecifier argumentList in order to match the implementation of TranslationVisitor class. This does not affect structure as it is equivalent in next level of nesting (complexArrow: arrowFunctionSpecifier argumentList;)
-	\todo{insert about simpleMapExpr}
 \end{enumerate}
 
 We have also implemented another script for handling the XQuery.g4 and using it ANTLR auto-generated XQueryParser and XQueryLexer together with its corresponding XQueryParserBaseVisitor base class.

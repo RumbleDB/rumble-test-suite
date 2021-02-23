@@ -166,59 +166,6 @@ Other conversions that were performed:
 
 Other items that were unsupported in Phase 2 were node(), empty-sequence() and xs:NOTATION together with all error codes that are not in Table \ref{tab:Phase2_Supported Types} that was taken from \cite{RumbleSupportedErrorCodes}.
 
-\begin{table}[]
-	\begin{tabular}{lllr}
-		\textbf{Type}      & \textbf{Status} &  & \multicolumn{1}{c}{\textbf{Supported Error Codes}} \\
-		atomic             & supported       &  & FOAR0001                                           \\
-		anyURI             & supported       &  & FOCA0002                                           \\
-		base64Binary       & supported       &  & FODC0002                                           \\
-		boolean            & supported       &  & FOFD1340                                           \\
-		byte               & not supported   &  & FOFD1350                                           \\
-		date               & supported       &  & JNDY0003                                           \\
-		dateTime           & supported       &  & JNTY0004                                           \\
-		dateTimeStamp      & not supported   &  & JNTY0024                                           \\
-		dayTimeDuration    & supported       &  & JNTY0018                                           \\
-		decimal            & supported       &  & RBDY0005                                           \\
-		double             & supported       &  & RBML0001                                           \\
-		duration           & supported       &  & RBML0002                                           \\
-		float              & not supported   &  & RBML0003                                           \\
-		gDay               & not supported   &  & RBML0004                                           \\
-		gMonth             & not supported   &  & RBML0005                                           \\
-		gYear              & not supported   &  & RBST0001                                           \\
-		gYearMonth         & not supported   &  & RBST0002                                           \\
-		hexBinary          & supported       &  & RBST0003                                           \\
-		int                & not supported   &  & RBST0004                                           \\
-		integer            & supported       &  & SENR0001                                           \\
-		long               & not supported   &  & XPDY0002                                           \\
-		negativeInteger    & not supported   &  & XPDY0050                                           \\
-		nonPositiveInteger & not supported   &  & XPDY0130                                           \\
-		nonNegativeInteger & not supported   &  & XPST0003                                           \\
-		positiveInteger    & not supported   &  & XPST0008                                           \\
-		short              & not supported   &  & XPST0017                                           \\
-		string             & supported       &  & XPST0080                                           \\
-		time               & supported       &  & XPST0081                                           \\
-		unsignedByte       & not supported   &  & XPTY0004                                           \\
-		unsignedInt        & not supported   &  & XQDY0054                                           \\
-		unsignedLong       & not supported   &  & XQST0016                                           \\
-		unsignedShort      & not supported   &  & XQST0031                                           \\
-		yearMonthDuration  & supported       &  & XQST0033                                           \\
-		&                 &  & XQST0034                                           \\
-		&                 &  & XQST0038                                           \\
-		&                 &  & XQST0039                                           \\
-		&                 &  & XQST0047                                           \\
-		&                 &  & XQST0048                                           \\
-		&                 &  & XQST0049                                           \\
-		&                 &  & XQST0052                                           \\
-		&                 &  & XQST0059                                           \\
-		&                 &  & XQST0069                                           \\
-		&                 &  & XQST0088                                           \\
-		&                 &  & XQST0089                                           \\
-		&                 &  & XQST0094                                          
-	\end{tabular}
-	\caption{Rumble Supported Types and Error Codes}
-	\label{tab:Phase2_Supported Types}
-\end{table}
-
 \subsubsection{Regression Tests}
 During Phase 1, we were performing iterations with goal to overall improve Test Driver's implementation. The good metric while performing these iterations was total number of test-case Crashes. Our goal was to reduce those numbers as much as possible. This was mainly handled by making following changes: bug fixes, software enhancements, configuration changes. Creating this changes in software development can usually lead to creating new issues that were not present before or re-emergence of old issues. In these cases it is quite common that software development requires regression testing.
 \todo{MAYBE CITE SOMETHING} Regression testing (rarely non-regression testing[1]) is re-running functional and non-functional tests to ensure that previously developed and tested software still performs after a change.[2] If not, that would be called a regression. 
@@ -275,49 +222,6 @@ The main goal of performing iterations was to go through all the crashes and try
 
 Final goal was to identify test-cases that fail but can be converted to JSONiq. They could not be included into the automatic distinction of 7 above mentioned cases and had to be handled manually. They also helped with identifying what Phase 3 conversion also had to support.
 
-\begin{table}[]
-	\begin{tabular}{ll}
-		\textbf{Dependency name}           & \textbf{Status}              \\
-		higherOrderFunctions               & supported                    \\
-		moduleImport                       & supported                    \\
-		arbitraryPrecisionDecimal          & supported                    \\
-		schemaValidation                   & not supported (XML specific) \\
-		schemaImport                       & not supported (XML specific) \\
-		advanced-uca-fallback              & not supported                \\
-		non\_empty\_sequence\_collection   & not supported yet            \\
-		collection-stability               & not supported yet            \\
-		directory-as-collection-uri        & not supported yet            \\
-		non\_unicode\_codepoint\_collation & not supported                \\
-		staticTyping                       & not supported yet            \\
-		simple-uca-fallback                & not supported                \\
-		olson-timezone                     & not supported yet            \\
-		fn-format-integer-CLDR             & not supported yet            \\
-		xpath-1.0-compatibility            & not supported (XML specific) \\
-		fn-load-xquery-module              & not supported yet            \\
-		fn-transform-XSLT                  & not supported yet            \\
-		namespace-axis                     & not supported (XML specific) \\
-		infoset-dtd                        & not supported (XML specific) \\
-		serialization                      & not supported yet            \\
-		fn-transform-XSLT30                & not supported yet            \\
-		remote\_http                       & not supported                \\
-		typedData                          & not supported                \\
-		schema-location-hint               & not supported (XML specific) \\
-		calendar                           & not supported yet            \\
-		unicode-version                    & supported                    \\
-		unicode-normalization-form         & supported                    \\
-		format-integer-sequence            & not supported yet            \\
-		xsd-version                        & supported                    \\
-		xml-version                        & supported                    \\
-		default-language                   & only "en" supported          \\
-		language                           & only "en" supported          \\
-		spec                               & only "XT30+" not supported   \\
-		limits                             & not supported yet           
-	\end{tabular}
-	\caption{Supported Dependency List }
-	\label{tab:Phase2_DependencyList}
-\end{table}
-
-\todo{somehow introduce pagebreak here so that table comes before text about Phase 3 implementation}
 \section{Phase 3 implementation}
 \subsection{Description}
 \label{Phase3_Description}
@@ -373,6 +277,102 @@ In addition to test-sets assigned to Item 2, we are adding the Unsupported and D
 	\end{tabular}
 	\caption{Phase 3 Results Overview}
 	\label{tab:Phase3_ResultTable}
+\end{table}
+
+
+\begin{table}[]
+	\begin{tabular}{lllr}
+		\textbf{Type}      & \textbf{Status} &  & \multicolumn{1}{c}{\textbf{Supported Error Codes}} \\
+		atomic             & supported       &  & FOAR0001                                           \\
+		anyURI             & supported       &  & FOCA0002                                           \\
+		base64Binary       & supported       &  & FODC0002                                           \\
+		boolean            & supported       &  & FOFD1340                                           \\
+		byte               & not supported   &  & FOFD1350                                           \\
+		date               & supported       &  & JNDY0003                                           \\
+		dateTime           & supported       &  & JNTY0004                                           \\
+		dateTimeStamp      & not supported   &  & JNTY0024                                           \\
+		dayTimeDuration    & supported       &  & JNTY0018                                           \\
+		decimal            & supported       &  & RBDY0005                                           \\
+		double             & supported       &  & RBML0001                                           \\
+		duration           & supported       &  & RBML0002                                           \\
+		float              & not supported   &  & RBML0003                                           \\
+		gDay               & not supported   &  & RBML0004                                           \\
+		gMonth             & not supported   &  & RBML0005                                           \\
+		gYear              & not supported   &  & RBST0001                                           \\
+		gYearMonth         & not supported   &  & RBST0002                                           \\
+		hexBinary          & supported       &  & RBST0003                                           \\
+		int                & not supported   &  & RBST0004                                           \\
+		integer            & supported       &  & SENR0001                                           \\
+		long               & not supported   &  & XPDY0002                                           \\
+		negativeInteger    & not supported   &  & XPDY0050                                           \\
+		nonPositiveInteger & not supported   &  & XPDY0130                                           \\
+		nonNegativeInteger & not supported   &  & XPST0003                                           \\
+		positiveInteger    & not supported   &  & XPST0008                                           \\
+		short              & not supported   &  & XPST0017                                           \\
+		string             & supported       &  & XPST0080                                           \\
+		time               & supported       &  & XPST0081                                           \\
+		unsignedByte       & not supported   &  & XPTY0004                                           \\
+		unsignedInt        & not supported   &  & XQDY0054                                           \\
+		unsignedLong       & not supported   &  & XQST0016                                           \\
+		unsignedShort      & not supported   &  & XQST0031                                           \\
+		yearMonthDuration  & supported       &  & XQST0033                                           \\
+		&                 &  & XQST0034                                           \\
+		&                 &  & XQST0038                                           \\
+		&                 &  & XQST0039                                           \\
+		&                 &  & XQST0047                                           \\
+		&                 &  & XQST0048                                           \\
+		&                 &  & XQST0049                                           \\
+		&                 &  & XQST0052                                           \\
+		&                 &  & XQST0059                                           \\
+		&                 &  & XQST0069                                           \\
+		&                 &  & XQST0088                                           \\
+		&                 &  & XQST0089                                           \\
+		&                 &  & XQST0094                                          
+	\end{tabular}
+	\caption{Rumble Supported Types and Error Codes}
+	\label{tab:Phase2_Supported Types}
+\end{table}
+
+\begin{table}[]
+	\begin{tabular}{ll}
+		\textbf{Dependency name}           & \textbf{Status}              \\
+		higherOrderFunctions               & supported                    \\
+		moduleImport                       & supported                    \\
+		arbitraryPrecisionDecimal          & supported                    \\
+		schemaValidation                   & not supported (XML specific) \\
+		schemaImport                       & not supported (XML specific) \\
+		advanced-uca-fallback              & not supported                \\
+		non\_empty\_sequence\_collection   & not supported yet            \\
+		collection-stability               & not supported yet            \\
+		directory-as-collection-uri        & not supported yet            \\
+		non\_unicode\_codepoint\_collation & not supported                \\
+		staticTyping                       & not supported yet            \\
+		simple-uca-fallback                & not supported                \\
+		olson-timezone                     & not supported yet            \\
+		fn-format-integer-CLDR             & not supported yet            \\
+		xpath-1.0-compatibility            & not supported (XML specific) \\
+		fn-load-xquery-module              & not supported yet            \\
+		fn-transform-XSLT                  & not supported yet            \\
+		namespace-axis                     & not supported (XML specific) \\
+		infoset-dtd                        & not supported (XML specific) \\
+		serialization                      & not supported yet            \\
+		fn-transform-XSLT30                & not supported yet            \\
+		remote\_http                       & not supported                \\
+		typedData                          & not supported                \\
+		schema-location-hint               & not supported (XML specific) \\
+		calendar                           & not supported yet            \\
+		unicode-version                    & supported                    \\
+		unicode-normalization-form         & supported                    \\
+		format-integer-sequence            & not supported yet            \\
+		xsd-version                        & supported                    \\
+		xml-version                        & supported                    \\
+		default-language                   & only "en" supported          \\
+		language                           & only "en" supported          \\
+		spec                               & only "XT30+" not supported   \\
+		limits                             & not supported yet           
+	\end{tabular}
+	\caption{Supported Dependency List }
+	\label{tab:Phase2_DependencyList}
 \end{table}
 
 \begin{table}[]
