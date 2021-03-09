@@ -21,9 +21,9 @@ The outputs will be stored under **rumble-test-suite/logDirectoryName directory*
 7. Dependencies.txt - List of test cases that are causing **internal Test Driver exception** as they **contain dependency tags that are not supported in Rumble yet**. To Edit this list please check below for **How to Edit Dependencies.txt **        
 8. Skipped.txt - List of test cases that are **ommited from being executed in Rumble** as they found fail since **they are not supported in Rumble yet**. To Edit this list please check below for **How to Edit Skipped.txt **
 9. Statistics.csv - **aggregated sum per test set** of above mentioned 8 categories
-10. BrokenWithLatestImplementation.txt - 
+10. BrokenWithLatestImplementation.txt - List of test cases that were **passing before** but not anymore and List of Tests that were **not crashing before**, but are now and not in previous List. **Before means in comparison to previous TestDriver execution.** To use this List refer to **How to verify Rumble bugfix**
 
-#### 2. How to verify Implementation
+#### 2. How to verify Rumble bugfix
 Explain how to use BrokenWithLatestImplementation
 
 #### 3. How to debug
@@ -41,11 +41,18 @@ The list of Errors that will not cause the exception **mentiond in Understanding
 
 #### 8. How to Edit Dependencies.txt
 The list of Dependencies that will not cause the exception **mentiond in Understanding the Output folder structure of Test Driver** can be found at beginning of **processTestCase** method in **src/main/java/ch/ethz/TestDriver.java**. This list was compiled **according to communication between Dr Ghislain Fourny and Stevan Mihajlovic** and is available in thesis report and will be coppied here: 
-schemaValidation                    schemaImport                        advanced-uca-fallback               non_empty_sequence_collection    collection-stability                directory-as-collection-uri         non_unicode_codepoint_collation   staticTyping                        simple-uca-fallback                 olson-timezone                      fn-format-integer-CLDR              xpath-1.0-compatibility             fn-load-xquery-module               fn-transform-XSLT                   namespace-axis                      infoset-dtd                         serialization                       fn-transform-XSLT30                 remote_http                        typedData                           schema-location-hint    		
-calendar                            format-integer-sequence             limits. In Future, any change happening in Rumble should be reflected by changing this method.
+
+schemaValidation,                    schemaImport,                        advanced-uca-fallback,               non_empty_sequence_collection,       collection-stability,                directory-as-collection-uri,         non_unicode_codepoint_collation,     staticTyping,                        simple-uca-fallback,                 olson-timezone,                      fn-format-integer-CLDR,              xpath-1.0-compatibility,             fn-load-xquery-module,               fn-transform-XSLT,                   namespace-axis,                      infoset-dtd,                         serialization,                       fn-transform-XSLT30,                 remote_http,                         typedData,                           schema-location-hint    		
+calendar,                            format-integer-sequence,             limits. 
+
+In Future, any change happening in Rumble should be reflected by changing this method.
 
 #### 9. How to Edit Skipped.txt
-The list of test cases that will be ommited as **mentiond in Understanding the Output folder structure of Test Driver** can be found in **ConvertAtomicTypes** and **ConvertNonAtomicTypes** methods in **src/main/java/ch/ethz/TestDriver.java**.
+The list of test cases that will be ommited as **mentiond in Understanding the Output folder structure of Test Driver** are all the test cases that are contained within test sets in **rumble-test-suite/TestSetsToSkip_Item2.txt** .txt file. 
+
+This list is loaded by **src/main/java/ch/ethz/TestDriver.java** using **public static final String TEST_SETS_TO_SKIP_FILENAME = "TestSetsToSkip_Item2.txt"** in **src/main/java/ch/ethz/Constants.java**
+
+In addition, list contains some test cases might be troublesome to execute (example too deep recursion for assert-permutation). This list can be found in **skipTestCaseList** field in **src/main/java/ch/ethz/TestDriver.java**.
 
 # How to setup your IDE - IntelliJ Project assuming all PRE-REQUIREMENTS are installed. 
 0. Obtaining the rumble-test-suite repository and its structure 
