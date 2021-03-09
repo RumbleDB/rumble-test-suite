@@ -1,4 +1,12 @@
-# How to setup IntelliJ Project assuming all PRE-REQUIREMENTS are installed. 
+# Introduction
+This README is written as a top-down breakdown document. At the beginning you will find the **core description** on how to actually use the Project. This assumes that you have already setup your IDE and all the PRE-REQUIREMENTS needed for it. In case that you did not setup anything yet, you should read this document backwards - from end until beginning such that you can follow a story. 
+
+# How to use Test Driver and Test Convertor
+Due to time factor, the Project could not be refactored. Meaning that there is **no command line arguments** that could be passed to command executing a JAVA .jar file were not created. Also, **no configuration .json file** (or other format) was created. Instead, **Constants.java** class will be used in combination with **private fields** of JAVA classes. **For each scenario we will describe how to setup all fields in order to obtain desired results. In addition, usage of outputs will be described.**
+
+
+
+# How to setup your IDE - IntelliJ Project assuming all PRE-REQUIREMENTS are installed. 
 0. Obtaining the rumble-test-suite repository and its structure 
 
 
