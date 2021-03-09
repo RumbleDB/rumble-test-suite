@@ -15,8 +15,8 @@ The outputs will be stored under **rumble-test-suite/logDirectoryName directory*
 1. Success.txt - List of test cases that **were not modified** by hard-coded conversion, where **Rumble result matches expected result of test case**
 2. Managed.txt - List of test cases that **were modified** by hard-coded conversion, where **Rumble result matches expected result of test case**
 3. Fails.txt - List of test cases that where **Rumble result does not match expected result of test case**
-4. Crashes.txt - List of test cases that caused unhandled exception when run in Rumble
-5. UnsupportedTypes.txt - List of test cases 
+4. Crashes.txt - List of test cases that caused **unhandled exception when run in Rumble**
+5. UnsupportedTypes.txt - List of test cases that are causing **internal Test Driver exception** as they are not supported in Rumble yet. The list of Types that will cause the exception can be found in **ConvertAtomicTypes** and **ConvertNonAtomicTypes** in **src/main/java/ch/ethz/TestDriver.java**. This list was compiled **according to official Rumble documentation Supported Types list** available [here](https://rumble.readthedocs.io/en/latest/JSONiq/) 
 6. UnsupportedErrorCodes.txt - 
 7. Dependencies.txt - 
 8. Skipped.txt - 
