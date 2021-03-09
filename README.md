@@ -16,14 +16,20 @@ The outputs will be stored under **rumble-test-suite/logDirectoryName directory*
 2. Managed.txt - List of test cases that **were modified** by hard-coded conversion, where **Rumble result matches expected result of test case**
 3. Fails.txt - List of test cases that where **Rumble result does not match expected result of test case**
 4. Crashes.txt - List of test cases that caused **unhandled exception when run in Rumble**
-5. UnsupportedTypes.txt - List of test cases that are causing **internal Test Driver exception** as they are not supported in Rumble yet. The list of Types that will cause the exception can be found in **ConvertAtomicTypes** and **ConvertNonAtomicTypes** in **src/main/java/ch/ethz/TestDriver.java**. This list was compiled **according to official Rumble documentation Supported Types list** available [here](https://rumble.readthedocs.io/en/latest/JSONiq/) 
-6. UnsupportedErrorCodes.txt - 
-7. Dependencies.txt - 
+5. UnsupportedTypes.txt - List of test cases that are causing **internal Test Driver exception** as they **contain Types that are not supported in Rumble yet**. The list of Types that will cause the exception can be found in **ConvertAtomicTypes** and **ConvertNonAtomicTypes** methods in **src/main/java/ch/ethz/TestDriver.java**. This list was compiled **according to official Rumble documentation Supported Types list** available [here](https://rumble.readthedocs.io/en/latest/JSONiq/). In Future, any change happening in Rumble should be reflected by changing these two methods.
+6. UnsupportedErrorCodes.txt - List of test cases that are causing **internal Test Driver exception** as their **expected result contains Error codes that are not supported in Rumble yet**. The list of Errors that will not cause the exception can be found in **supportedErrorCodes** field in **src/main/java/ch/ethz/TestDriver.java**. This list was compiled **according to official Rumble documentation Error Codes list** available [here](https://rumble.readthedocs.io/en/latest/Error%20codes/). In Future, any change happening in Rumble should be reflected by changing this field.
+7. Dependencies.txt - List of test cases that are causing **internal Test Driver exception** as they **contain dependency tags that are not supported in Rumble yet**. The list of Dependencies that will not cause the exception can be found at beginning of **processTestCase** method in **src/main/java/ch/ethz/TestDriver.java**. This list was compiled **according to communication between Dr Ghislain Fourny and Stevan Mihajlovic** and is available in thesis report and will be coppied here: 
+schemaValidation                    schemaImport                        advanced-uca-fallback               non_empty_sequence_collection    collection-stability                directory-as-collection-uri         non_unicode_codepoint_collation   staticTyping                        simple-uca-fallback                 olson-timezone                      fn-format-integer-CLDR              xpath-1.0-compatibility             fn-load-xquery-module               fn-transform-XSLT                   namespace-axis                      infoset-dtd                         serialization                       fn-transform-XSLT30                 remote_http                        typedData                           schema-location-hint    		
+calendar                            format-integer-sequence             limits. In Future, any change happening in Rumble should be reflected by changing this method.                            
 8. Skipped.txt - 
 9. Statistics.csv - **aggregated sum per test set** of above mentioned 8 categories
 10. BrokenWithLatestImplementation.txt - 
 
+## 2. How to verify Implementation
+Explain how to use BrokenWithLatestImplementation
 
+## 3. How to debug
+Explain how to use testCaseToTest, testSetToTest, queryToTest fields
 
 # How to setup your IDE - IntelliJ Project assuming all PRE-REQUIREMENTS are installed. 
 0. Obtaining the rumble-test-suite repository and its structure 
