@@ -4,6 +4,25 @@ This README is written as a top-down breakdown document. At the beginning you wi
 # How to use Test Driver and Test Convertor
 Due to time factor, the Project could not be refactored. Meaning that there is **no command line arguments** that could be passed to command executing a JAVA .jar file were not created. Also, **no configuration .json file** (or other format) was created. Instead, **Constants.java** class will be used in combination with **private fields** of JAVA classes. **For each scenario we will describe how to setup all fields in order to obtain desired results. In addition, usage of outputs will be described.**
 
+## 1. Understanding the Output folder structure of Test Driver
+The outputs can be enabled by setting **public static final boolean PRODUCE_LOGS = true** in **src/main/java/ch/ethz/Constants.java**
+
+The outputs will be stored under **rumble-test-suite/logDirectoryName directory**. 
+
+**logDirectoryName** is declared and assigned as **private static String logDirectoryName** in **src/main/java/ch/ethz/Run.java**
+
+**Each execution** of src/main/java/ch/ethz/Run.java **will create a subdirectory** rumble-test-suite/logDirectoryName/timestamp containing:
+1. Success.txt - List of test cases that **were not modified** by hard-coded conversion, where **Rumble result matches expected result of test case**
+2. Managed.txt - List of test cases that **were modified** by hard-coded conversion, where **Rumble result matches expected result of test case**
+3. Fails.txt - List of test cases that where **Rumble result does not match expected result of test case**
+4. Crashes.txt - List of test cases that caused unhandled exception when run in Rumble
+5. UnsupportedTypes.txt - List of test cases 
+6. UnsupportedErrorCodes.txt - 
+7. Dependencies.txt - 
+8. Skipped.txt - 
+9. Statistics.csv - **aggregated sum per test set** of above mentioned 8 categories
+10. BrokenWithLatestImplementation.txt - 
+
 
 
 # How to setup your IDE - IntelliJ Project assuming all PRE-REQUIREMENTS are installed. 
