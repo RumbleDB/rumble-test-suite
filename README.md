@@ -4,7 +4,7 @@ This README is written as a top-down breakdown document. At the beginning you wi
 # How to use Test Driver and Test Convertor
 Due to time factor, the Project could not be refactored. Meaning that there is **no command line arguments** that could be passed to command executing a JAVA .jar file were not created. Also, **no configuration .json file** (or other format) was created. Instead, **Constants.java** class will be used in combination with **private fields** of JAVA classes. **For each scenario we will describe how to setup all fields in order to obtain desired results. In addition, usage of outputs will be described.**
 
-#### 1. Understanding the Output folder structure of Test Driver
+#### 1. Understanding the Output directory structure of Test Driver
 The outputs can be enabled by setting **public static final boolean PRODUCE_LOGS = true** in **src/main/java/ch/ethz/Constants.java**
 
 The outputs will be stored under **rumble-test-suite/logDirectoryName directory**. 
@@ -19,17 +19,34 @@ The outputs will be stored under **rumble-test-suite/logDirectoryName directory*
 5. UnsupportedTypes.txt - List of test cases that are causing **internal Test Driver exception** as they **contain Types that are not supported in Rumble yet**. 
 6. UnsupportedErrorCodes.txt - List of test cases that are causing **internal Test Driver exception** as their **expected result contains Error codes that are not supported in Rumble yet**. To Edit this list please check below for **How to Edit UnsupportedErrorCodes.txt **   
 7. Dependencies.txt - List of test cases that are causing **internal Test Driver exception** as they **contain dependency tags that are not supported in Rumble yet**. To Edit this list please check below for **How to Edit Dependencies.txt **        
-8. Skipped.txt - List of test cases that are **ommited from being executed in Rumble** as they found fail since **they are not supported in Rumble yet**. To Edit this list please check below for **How to Edit Skipped.txt **
+8. Skipped.txt - List of test cases that are **omitted from being executed in Rumble** as they would fail since **they are not supported in Rumble yet**. To Edit this list please check below for **How to Edit Skipped.txt **
 9. Statistics.csv - **aggregated sum per test set** of above mentioned 8 categories
 10. BrokenWithLatestImplementation.txt - List of test cases that were **passing before** but not anymore and List of Tests that were **not crashing before**, but are now and not in previous List. **Before means in comparison to previous TestDriver execution.** To use this List refer to **How to verify Rumble bugfix**
 
-#### 2. How to verify Rumble bugfix
+#### 2. Understanding the Output directory structure of Test Converter
+The outputs will be stored under **rumble-test-suite/OUTPUT_TEST_SUITE_DIRECTORY directory**. 
+
+**OUTPUT_TEST_SUITE_DIRECTORY** is declared and assigned as public static final String OUTPUT_TEST_SUITE_DIRECTORY = "Output_Test_Suite" in **src/main/java/converter/Constants.java**
+
+**Each execution** of src/main/java/converter/Run.java **will create a subdirectory** rumble-test-suite/OUTPUT_TEST_SUITE_DIRECTORY/timestamp with the **directory structure same as the qt3tests directory.**
+
+Similar to the Test Driver, we can **omit from the Output test sets and test cases** since they are not JSONiq and **should not be converted to JSONiq. It will never be supported**. The list of test cases that will be are all the test cases that are contained within test sets in **rumble-test-suite/TestSetsToSkip_Item1.txt** .txt file.
+
+This list is loaded by **src/main/java/converter/TestConverter.java** using **public static final String TEST_SETS_TO_SKIP_FILENAME = "TestSetsToSkip_Item1.txt"** in **src/main/java/converter/Constants.java**
+
+In addition, list can be complemented by some specific test cases from other test sets that might be troublesome to convert. The list of specific test cases are contained in **rumble-test-suite/TestCasesToSkip.txt**.txt file.
+
+This list is loaded by **src/main/java/converter/TestConverter.java** using **public static final String TEST_CASES_TO_SKIP_FILENAME = "TestCasesToSkip.txt"** in **src/main/java/converter/Constants.java**
+
+#### 3. Test Driver and Test Converter connection
+4 combinations
+
+#### 3. How to verify Rumble bugfix
+First we must understand that we can verify Rumble implementation using either XQuery or JSONiq Parser. The recommendation here is to use the JSON
 Explain how to use BrokenWithLatestImplementation
 
-#### 3. How to debug
+#### 4. How to debug
 Explain how to use testCaseToTest, testSetToTest, queryToTest fields
-
-#### 4. Test Converter Output 
 
 #### 5. How to debug test Converter
 
@@ -48,7 +65,7 @@ calendar,                            format-integer-sequence,             limits
 In Future, any change happening in Rumble should be reflected by changing this method.
 
 #### 9. How to Edit Skipped.txt
-The list of test cases that will be ommited as **mentiond in Understanding the Output folder structure of Test Driver** are all the test cases that are contained within test sets in **rumble-test-suite/TestSetsToSkip_Item2.txt** .txt file. 
+The list of test cases that will be omitted as **mentiond in Understanding the Output folder structure of Test Driver** are all the test cases that are contained within test sets in **rumble-test-suite/TestSetsToSkip_Item2.txt** .txt file. 
 
 This list is loaded by **src/main/java/ch/ethz/TestDriver.java** using **public static final String TEST_SETS_TO_SKIP_FILENAME = "TestSetsToSkip_Item2.txt"** in **src/main/java/ch/ethz/Constants.java**
 
