@@ -39,24 +39,49 @@ In addition, list can be complemented by some specific test cases from other tes
 This list is loaded by **src/main/java/converter/TestConverter.java** using **public static final String TEST_CASES_TO_SKIP_FILENAME = "TestCasesToSkip.txt"** in **src/main/java/converter/Constants.java**
 
 #### 3. Test Driver and Test Converter connection
-4 combinations
+First we must understand that we can test Rumble with either XQuery or JSONiq Parser implementation. The Rumble implementation can be tested using the original qt3tests test suite. In case Rumble is using XQuery parser, we can run the whole test suite as is. In case Rumble is using JSONiq parser, the test cases must be hard-code converted as otherwise they would not be meaningful. The Rumble implementation can be tested using the qt3tests test suite that is converted to JSONiq in a smiliar fashion. To support different scenarios, we are using **public static final boolean TO_CONVERT** and **public static final boolean USE_CONVERTED_TEST_SUITE** in **src/main/java/ch/ethz/Constants.java**. Here we will describe use cases and values that corresponding fields should have:
+1. Preferred way of testing Rumble implementation as is now: TO_CONVERT = true; USE_CONVERTED_TEST_SUITE = false;
+2. Verify implementation of XQuery Parser: TO_CONVERT = false; USE_CONVERTED_TEST_SUITE = false;
+3. Future way of testing Rumble implementation once Test Converter is stable: TO_CONVERT = false; USE_CONVERTED_TEST_SUITE = true;
+4. Rarely used (only for advanced users): TO_CONVERT = true; USE_CONVERTED_TEST_SUITE = true;
 
-#### 3. How to verify Rumble bugfix
-First we must understand that we can verify Rumble implementation using either XQuery or JSONiq Parser. The recommendation here is to use the JSON
-Explain how to use BrokenWithLatestImplementation
+#### 4. How to verify Rumble bugfix
+As mentioned in **Test Driver and Test Converter connection**, preferred way of testing Rumble implementation for now is to use the original qt3tests test suite wtih test cases that are hard-code converted:
+1. We need a branch (research-project-stevan-mihajlovic) where bugfix implemented in master branch will be verified:
+```
+cd rumble
+git checkout master
+git pull
+git checkout research-project-stevan-mihajlovic
+git merge master
+For Ubuntu: CTRL X (to exit the menu)
+For MAC:
+	1. press "esc" (escape)
+	2. write ":wq" (write & quit)
+	3. then press enter.
+git push
+```
+2. Execute **src/main/java/ch/ethz/Run.java** to obtain new output of the results as explained in **Understanding the Output directory structure of Test Driver**
+3. Open generated BrokenWithLatestImplementation.txt file. Ideally it should be empty as new implementation should not break previous one.
+4. Verify that test cases that were failing due to a bug before are now either in generated Success.txt or Managed.txt
+5. If steps 3 and 4 were verified successfully, close the issue on GitHub otherwise debug (check **How to debug Test Driver**)
 
-#### 4. How to debug
-Explain how to use testCaseToTest, testSetToTest, queryToTest fields
+#### 5. How to debug Test Driver
+The Test Driver uses 3 fields enabling to debug specific test sets or cases or simply specific query. They are all declared and assigned in **src/main/java/ch/ethz/TestDriver.java** as fields:
+1. private String testCaseToTest - Set this field if you want to run a specific test set with name that starts with this string
+2. private String testSetToTest -  Set this field if you want to run a specific test case with name that starts with this string
+3. private String queryToTest - For running a specific query as string usually when testing the XQuery Parser for Rumble (check **How to debug Test Converter**) 
 
-#### 5. How to debug test Converter
+#### 6. How to debug Test Converter
+As mentioned in **Test Driver and Test Converter connection**, verifying implementation of XQuery Parser is done with original qt3tests test suite without any hard-coded conersion. The current implementation of Rumble does not support both XQuery and JSONiq Parser running simultaneously. Therefore, it is first required to change to the branch with desired Parser declared and assigned **parseMainModule** and **parseLibraryModule** methods in **rumble-test-suite/rumble/src/main/java/org/rumbledb/compiler/VisitorHelpers.java**. Building the rumble .jar file and debugging it is explained in **Maven and ANT**
 
-#### 6. How to Edit UnsupportedTypes.txt
+#### 7. How to Edit UnsupportedTypes.txt
 The list of Types that will cause the exception **mentiond in Understanding the Output folder structure of Test Driver** can be found in **ConvertAtomicTypes** and **ConvertNonAtomicTypes** methods in **src/main/java/ch/ethz/TestDriver.java**. This list was compiled **according to official Rumble documentation Supported Types list** available [here](https://rumble.readthedocs.io/en/latest/JSONiq/). In Future, any change happening in Rumble should be reflected by changing these two methods.
 
-#### 7. How to Edit UnsupportedErrorCodes.txt
+#### 8. How to Edit UnsupportedErrorCodes.txt
 The list of Errors that will not cause the exception **mentiond in Understanding the Output folder structure of Test Driver** can be found in **supportedErrorCodes** field in **src/main/java/ch/ethz/TestDriver.java**. This list was compiled **according to official Rumble documentation Error Codes list** available [here](https://rumble.readthedocs.io/en/latest/Error%20codes/). In Future, any change happening in Rumble should be reflected by changing this field.
 
-#### 8. How to Edit Dependencies.txt
+#### 9. How to Edit Dependencies.txt
 The list of Dependencies that will not cause the exception **mentiond in Understanding the Output folder structure of Test Driver** can be found at beginning of **processTestCase** method in **src/main/java/ch/ethz/TestDriver.java**. This list was compiled **according to communication between Dr Ghislain Fourny and Stevan Mihajlovic** and is available in thesis report and will be coppied here: 
 
 schemaValidation,                    schemaImport,                        advanced-uca-fallback,               non_empty_sequence_collection,       collection-stability,                directory-as-collection-uri,         non_unicode_codepoint_collation,     staticTyping,                        simple-uca-fallback,                 olson-timezone,                      fn-format-integer-CLDR,              xpath-1.0-compatibility,             fn-load-xquery-module,               fn-transform-XSLT,                   namespace-axis,                      infoset-dtd,                         serialization,                       fn-transform-XSLT30,                 remote_http,                         typedData,                           schema-location-hint    		
@@ -64,7 +89,7 @@ calendar,                            format-integer-sequence,             limits
 
 In Future, any change happening in Rumble should be reflected by changing this method.
 
-#### 9. How to Edit Skipped.txt
+#### 10. How to Edit Skipped.txt
 The list of test cases that will be omitted as **mentiond in Understanding the Output folder structure of Test Driver** are all the test cases that are contained within test sets in **rumble-test-suite/TestSetsToSkip_Item2.txt** .txt file. 
 
 This list is loaded by **src/main/java/ch/ethz/TestDriver.java** using **public static final String TEST_SETS_TO_SKIP_FILENAME = "TestSetsToSkip_Item2.txt"** in **src/main/java/ch/ethz/Constants.java**
