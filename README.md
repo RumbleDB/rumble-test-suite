@@ -17,13 +17,15 @@ The outputs will be stored under **rumble-test-suite/logDirectoryName directory*
 3. Fails.txt - List of test cases that where **Rumble result does not match expected result of test case**
 4. Crashes.txt - List of test cases that caused **unhandled exception when run in Rumble**
 5. UnsupportedTypes.txt - List of test cases that are causing **internal Test Driver exception** as they **contain Types that are not supported in Rumble yet**. 
-6. UnsupportedErrorCodes.txt - List of test cases that are causing **internal Test Driver exception** as their **expected result contains Error codes that are not supported in Rumble yet**. To Edit this list please check below for **How to Edit UnsupportedErrorCodes.txt **   
-7. Dependencies.txt - List of test cases that are causing **internal Test Driver exception** as they **contain dependency tags that are not supported in Rumble yet**. To Edit this list please check below for **How to Edit Dependencies.txt **        
-8. Skipped.txt - List of test cases that are **omitted from being executed in Rumble** as they would fail since **they are not supported in Rumble yet**. To Edit this list please check below for **How to Edit Skipped.txt **
+6. UnsupportedErrorCodes.txt - List of test cases that are causing **internal Test Driver exception** as their **expected result contains Error codes that are not supported in Rumble yet**. To Edit this list please check below for **How to Edit UnsupportedErrorCodes.txt**   
+7. Dependencies.txt - List of test cases that are causing **internal Test Driver exception** as they **contain dependency tags that are not supported in Rumble yet**. To Edit this list please check below for **How to Edit Dependencies.txt**        
+8. Skipped.txt - List of test cases that are **omitted from being executed in Rumble** as they would fail since **they are not supported in Rumble yet**. To Edit this list please check below for **How to Edit Skipped.txt**
 9. Statistics.csv - **aggregated sum per test set** of above mentioned 8 categories
 10. BrokenWithLatestImplementation.txt - List of test cases that were **passing before** but not anymore and List of Tests that were **not crashing before**, but are now and not in previous List. **Before means in comparison to previous TestDriver execution.** To use this List refer to **How to verify Rumble bugfix**
 
 #### 2. Understanding the Output directory structure of Test Converter
+The outputs can be enabled by setting **public static final boolean PRODUCE_OUTPUT = true** in **src/main/java/converter/Constants.java**
+
 The outputs will be stored under **rumble-test-suite/OUTPUT_TEST_SUITE_DIRECTORY directory**. 
 
 **OUTPUT_TEST_SUITE_DIRECTORY** is declared and assigned as public static final String OUTPUT_TEST_SUITE_DIRECTORY = "Output_Test_Suite" in **src/main/java/converter/Constants.java**
@@ -72,16 +74,21 @@ The Test Driver uses 3 fields enabling to debug specific test sets or cases or s
 2. private String testSetToTest -  Set this field if you want to run a specific test case with name that starts with this string
 3. private String queryToTest - For running a specific query as string usually when testing the XQuery Parser for Rumble (check **How to debug Test Converter**) 
 
-#### 6. How to debug Test Converter
-As mentioned in **Test Driver and Test Converter connection**, verifying implementation of XQuery Parser is done with original qt3tests test suite without any hard-coded conersion. The current implementation of Rumble does not support both XQuery and JSONiq Parser running simultaneously. Therefore, it is first required to change to the branch with desired Parser declared and assigned **parseMainModule** and **parseLibraryModule** methods in **rumble-test-suite/rumble/src/main/java/org/rumbledb/compiler/VisitorHelpers.java**. Building the rumble .jar file and debugging it is explained in **Maven and ANT**
+#### 6. How to debug XQuery Parser 
+As mentioned in **Test Driver and Test Converter connection**, verifying implementation of XQuery Parser is done with original qt3tests test suite without any hard-coded conersion. The current implementation of Rumble does not support both XQuery and JSONiq Parser running simultaneously. Therefore, it is first required to change to the branch with desired XQuery Parser declared and assigned **parseMainModule** and **parseLibraryModule** methods in **rumble-test-suite/rumble/src/main/java/org/rumbledb/compiler/VisitorHelpers.java**. Building the rumble .jar file and debugging it is explained in **Maven and ANT**
 
-#### 7. How to Edit UnsupportedTypes.txt
+#### 7. How to output converted Test Suite
+1. As explained in **How to debug XQuery Parser**: The current implementation of Rumble does not support both XQuery and JSONiq Parser running simultaneously. Therefore, it is first required to change to the branch with desired XQuery Parser declared and assigned **parseMainModule** and **parseLibraryModule** methods in **rumble-test-suite/rumble/src/main/java/org/rumbledb/compiler/VisitorHelpers.java**.
+2. Execute **src/main/java/converter/Run.java ** to obtain new output of the results as explained in **Understanding the Output directory structure of Test Converter**
+3. DONE
+
+#### 8. How to Edit UnsupportedTypes.txt
 The list of Types that will cause the exception **mentiond in Understanding the Output folder structure of Test Driver** can be found in **ConvertAtomicTypes** and **ConvertNonAtomicTypes** methods in **src/main/java/ch/ethz/TestDriver.java**. This list was compiled **according to official Rumble documentation Supported Types list** available [here](https://rumble.readthedocs.io/en/latest/JSONiq/). In Future, any change happening in Rumble should be reflected by changing these two methods.
 
-#### 8. How to Edit UnsupportedErrorCodes.txt
+#### 9. How to Edit UnsupportedErrorCodes.txt
 The list of Errors that will not cause the exception **mentiond in Understanding the Output folder structure of Test Driver** can be found in **supportedErrorCodes** field in **src/main/java/ch/ethz/TestDriver.java**. This list was compiled **according to official Rumble documentation Error Codes list** available [here](https://rumble.readthedocs.io/en/latest/Error%20codes/). In Future, any change happening in Rumble should be reflected by changing this field.
 
-#### 9. How to Edit Dependencies.txt
+#### 10. How to Edit Dependencies.txt
 The list of Dependencies that will not cause the exception **mentiond in Understanding the Output folder structure of Test Driver** can be found at beginning of **processTestCase** method in **src/main/java/ch/ethz/TestDriver.java**. This list was compiled **according to communication between Dr Ghislain Fourny and Stevan Mihajlovic** and is available in thesis report and will be coppied here: 
 
 schemaValidation,                    schemaImport,                        advanced-uca-fallback,               non_empty_sequence_collection,       collection-stability,                directory-as-collection-uri,         non_unicode_codepoint_collation,     staticTyping,                        simple-uca-fallback,                 olson-timezone,                      fn-format-integer-CLDR,              xpath-1.0-compatibility,             fn-load-xquery-module,               fn-transform-XSLT,                   namespace-axis,                      infoset-dtd,                         serialization,                       fn-transform-XSLT30,                 remote_http,                         typedData,                           schema-location-hint    		
@@ -89,7 +96,7 @@ calendar,                            format-integer-sequence,             limits
 
 In Future, any change happening in Rumble should be reflected by changing this method.
 
-#### 10. How to Edit Skipped.txt
+#### 11. How to Edit Skipped.txt
 The list of test cases that will be omitted as **mentiond in Understanding the Output folder structure of Test Driver** are all the test cases that are contained within test sets in **rumble-test-suite/TestSetsToSkip_Item2.txt** .txt file. 
 
 This list is loaded by **src/main/java/ch/ethz/TestDriver.java** using **public static final String TEST_SETS_TO_SKIP_FILENAME = "TestSetsToSkip_Item2.txt"** in **src/main/java/ch/ethz/Constants.java**
