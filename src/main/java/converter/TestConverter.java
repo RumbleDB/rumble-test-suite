@@ -3,6 +3,10 @@ package converter;
 import net.sf.saxon.s9api.*;
 import net.sf.saxon.s9api.streams.Steps;
 import org.apache.commons.io.FileUtils;
+import org.apache.spark.sql.SparkSession;
+import org.rumbledb.api.Rumble;
+import org.rumbledb.config.RumbleRuntimeConfiguration;
+import org.rumbledb.exceptions.RumbleException;
 
 import java.io.*;
 import java.nio.charset.Charset;
@@ -25,10 +29,13 @@ public class TestConverter {
     private String bindingNameSpace = "http://bindingfunctions.com/";
     private int testCasesOutputted = 0;
     private String catalogContent;
+    private SparkSession sparkSession;
+    private Rumble rumbleInstance;
 
     void execute() {
         getTestsRepository();
         loadTestsToSkip();
+        initializeSparkAndRumble();
         if (Constants.PRODUCE_OUTPUT) {
             createOutputDirectory();
             copyHelperDirectories();
@@ -176,7 +183,14 @@ public class TestConverter {
     }
 
     private String Convert(String testString){
-        return testString;
+        try {
+            String convertedTestString = rumbleInstance.serializeToJSONiq(testString);
+            return convertedTestString;
+        } catch (RumbleException re) {
+            return testString;
+        } catch (Exception e){
+            return testString;
+        }
     }
 
     private void processTestSet(DocumentBuilder catalogBuilder, XQueryCompiler xqc, XdmNode testSetNode) throws SaxonApiException{
@@ -277,4 +291,24 @@ public class TestConverter {
         "fn/json-doc",
         "fn/json-to-xml"
     };
+
+    private void initializeSparkAndRumble() {
+        // Initialize configuration - the instance will be the same as in org.rumbledb.cli.Main.java (one for shell)
+        RumbleRuntimeConfiguration rumbleConf = new RumbleRuntimeConfiguration(
+                new String[]{
+                        "--output-format","json"
+                });
+
+        // Initialize Spark - not needed when I have part of code from org.rumbledb.cli.JsoniqQueryExecutor.java
+        sparkSession = SparkSession.builder()
+                .master("local")
+                .appName("rumble-test-suite")
+                .getOrCreate();
+
+        // org.rumbledb.cli.JsoniqQueryExecutor.java does this for some reason in the ctor
+        //SparkSessionManager.COLLECT_ITEM_LIMIT = rumbleConf.getResultSizeCap();
+
+        // Initialize Rumble
+        rumbleInstance = new Rumble(rumbleConf);
+    }
 }
