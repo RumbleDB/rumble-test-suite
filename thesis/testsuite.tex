@@ -35,7 +35,7 @@ For parsing XML, we have decided to use Saxon. One may argue that for all 4 list
 \label{Phase1_Description}
 In the first phase of the implementation we have analyzed the structure of QT3TS. We had to understand the under-laying structure of each and every test case. We had to see under which tags the information is stored in order to obtain it using Saxon API. Example test case in XML format:
 
-\lstinputlisting{source_code_1.xml}
+\lstinputlisting[language=XML, frame=single, breaklines=true, showspaces=false, otherkeywords={test, test-case, description, created, environment, result, all-of,assert-eq,assert-type, <, /, >}, stringstyle=\color{ao}, keywordstyle=\color{chromeyellow}]{source_code_1.xml}
 
 The two most important tags in each test case are:
 \begin{itemize}
@@ -50,7 +50,7 @@ Test Driver's Test Result Handling Logic is in charge of determining which asser
 \begin{itemize}
 	\item assert-empty - This assertion requires result to return empty sequence
 	\item assert - This assertion requires us to run another query in which obtained result will be used as parameter of the new query. For example:
-	\lstinputlisting{source_code_2.xml}
+	\lstinputlisting[language=XML, frame=single, breaklines=true, showspaces=false, otherkeywords={<result>,  </result>, <test>, </test>, <assert>, </assert>}, stringstyle=\color{ao}, keywordstyle=\color{chromeyellow}]{source_code_2.xml}
 	\item assert-eq - It requires us to run another query in form of obtained result "eq" value under the assert-eq tag
 	\item assert-deep-eq - Similar to assert-eq but runs "deep-equal" query
 	\item assert-true - It requires result to return single Boolean value True
@@ -61,6 +61,9 @@ Test Driver's Test Result Handling Logic is in charge of determining which asser
 	\item assert-type - Requires to check if obtained result is instance of this tag
 	\item assert-count - It requires obtained result sequence size to be equal to the value under assert-count tag
 	\item not - It requires to execute nested assertion with a negation
+	\item assert-xml - Requires result to be a XML document matching this one
+	\item serialization-matches - Requires serialization of result to match this
+	\todo{figure out where to put it}
 \end{itemize}
 
 After the assertion is performed, we need to classify the results. The idea is to make statistics that are described in \ref{Phase1_Results}. With such a classification we would be able to improve Rumble by reporting bugs in its implementation.
@@ -114,13 +117,14 @@ After generating Phase 1 Implementation report described in Table \ref{tab:Phase
 
 \subsubsection{Result Binding}
 To better understand the issues we have encountered, we will provide following code snippet:
-\lstinputlisting{source_code_without_results.java}
+%[}]
+\lstinputlisting[language=Java, frame=single, breaklines=true, showspaces=false, stringstyle=\color{ao}, keywordstyle=\color{chromeyellow}, basicstyle=\small]{source_code_without_results.java}
 
 If we examine the AssertEq implementation, we will notice that lines.get(0) assumes that obtained result is a single item and takes first one. It does not handle sequences! Furthermore, handling sequences was only possible for AssertStringEqual in case that our result is sequence of strings by performing string concatenation. All other assertions such as Assert, AssertEq, AssertDeepEq are not possible to be implemented. Finally, if we remember Assert example from Section \ref{Phase1_Description}, we will notice that we had to perform string replace of \$result with actual result obtained from the Rumble API. 
 
 Thus, Rumble was extended to support result binding. The change was made in Rumble implementation itself. The only modification required in Test Driver was to instantiate a new RumbleConfiguration and also new Rumble instance for each test-case that requires result binding. Check code below:
 
-\lstinputlisting{source_code_with_results.java}
+\lstinputlisting[language=Java, frame=single, breaklines=true, showspaces=false, stringstyle=\color{ao}, keywordstyle=\color{chromeyellow}, basicstyle=\footnotesize]{source_code_with_results.java}
 
 The main concern of the new implementation was that performing many instantiates might cause the execution time to increase dramatically. However, after run-time increased only by 15seconds from 2minutes - only 12.5\%.
 
