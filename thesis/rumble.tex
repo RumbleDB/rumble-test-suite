@@ -147,33 +147,11 @@ The user can use Rumble via command line or using the Rumble API for Java. The a
 \end{figure}
 
 \subsection{Mapping}
+\label{sec:RumbleMapping}
 We said that Rumble has a logic that is capable to map query to Spark primitives. We also said that in JSONiq, everything is Sequence of Items. Therefore, Rumble uses interface Item in the code \cite{RumbleRepository}. All 6 types that were mentioned in Section \ref{sec:JSON} then implement this interface. After that, Item is wrapped using the Spark JavaRDD generic class and the mapping is complete! Spark is now able to execute queries using objects of the wrapper class.\todo{Maybe I should present the full inheritance tree with subtypes as well}
 
-We also said that out of all Expressions, FLWOR Expressions are the most powerful ones and we can view them as set of clauses. Between themselves, clauses operate by consuming tuple streams instead of operating on Sequence of Items. Sequence of Items is produced only in the end with mandatory Return clause. Therefore, in the code \cite{RumbleRepository}, Rumble uses class FlworTuple for wrapping to the Spark JavaRDD generic class similarly like already explained for types. For each clause, we have a Spark Iterator and they all, with exception of Return, have a reference to FlworTuple. 
-
-As explained by Irimescu in \cite{RumbleThesis}: "Clauses can be mapped to a set of RDD transformations (potentially containing RDD creations as well) executed on RDDs that contain maps of variable names and sequences encapsulated in tuple objects. A summary of the mappings from clauses to transformations is presented below in Table \ref{tab:ClausesMapping}:"
-\todo{This part is a bit suspicious as it seems that code evolved a bit. It is not clear to me whether we wrap FlworTuple and push it down to Spark or is it executed locally and what locally exactly means}
-\begin{table}[h!]
-	\resizebox{\textwidth}{!}{%
-		\begin{tabular}{|l|l|}
-			\hline
-			\begin{tabular}[c]{@{}l@{}}FLWOR \\ Clause\end{tabular} & \begin{tabular}[c]{@{}l@{}}Spark Transformation \\ / Action\end{tabular}                                                                                                       \\ \hline
-			\multirow{2}{*}{for}                                    & \multirow{2}{*}{\begin{tabular}[c]{@{}l@{}}flatMap() - map each incoming tuple to a set of tuples,\\ each extending the original one with one new key-value pair\end{tabular}} \\
-			&                                                                                                                                                                                \\ \hline
-			let                                                     & map() - extend each incoming tuple with the new variable name to sequence of items pair                                                                                        \\ \hline
-			where                                                   & filter(condition)                                                                                                                                                              \\ \hline
-			\multirow{3}{*}{order by key}                           & 1. mapToPair() - map each tuple to a pair with the sort key and the tuple itself                                                                                               \\ \cline{2-2} 
-			& 2. sortByKey()                                                                                                                                                                 \\ \cline{2-2} 
-			& 3. map() - map back from pairs to tuples only                                                                                                                                  \\ \hline
-			\multirow{3}{*}{group by key}                           & 1. mapToPair() - map each tuple to a pair of group key and the tuple itself                                                                                                    \\ \cline{2-2} 
-			& 2. groupByKey()                                                                                                                                                                \\ \cline{2-2} 
-			& 3. map() - map back from pairs to tuples only and linearize the results                                                                                                        \\ \hline
-			return                                                  & map() + collect()/take()                                                                                                                                                       \\ \hline
-		\end{tabular}%
-	}
-	\caption{Theoretical Mapping - Clauses to Transformations/Actions}
-	\label{tab:ClausesMapping}
-\end{table}
+We also said that out of all Expressions, FLWOR Expressions are the most powerful ones and we can view them as set of clauses. Between themselves, clauses operate by consuming tuple streams instead of operating on Sequence of Items. Sequence of Items is produced only in the end with mandatory Return clause. Therefore, in the code \cite{RumbleRepository}, Rumble uses class FlworTuple for wrapping to the Spark Dataset generic class that is used for DataFrames. For each clause, we have a RuntimeTupleIterator and they all, with exception of Return, have a reference to FlworTuple. More details in Subsection \ref{sec:Generator}.
+\todo{Or maybe I should just delete the whole Mapping since I have it at the end}
 
 \subsection{General Architecture}
 \label{sec:RumbleArchitecture}
@@ -212,48 +190,67 @@ Using all these classes, it is then possible to generate Expression Tree as expl
 	\item For any variable declaration it creates a new static context containing the new variable and sets the previously existing static context as parent."
 \end{enumerate}
 
-
-\todo{Verify that they created Node and Expression classes and use them for the generic Translation Visitor class }
-
 \subsubsection{Generator}
+\label{sec:Generator}
 So called "back-end" - last part of Compiler includes code generation where the intermediate code gets transformed into assembly instruction and finally machine instructions. For this step in Rumble, we are performing conversion from Expression Tree to tree of runtime iterators. As Rumble was written in Java, runtime iterators are in charge of executing operations which get converted to Java bytecode.
 
-All runtime iterators implement RuntimeIteratorInterface which is similar to java.util.Iterator interface with methods such as hasNext() and next(). Using next(), runtime iterators can iterate over Sequence of Items and return results one item at a time. In addition, next() method triggers computation of all children iterators by recursively calling next() method in them. Result of such implementation is "lazy evaluation" where results are compute only when demanded. 
+All RuntimeTupleIterator implement RuntimeTupleIteratorInterface while all other runtime iterators implement RuntimeIteratorInterface. Both interfaces are similar to java.util.Iterator interface with methods such as hasNext() and next(). Using next(), runtime iterators can iterate over Sequence of Items and return results one item at a time. In addition, next() method triggers computation of all children iterators by recursively calling next() method in them. Result of such implementation is "lazy evaluation" where results are compute only when demanded. 
 
-RuntimeIteratorInterface operates on Dynamic Context containing mapping between variable names and actual sequences of items. Static Context is in charge of static type checking performed at compile-time while Dynamic Context is in charge of dynamic type checking performed at runtime.
+These two runtime interfaces operate on Dynamic Context containing mapping between variable names and actual sequences of items. Static Context is in charge of static type checking performed at compile-time while Dynamic Context is in charge of dynamic type checking performed at runtime.
 
-As pointed out in \cite{RumblePaper} "The main novelty in the design of Rumble is the runtime iterators that can switch dynamically between different execution modes, and which encode the decision of which nesting level is distributed". In total there are 3 different execution modes. In local execution mode runtime iterators are executed on single node locally in Java and they do not push computation to Spark. The other two, RDD-based execution ( which uses Spark’s RDD interface) and  DataFrame-based execution (which uses the DataFrame interface) are executed on top of Spark. They both push computation to spark when dataset is large and there is a clear advantage over local execution mode. The decision in which mode runtime iterator will be executed can be summarized in Table \ref{tab:RuntimeCategoriesMapping} based on JSONiq Expression. 
+As pointed out in \cite{RumblePaper} "The main novelty in the design of Rumble is the runtime iterators that can switch dynamically between different execution modes, and which encode the decision of which nesting level is distributed". In total there are 3 different execution modes. In local execution mode runtime iterators are executed on single node locally in Java and they do not push computation to Spark. The other two, RDD-based execution (which uses Spark’s RDD interface) and  DataFrame-based execution (which uses the DataFrame interface) are executed on top of Spark. They both push computation to spark when dataset is large and there is a clear advantage over local execution mode. The modes which runtime iterator supports is based on category of JSONiq Expression and it is presented in Table \ref{tab:RuntimeCategoriesMapping}. The column "As in JSONiq" represents classification as we have seen it before in Section \ref{sec:JSONiq} where Built-in Function and Sequence Construction are omitted since they are spread across several categories. The columns L, R and D represent local, RDD-based and DataFrame-based execution mode respectively while + sign signifies that this mode is supported.
 
 \begin{table}[h!]
+		\vspace{-1mm}
+	\centering
 	\resizebox{\textwidth}{!}{%
-		\begin{tabular}{|l|l|}
-			\hline
-			\textbf{Category}                    & \textbf{Expression/Clause}                                              \\ \hline
-			\multirow{2}{*}{local-only}          & \multirow{2}{*}{Arithmetic, Logic, Comparison, Literal}                 \\
-			&                                                                         \\ \hline
-			sequence- transforming               & \$seq[...], \$a{[}\$i], \$a{[}{]}, \$a[[]], \$o.\$s, \$seq!..., annotate, treat \\ \hline
-			\multirow{2}{*}{sequence- producing} & json-file, parquet-file, libsvm-file, text-file, csv-file               \\ \cline{2-2} 
-			& avro-file, root- file, structured-json-file, parallelize                \\ \hline
-			\multirow{3}{*}{sequence- combining} & seq1,\$seq2, if (\$c) then... else...,                                    \\ \cline{2-2} 
-			& switch (\$x) case... default...,                                        \\ \cline{2-2} 
-			& typeswitch (\$x) case... default...                                     \\ \hline
-			FLWOR                                & FLWOR                                                                   \\ \hline
-		\end{tabular}%
-	}
+	\begin{tabular}{|l|l|l|l|l|l|} 
+		\hline
+		\textbf{Category}                      & \textbf{Expression/Clause}                                  & \textbf{As in JSONiq~}                                                                                                   & \textbf{L}         & \textbf{R}         & \textbf{D}          \\ 
+		\hline
+		\multirow{5}{*}{local-only}            & (),~\{\$k:\$v\},~[\$seq],~\$\$,~+,~-,~mod,~                 & \multirow{5}{*}{\begin{tabular}[c]{@{}l@{}}Arithmetic,\\Comparison,\\Logic,\\Literal,\\JSON construction\end{tabular}} & \multirow{5}{*}{+} & \multirow{5}{*}{}  & \multirow{5}{*}{}   \\ 
+		\cline{2-2}
+		& div,~idiv,~eq,~ne,~gt,~lt,~ge,~le,~and,~                    &                                                                                                                        &                    &                    &                     \\ 
+		\cline{2-2}
+		& or,~not,~\$a\textbar{}\textbar{}\$b,~\$f(\$x),~\$m~to~\$n,~ &                                                                                                                        &                    &                    &                     \\ 
+		\cline{2-2}
+		& try catch, instance~of, castable,                           &                                                                                                                        &                    &                    &                     \\ 
+		\cline{2-2}
+		& cast, some~\$x~in~\$y~satisfies...                          &                                                                                                                        &                    &                    &                     \\ 
+		\hline
+		\multirow{2}{*}{sequence-transforming} & \$seq[...],~\$a[\$i],~\$a[],~\$a[[]],~\$o.\$s,              & \multirow{2}{*}{JSON navigation}                                                                                       & \multirow{2}{*}{+} & \multirow{2}{*}{+} & \multirow{2}{*}{+}  \\ 
+		\cline{2-2}
+		& \$seq!..., annotate, treat                                  &                                                                                                                        &                    &                    &                     \\ 
+		\hline
+		\multirow{3}{*}{sequence-producing}    & json-file, parquet-file, libsvm-file,~                      & \multirow{3}{*}{}                                                                                                      & \multirow{3}{*}{}  & \multirow{3}{*}{+} & \multirow{3}{*}{+}  \\ 
+		\cline{2-2}
+		& text-file, csv-file,~avro-file, root- file,                 &                                                                                                                        &                    &                    &                     \\ 
+		\cline{2-2}
+		& structured-json-file, parallelize                           &                                                                                                                        &                    &                    &                     \\ 
+		\hline
+		\multirow{3}{*}{sequence-combining}    & seq1,\$seq2, if (\$c) then... else...,                      & \multirow{3}{*}{}                                                                                                      & \multirow{3}{*}{+} & \multirow{3}{*}{+} & \multirow{3}{*}{+}  \\ 
+		\cline{2-2}
+		& switch (\$x) case... default...,                            &                                                                                                                        &                    &                    &                     \\ 
+		\cline{2-2}
+		& typeswitch (\$x) case... default...                         &                                                                                                                        &                    &                    &                     \\ 
+		\hline
+		\multirow{2}{*}{FLWOR}                 & for,~let,~where,~group~by,~                                 & \multirow{2}{*}{FLWOR}                                                                                                 & \multirow{2}{*}{+} & \multirow{2}{*}{}  & \multirow{2}{*}{+}  \\ 
+		\cline{2-2}
+		& order~by,~count, return                                     &                                                                                                                        &                    &                    &                     \\
+		\hline
+	\end{tabular}}
 	\caption{Runtime iterator categorization for JSONiq expressions and clauses}
 	\label{tab:RuntimeCategoriesMapping}
+	\vspace{-3mm}
 \end{table}
 
-Local-only iterators executed in the local execution mode basically come down to implementing the Expression's behavior in Java. On the other hand, RDD and Dataframe-based execution modes require a mapping similar to what was described in Table \ref{tab:ClausesMapping}. There is an essential difference between these two modes that are running on top of Spark. The Dataframe-based mode is used in case that internal structure is known statically. This mode is also preferred over RDD-based mode as it faster in execution. On the other hand, RDD-based mode is used whenever the structure is unknown. 
+\todo{Check if table makes sense for the plus signs because at the end of this section we have additional explanation which primitives are used (RDD union, flatmap etc...)}
+Local-only iterators executed in the local execution mode basically come down to implementing the Expression's behavior in Java. On the other hand, RDD and Dataframe-based execution modes require a mapping to Spark primitives as explained in Section \ref{sec:RumbleMapping}. There is an essential difference between these two modes that are running on top of Spark. The Dataframe-based mode is used in case that internal structure is known statically. This mode is also preferred over RDD-based mode as it faster in execution. On the other hand, RDD-based mode is used whenever the structure is unknown. 
 
-Rumble in its initial version was using RDD-based mode for FLWOR Expressions as Dataframe-based mode was not yet implemented. However, all FLWOR Clauses Iterators, with exception of Return, operate with FlworTuple. From the query it is possible to derive static type of the variables in the tuples and therefore represent them as columns in Dataframe. The initial Spark Iterator interface was renamed to RuntimeTupleIterator and changed to use SQL queries instead of RDD transformations of Spark. We will not explain in detail the new mappings for each and every FLWOR Clause but we will make a parallel to For Clause and reuse example from \cite{RumblePaper}. If the current variables are x, y, and z, and the new variable introduced by the for clause is i, then the for clause is mapped to the following:
+Rumble in its initial version was using RDD-based mode for FLWOR Expressions. However, all FLWOR Clauses Iterators, with exception of Return, operate with FlworTuple. From the query it is possible to derive static type of the variables in the tuples and therefore represent them as columns in DataFrame. Today, the RuntimeTupleIterator is using SQL queries instead of RDD transformations of Spark. We will not explain in detail the new mappings for each and every FLWOR Clause but we will make a parallel to For Clause and reuse example from \cite{RumblePaper}. If the current variables are x, y, and z, and the new variable introduced by the for clause is i, then the for clause is mapped to the following:
 
 SELECT x, y, z, EXPLODE(UDF(x, y, z)) AS i FROM input\_stream
 
 Spark’s EXPLODE functionality corresponds to flatMap() on RDDs, while UDF is a Spark SQL user-defined function that takes all existing variables as input, and returns the resulting sequence of items as a List$<$Item$>$.
 
-Regarding all sequence category of runtime iterators, they all operate on sequences of items. Since item is essentially an interface and we have a polymorphic class hierarchy as all 6 JSON types implement it, we cannot use Dataframes but we use RDDs instead. Therefore, Sequence-transforming Expressions are handled using map(), flatMap(), and filter() transformations in Spark. Sequence-combining Expressions use RDD.union. There is a small exception for Sequence-producing Expressions. Only for json-file() and text-file() the structure is unknown, for all other file formats, structure is known and therefore Dataframe can be used. 
-
-
-
-\todo{Original thesis has FLWOR put in the group of Iterators that execute on top of Spark. However, ML on Rumble thesis puts FLWOR in the local runtime iterators. It is connected with previous question that was confusing me when I did the mapping. Second issue is both thesis do not match what is written in the code. In the code we have HybridRuntimeIterator}
+%Regarding all sequence category of runtime iterators, they all operate on sequences of items. Since item is essentially an interface and we have a polymorphic class hierarchy as all 6 JSON types implement it, we cannot use Dataframes but we use RDDs instead. Therefore, Sequence-transforming Expressions are handled using map(), flatMap(), and filter() transformations in Spark. Sequence-combining Expressions use RDD.union. There is a small exception for Sequence-producing Expressions. Only for json-file() and text-file() the structure is unknown, for all other file formats, structure is known and therefore Dataframe can be used. 
