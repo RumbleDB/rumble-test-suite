@@ -9,6 +9,8 @@ First we need to think about achieving a clean XQuery to JSONiq conversion witho
 
 If we are able to create Expression Tree from a query that is written in XQuery, it would mean that we have created JSONiq Expression Tree. Instead of creating the runtime iterator and executing the query, we can simply serialize Expression Tree to JSONiq query directly. We will reuse parts of Rumble and extends it's architecture so that it supports parsing queries written in XQuery. 
 
+This means that even though Test Converter and Test Driver will be two separate Java console applications, they will both use Rumble. One may argue that the success of standalone JSONiq Test Suite will in that case depend on Rumble implementation. And this is true, it will. But decision here is to use Rumble simply because using JSONiq Expression tree Rumble has is the cleanest possible solution for conversion. Finally, it will also improve Rumble itself by supporting additional query language - XQuery.
+
 In Figure \ref{fig:Rumble_General_Architecture_With_XQuery} we have represented that will enable us to achieve the target. In the following sub sections we will explain the implementation details of XQuery Lexer \& Parser and Translator together with Serialization part. 
 
 \begin{figure}[h!]
@@ -26,8 +28,9 @@ If we recall Section \ref{sec:RumbleLexerParser}, for simple languages, these tw
 
 The initial approach was to implement the XQuery.g4 file ourselves based on already implemented JSONiq.g4 file in Rumble. However, XQuery is older than JSONiq and it was logical that such file was already implemented. Indeed, we managed to find an ANTLR4 implementation of xqDoc for XQuery \cite{XqueryGrammar}. It is licensed under the same Apache License 2.0 like Rumble and we can re-use it. The grammar is stable and it was not changed for more than 10 months so we we do not expect it to be updated. Also it is compliant with XQuery 3.1 W3C Recommendation \cite{XQueryRecommendation}. 
 
-Names of certain labels in grammar file were changed in order to match the code of TranslationVisitor class. This class will be reused to implement XQueryTranslationVisitor and using the same labels would make it easier for us. The structure remains the same except for couple of modifications that we will document here:
+Names of certain labels in grammar file were changed in order to match the code of TranslationVisitor class. which will be used as baseline to implement XQueryTranslationVisitor. The structure remains the same except for:
 \begin{enumerate}
+	
 	\item module was not according to the W3C Recommendation \cite{XQueryRecommendation} and allowed for multiple mainModules. See below the comparison between old and new module implementation.
 	
 	module : xqDocComment? versionDecl? xqDocComment? (libraryModule $|$ (mainModule (SEMICOLON versionDecl? mainModule)*));
@@ -112,9 +115,11 @@ For annotations, for now we only support single public annotations without prefi
 	\item Otherwise, let the query with annotations to be converted
 \end{enumerate}
 
+Namespaces fn and map that were removed in Section \ref{Phase2_Converter}, we are now binding. Namespace xs is part of grammar. For namespaces map and array, no binding is needed as they are counted for Item 2 as mentioned in Section \ref{sec:TestConverterImplementation}
+
 Handling the Literals is slightly different. If we compare JSONiq with XQuery, we will see that true, false and null literals do not exist in XQuery. Instead they will be added as function calls.
 
-The itemType of XQuery covers more possibilities compared to the JSONiq itemType and below we will observe the differences:
+The itemType of XQuery covers more possibilities compared to the JSONiq:
 
 itemType: kindTest
 $|$ (KW\_ITEM LPAREN RPAREN)
