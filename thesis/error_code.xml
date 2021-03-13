@@ -1,0 +1,10 @@
+<test-case name="Literals036">
+   <description>
+      Test for invalid decimal literal
+   </description>
+   <created by="Mike Rorke" on="2005-02-03"/>
+   <test>65535032.001.01</test>
+   <result>
+      <error code="XPST0003"/>
+   </result>
+</test-case>

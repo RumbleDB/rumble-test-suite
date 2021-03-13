@@ -63,7 +63,6 @@ Test Driver's Test Result Handling Logic is in charge of determining which asser
 	\item not - It requires to execute nested assertion with a negation
 	\item assert-xml - Requires result to be a XML document matching this one
 	\item serialization-matches - Requires serialization of result to match this
-	\todo{figure out where to put it}
 \end{itemize}
 
 After the assertion is performed, we need to classify the results. The idea is to make statistics that are described in \ref{Phase1_Results}. With such a classification we would be able to improve Rumble by reporting bugs in its implementation.
@@ -77,11 +76,13 @@ The overview of scenario described in \ref{Phase1_Description} can be seen in Fi
  	\caption{Phase 1 Architecture Overview}
  	\label{fig:Phase1_Architecture}
  \end{figure}
- 
+
+%we need vspace because we inserted comment for asset-xml and serialization-matches
+\vspace*{-5mm}
 \subsection{Results}
 
 \label{Phase1_Results}
-As explained in \ref{Phase1_Description}, result obtained via Rumble API was compared with the expected result by applying the correct assertion check. In case assertion passed, test-case was considered a Success and otherwise Fail. The block of code performing these operations was surrounded by try and catch. In case that test failed because the syntax was not completely JSONiq, it would throw a RumbleException or more generally an Exception - Crash. With this implementation, we were to be able to distinguish 3 possible scenarios:
+As explained in \ref{Phase1_Description}, result obtained via Rumble API was compared with the expected result by applying the correct assertion check. In case assertion passed, test-case was considered a Success and otherwise Fail. The block of code performing these operations was surrounded by try and catch. In case that test failed because the syntax was not completely JSONiq, it would throw a RumbleException or more generally an Exception - Crash. Important note is that due to time limits, only two assertions were not implemented. Thus, assert-xml and serialization-matches will always result in Crash. With this implementation, we were to be able to distinguish 3 possible scenarios:
 
 \begin{enumerate}
 	\item Success - Test case succeed
@@ -111,8 +112,8 @@ After generating Phase 1 Implementation report described in Table \ref{tab:Phase
 \begin{itemize}
 	\item Unstable implementation of assertion which resulted in implementing proper way of result binding in Rumble
 	\item Too many crashing tests which resulted in implementing converter
-	\item Insufficient granularity for distinguishing test-cases
 	\item Improving Test Driver implementation resulted in breaking previously implemented features. Therefore, regression tests were introduced
+	\item Some tests were supposed to Crash with expected error codes and our granularity was not appropriate for distinguishing all test-cases
 \end{itemize}
 
 \subsubsection{Result Binding}
@@ -171,14 +172,33 @@ Other conversions that were performed:
 Other items that were unsupported in Phase 2 were node(), empty-sequence() and xs:NOTATION together with all error codes that are not in Table \ref{tab:Phase2_Supported Types} that was taken from \cite{RumbleSupportedErrorCodes}.
 
 \subsubsection{Regression Tests}
-During Phase 1, we were performing iterations with goal to overall improve Test Driver's implementation. The good metric while performing these iterations was total number of test-case Crashes. Our goal was to reduce those numbers as much as possible. This was mainly handled by making following changes: bug fixes, software enhancements, configuration changes. Creating this changes in software development can usually lead to creating new issues that were not present before or re-emergence of old issues. In these cases it is quite common that software development requires regression testing.
-\todo{MAYBE CITE SOMETHING} Regression testing (rarely non-regression testing[1]) is re-running functional and non-functional tests to ensure that previously developed and tested software still performs after a change.[2] If not, that would be called a regression. 
-\todo{Copied from Wikipedia}. During iterations, it was noticed that our approach of fixing and improving the application is highly exposed to changes that require regression testing. 
+During Phase 1, we were performing iterations with goal to overall improve Test Driver's implementation. The good metric while performing these iterations was total number of test-case Crashes. Our goal was to reduce those numbers as much as possible. This was mainly handled by making following changes: bug fixes, software enhancements, configuration changes. Creating this changes in software development can usually lead to creating new issues that were not present before or re-emergence of old issues. In these cases it is quite common that software development requires regression testing. Regression testing (rarely non-regression testing) is re-running functional and non-functional tests to ensure that previously developed and tested software still performs after a change. If not, that would be called a regression \cite{RegressionTesting}. During iterations, it was noticed that our approach of fixing and improving the application is highly exposed to changes that require regression testing. 
 
 While performing iterations, we had to ensure that any further implementation would not break the test-cases that were passing before and at the same time not introduce new test-cases that are Crashing. Thus, for each iteration we have maintained log files of all Passed (Success + Managed) and Crashed test-cases. In every next iteration we have done two comparison between new and previous log files. We have performed a check that compared whether all the passed test-cases from the previous implementation were also contained in the new implementation or not and created "List of test cases that were passing before but not anymore". For Crashes, we did opposite check and created list of "Tests that were not crashing before, but are now and not in list above". 
 
+\subsubsection{Handling Error Codes and better granularity}
+In the Section \ref{Phase1_Description} we have described all the possible assertions for which we are able to verify whether the result of executed query matches the expected result. However, some of the test-cases are different. They are there to verify that certain query cannot be parsed or executed because it is not compliant with the XML language. To better understand we provide an example below:
+
+\lstinputlisting[language=XML, frame=single, breaklines=true, showspaces=false, otherkeywords={test, test-case, description, created, environment, result, all-of,assert-eq,assert-type, <, /, >}, stringstyle=\color{ao}, keywordstyle=\color{chromeyellow}]{error_code.xml}
+
+The issue with such query is that decimal number cannot have more than one decimal separation character (dot). Such a query should not parse and there is a correct error code that should be reported instead - XPST0003 - "It is a static error if an expression is not a valid instance of the grammar defined in." 
+
+The issue in Test Driver implementation is that when such a query is passed down to Rumble, it will cause a RumbleException which essentially breaks the execution of the code. Meaning that they need to be handled differently. Essentially, in case that executed query causes RumbleException, we need to check whether it has error codes as expected result. If not, it will be considered a Crash. If it has error code as expected result, we need to check whether it matches the RumbleException's error code. Often, test-cases have several error codes that they would accept under any-off assertion in the result tag. And this is exactly the check that we are performing. In case that we have a single match with any of the possible error codes, we consider test-case to be a Success. Otherwise, in case that any of the possible error codes matches the error codes that are in Table \ref{tab:Phase2_Supported Types} we consider test-case to be a Failed. Otherwise it will go into category Unsupported. The two tags for which we are not verifying assertion but checking error codes are:
+\begin{itemize}
+	\item error - the code is under attribute code and starts with X
+	\item assert-serialization-error - similar as error but starts with S
+\end{itemize}
+The complete classification diagram is shown in Figure \ref{fig:Phase2_ErrorCodes}.
+
+\begin{figure}[h!]
+	\vspace*{-3mm}
+	\includegraphics[width=\linewidth]{error_code.png}
+	\caption{Phase 2 Classification Diagram}
+	\vspace*{-5mm}
+	\label{fig:Phase2_ErrorCodes}
+\end{figure}
+
 \subsection{Architecture}
-\todo{Maybe the Exceptions arhictecutre here as well}
 The overview of scenario described in \ref{Phase2_Description} can be seen in Figure \ref{fig:Phase2_Architecture}
 \begin{figure}[h!]
 	\vspace*{-5mm}
@@ -193,13 +213,13 @@ As we have seen in Section \ref{Phase2_Converter}, Crashes were not only capturi
 \begin{enumerate}
 	\item Success – Test that is passing the assertion and does not need Converter
 	\item Managed – Tests that would have failed assertion, but they were modified with hard-coded conversion into JSONiq using Converter
-	\item Skipped – Test that is not JSONiq and thus expectedly fails assertion. These tests should not be converted to JSONiq
 	\item Failed – Tests that are failing because there is a bug in Rumble API or Test Driver implementation. 
 	\item Dependency – Tests that are failing because dependency is not supported
-	\item Unsupported – Tests that are failing because type, feature or error code is not supported yet
+	\item Unsupported – Tests that are failing because type or error code is not supported yet
 	\item Crash – Any other exception
 \end{enumerate}
 
+%Decision: Skipped was not presented in the classification diagram. Also it takes only 5 test-cases that are hardcoded to be avoided. For now we will imagine that we have only Crashed that we are supposed to classify afterwards in 1 or 2.
 After introduction of the 7 above mentioned cases, together with small adjustments and bug changes, we were able to obtain:
 %Check 20201105_215309 (separation like in documentation) for the calculation and sources
 \begin{table}[h!]
@@ -210,9 +230,8 @@ After introduction of the 7 above mentioned cases, together with small adjustmen
 		Success                        & 2686                                  & 8.52                                      \\ \hline
 		Managed                        & 4211                                  & 13.36                                     \\ \hline
 		Fail                           & 2554                                  & 8.10                                      \\ \hline
-		Skipped                        & 5                                     & 0.02                                      \\ \hline
 		Dependency                     & 1481                                  & 4.70                                      \\ \hline
-		Crash                          & 13171                                 & 41.79                                     \\ \hline
+		Crash                          & 13171                                 & 41.80                                     \\ \hline
 		Unsupported                    & 7412                                  & 23.52                                     \\ \hline
 	\end{tabular}
 	\caption{Phase 2 Results Overview}
@@ -244,7 +263,7 @@ For implementing Test Converter we decided to create following classification of
 
 With this classification, we want to reuse most of Phase 2 Implementation Results presented in Table \ref{tab:Phase2_ResultTable}.
 
-If we compare above described classification with classification in Table \ref{tab:Phase2_ResultTable}, we can notice that Fail corresponds to Item 5. Item 6 corresponds to Success. Managed corresponds to Item 3. Item 2 corresponds to Unsupported and Dependency. Skipped correspond to Item 1. 
+If we compare above described classification with classification in Table \ref{tab:Phase2_ResultTable}, we can notice that Item 5 corresponds to Fail, Item 6 to Success, Managed to Item 3. Item 2 to both Unsupported and Dependency. 
 
 Performing iterations in Phase 1, we want to distribute all Crashes into some of Item 4 or 1. Of course, it is in our interest to identify as many test-cases as possible as Item 4 and perform conversion in Test Converter. Everything that we cannot convert, we will classify as Item 1. 
 
@@ -266,7 +285,7 @@ The overview of scenario described in \ref{Phase3_Description} can be seen in Fi
 \subsection{Results}
 After carefully analyzing the complete QT3TS, we have concluded that out of 424 test-sets QT3TS consists of, total of 143 can be classified of belonging in the Item 1 or Item 2 of classification documented in this phase of implementation. More specifically, we have assigned 61 test-sets to Item 1 presented in Table \ref{tab:Phase3_Item1} and 84 test-sets to Item 2 presented in Table \ref{tab:Phase3_Item2}.
 
-In addition to test-sets assigned to Item 2, we are adding the Unsupported and Dependency. Furthermore, several bugs were fixed in Rumble between Phase 2 and Phase 3 Implementation resulting in:
+In addition to test-sets assigned to Item 2, we are adding the Unsupported and Dependency. Furthermore, several bugs were fixed in Rumble between Phase 2 and Phase 3 Implementation and results are presented in Table \ref{tab:Phase3_ResultTable}.
 %Check 20210126_173411 (method binding) for the calculation and sources
 \begin{table}[h!]
 	\centering
@@ -284,187 +303,264 @@ In addition to test-sets assigned to Item 2, we are adding the Unsupported and D
 	\label{tab:Phase3_ResultTable}
 \end{table}
 
-
-\begin{table}[]
-	\begin{tabular}{lllr}
-		\textbf{Type}      & \textbf{Status} &  & \multicolumn{1}{c}{\textbf{Supported Error Codes}} \\
-		atomic             & supported       &  & FOAR0001                                           \\
-		anyURI             & supported       &  & FOCA0002                                           \\
-		base64Binary       & supported       &  & FODC0002                                           \\
-		boolean            & supported       &  & FOFD1340                                           \\
-		byte               & not supported   &  & FOFD1350                                           \\
-		date               & supported       &  & JNDY0003                                           \\
-		dateTime           & supported       &  & JNTY0004                                           \\
-		dateTimeStamp      & not supported   &  & JNTY0024                                           \\
-		dayTimeDuration    & supported       &  & JNTY0018                                           \\
-		decimal            & supported       &  & RBDY0005                                           \\
-		double             & supported       &  & RBML0001                                           \\
-		duration           & supported       &  & RBML0002                                           \\
-		float              & not supported   &  & RBML0003                                           \\
-		gDay               & not supported   &  & RBML0004                                           \\
-		gMonth             & not supported   &  & RBML0005                                           \\
-		gYear              & not supported   &  & RBST0001                                           \\
-		gYearMonth         & not supported   &  & RBST0002                                           \\
-		hexBinary          & supported       &  & RBST0003                                           \\
-		int                & not supported   &  & RBST0004                                           \\
-		integer            & supported       &  & SENR0001                                           \\
-		long               & not supported   &  & XPDY0002                                           \\
-		negativeInteger    & not supported   &  & XPDY0050                                           \\
-		nonPositiveInteger & not supported   &  & XPDY0130                                           \\
-		nonNegativeInteger & not supported   &  & XPST0003                                           \\
-		positiveInteger    & not supported   &  & XPST0008                                           \\
-		short              & not supported   &  & XPST0017                                           \\
-		string             & supported       &  & XPST0080                                           \\
-		time               & supported       &  & XPST0081                                           \\
-		unsignedByte       & not supported   &  & XPTY0004                                           \\
-		unsignedInt        & not supported   &  & XQDY0054                                           \\
-		unsignedLong       & not supported   &  & XQST0016                                           \\
-		unsignedShort      & not supported   &  & XQST0031                                           \\
-		yearMonthDuration  & supported       &  & XQST0033                                           \\
-		&                 &  & XQST0034                                           \\
-		&                 &  & XQST0038                                           \\
-		&                 &  & XQST0039                                           \\
-		&                 &  & XQST0047                                           \\
-		&                 &  & XQST0048                                           \\
-		&                 &  & XQST0049                                           \\
-		&                 &  & XQST0052                                           \\
-		&                 &  & XQST0059                                           \\
-		&                 &  & XQST0069                                           \\
-		&                 &  & XQST0088                                           \\
-		&                 &  & XQST0089                                           \\
-		&                 &  & XQST0094                                          
-	\end{tabular}
-	\caption{Rumble Supported Types and Error Codes}
-	\label{tab:Phase2_Supported Types}
-\end{table}
-
-\begin{table}[]
-	\begin{tabular}{ll}
-		\textbf{Dependency name}           & \textbf{Status}              \\
-		higherOrderFunctions               & supported                    \\
-		moduleImport                       & supported                    \\
-		arbitraryPrecisionDecimal          & supported                    \\
-		schemaValidation                   & not supported (XML specific) \\
-		schemaImport                       & not supported (XML specific) \\
-		advanced-uca-fallback              & not supported                \\
-		non\_empty\_sequence\_collection   & not supported yet            \\
-		collection-stability               & not supported yet            \\
-		directory-as-collection-uri        & not supported yet            \\
-		non\_unicode\_codepoint\_collation & not supported                \\
-		staticTyping                       & not supported yet            \\
-		simple-uca-fallback                & not supported                \\
-		olson-timezone                     & not supported yet            \\
-		fn-format-integer-CLDR             & not supported yet            \\
-		xpath-1.0-compatibility            & not supported (XML specific) \\
-		fn-load-xquery-module              & not supported yet            \\
-		fn-transform-XSLT                  & not supported yet            \\
-		namespace-axis                     & not supported (XML specific) \\
-		infoset-dtd                        & not supported (XML specific) \\
-		serialization                      & not supported yet            \\
-		fn-transform-XSLT30                & not supported yet            \\
-		remote\_http                       & not supported                \\
-		typedData                          & not supported                \\
-		schema-location-hint               & not supported (XML specific) \\
-		calendar                           & not supported yet            \\
-		unicode-version                    & supported                    \\
-		unicode-normalization-form         & supported                    \\
-		format-integer-sequence            & not supported yet            \\
-		xsd-version                        & supported                    \\
-		xml-version                        & supported                    \\
-		default-language                   & only "en" supported          \\
-		language                           & only "en" supported          \\
-		spec                               & only "XT30+" not supported   \\
-		limits                             & not supported yet           
-	\end{tabular}
-	\caption{Supported Dependency List }
-	\label{tab:Phase2_DependencyList}
-\end{table}
-
-\begin{table}[]
+\begin{table}[h!]
 	\centering
-	\begin{tabular}{ll}
-		fn/base-uri.xml                                                                 & prod/AxisStep.ancestor-or-self.xml                                                  \\
-		fn/doc.xml                                                                      & prod/AxisStep.following.xml                                                         \\
-		fn/document-uri.xml                                                             & prod/AxisStep.following-sibling.xml                                                 \\
-		fn/element-with-id.xml                                                          & prod/AxisStep.preceding.xml                                                         \\
-		fn/generate-id.xml                                                              & prod/AxisStep.preceding-sibling.xml                                                 \\
-		fn/has-children.xml                                                             & prod/AxisStep.static-typing.xml                                                     \\
-		fn/id.xml                                                                       & prod/AxisStep.unabbr.xml                                                            \\
-		fn/idref.xml                                                                    & prod/BoundarySpaceDecl.xml                                                          \\
-		fn/innermost.xml                                                                & prod/CompAttrConstructor.xml                                                        \\
-		fn/in-scope-prefixes.xml                                                        & prod/CompDocConstructor.xml                                                         \\
-		fn/json-to-xml.xml                                                              & prod/CompCommentConstructor.xml                                                     \\
-		fn/lang.xml                                                                     & prod/CompElemConstructor.xml                                                        \\
-		fn/name.xml                                                                     & prod/CompNamespaceConstructor.xml                                                   \\
-		fn/namespace-uri.xml                                                            & prod/CompPIConstructor.xml                                                          \\
-		fn/namespace-uri-for-prefix.xml                                                 & prod/CompTextConstructor.xml                                                        \\
-		fn/nilled.xml                                                                   & prod/ConstructionDecl.xml                                                           \\
-		fn/node-name.xml                                                                & prod/ConstructionDecl.schema.xml                                                    \\
-		fn/outermost.xml                                                                & prod/Comment.xml                                                                    \\
-		fn/parse-xml.xml                                                                & prod/CopyNamespacesDecl.xml                                                         \\
-		fn/parse-xml-fragment.xml                                                       & prod/DirAttributeList.xml                                                           \\
-		fn/path.xml                                                                     & prod/DirectConstructor.xml                                                          \\
-		fn/resolve-QName.xml                                                            & prod/DirElemConstructor.xml                                                         \\
-		fn/root.xml                                                                     & prod/DirElemContent.xml                                                             \\
-		fn/xml-to-json.xml                                                              & prod/DirElemContent.namespace.xml                                                   \\
-		xs/token.xml                                                                    & prod/DirElemContent.whitespace.xml                                                  \\
-		op/except.xml                                                                   & prod/NameTest.xml                                                                   \\
-		op/intersect.xml                                                                & prod/NodeTest.xml                                                                   \\
-		op/is-same-node.xml                                                             & prod/SchemaImport.xml                                                               \\
-		prod/AxisStep.xml                                                               & prod/StepExpr.xml                                                                   \\
-		prod/AxisStep.abbr.xml                                                          & prod/ValidateExpr.xml                                                               \\
-		prod/AxisStep.ancestor.xml                                                      &                                                                                    
+	\begin{tabular}{|l|l|} 
+		\hline
+		fn/base-uri.xml                 & prod/AxisStep.ancestor-or-self.xml   \\
+		fn/doc.xml                      & prod/AxisStep.following.xml          \\
+		fn/document-uri.xml             & prod/AxisStep.following-sibling.xml  \\
+		fn/element-with-id.xml          & prod/AxisStep.preceding.xml          \\
+		fn/generate-id.xml              & prod/AxisStep.preceding-sibling.xml  \\
+		fn/has-children.xml             & prod/AxisStep.static-typing.xml      \\
+		fn/id.xml                       & prod/AxisStep.unabbr.xml             \\
+		fn/idref.xml                    & prod/BoundarySpaceDecl.xml           \\
+		fn/innermost.xml                & prod/CompAttrConstructor.xml         \\
+		fn/in-scope-prefixes.xml        & prod/CompDocConstructor.xml          \\
+		fn/json-to-xml.xml              & prod/CompCommentConstructor.xml      \\
+		fn/lang.xml                     & prod/CompElemConstructor.xml         \\
+		fn/name.xml                     & prod/CompNamespaceConstructor.xml    \\
+		fn/namespace-uri.xml            & prod/CompPIConstructor.xml           \\
+		fn/namespace-uri-for-prefix.xml & prod/CompTextConstructor.xml         \\
+		fn/nilled.xml                   & prod/ConstructionDecl.xml            \\
+		fn/node-name.xml                & prod/ConstructionDecl.schema.xml     \\
+		fn/outermost.xml                & prod/Comment.xml                     \\
+		fn/parse-xml.xml                & prod/CopyNamespacesDecl.xml          \\
+		fn/parse-xml-fragment.xml       & prod/DirAttributeList.xml            \\
+		fn/path.xml                     & prod/DirectConstructor.xml           \\
+		fn/resolve-QName.xml            & prod/DirElemConstructor.xml          \\
+		fn/root.xml                     & prod/DirElemContent.xml              \\
+		fn/xml-to-json.xml              & prod/DirElemContent.namespace.xml    \\
+		xs/token.xml                    & prod/DirElemContent.whitespace.xml   \\
+		op/except.xml                   & prod/NameTest.xml                    \\
+		op/intersect.xml                & prod/NodeTest.xml                    \\
+		op/is-same-node.xml             & prod/SchemaImport.xml                \\
+		prod/AxisStep.xml               & prod/StepExpr.xml                    \\
+		prod/AxisStep.abbr.xml          & prod/ValidateExpr.xml                \\
+		prod/AxisStep.ancestor.xml      &                                      \\
+		\hline
 	\end{tabular}
 	\caption{Item 1 - Fails, as expected and should not be converted to JSONiq. It will never be supported}
 	\label{tab:Phase3_Item1}
 \end{table}
 
-\begin{table}[]
+\begin{table}
 	\centering
-	\begin{tabular}{ll}
-		fn/compare.xml                            & map/size.xml                               \\
-		fn/analyze-string.xml                     & map/put.xml                                \\
-		fn/collation-key.xml                      & map/remove.xml                             \\
-		fn/contains-token.xml                     & map/for-each.xml                           \\
-		fn/data.xml                               & array/append.xml                           \\
-		fn/default-collation.xml                  & array/filter.xml                           \\
-		fn/default-language.xml                   & array/fold-left.xml                        \\
-		fn/environment-variable.xml               & array/fold-right.xml                       \\
-		fn/escape-html-uri.xml                    & array/for-each.xml                         \\
-		fn/filter.xml                             & array/for-each-pair.xml                    \\
-		fn/fold-left.xml                          & array/get.xml                              \\
-		fn/fold-right.xml                         & array/head.xml                             \\
-		fn/for-each.xml                           & array/insert-before.xml                    \\
-		fn/for-each-pair.xml                      & array/join.xml                             \\
-		fn/format-integer.xml                     & array/put.xml                              \\
-		fn/format-number.xml                      & array/remove.xml                           \\
-		fn/function-lookup.xml                    & array/reverse.xml                          \\
-		fn/function-arity.xml                     & array/sort.xml                             \\
-		fn/function-name.xml                      & array/subarray.xml                         \\
-		fn/implicit-timezone.xml                  & array/tail.xml                             \\
-		fn/iri-to-uri.xml                         & xs/dateTimeStamp.xml                       \\
-		fn/load-xquery-module.xml                 & xs/error.xml                               \\
-		fn/local-name.xml                         & xs/normalizedString.xml                    \\
-		fn/local-name-from-QName.xml              & xs/numeric.xml                             \\
-		fn/namespace-uri-from-QName.xml           & op/bang.xml                                \\
-		fn/parse-ietf-date.xml                    & op/QName-equal.xml                         \\
-		fn/parse-json.xml                         & prod/Annotation.xml                        \\
-		fn/prefix-from-QName.xml                  & prod/BaseURIDecl.xml                       \\
-		fn/QName.xml                              & prod/ContextItemDecl.xml                   \\
-		fn/random-number-generator.xml            & prod/ContextItemExpr.xml                   \\
-		fn/resolve-uri.xml                        & prod/DefaultCollationDecl.xml              \\
-		fn/sort.xml                               & prod/DefaultNamespaceDecl.xml              \\
-		fn/static-base-uri.xml                    & prod/EQName.xml                            \\
-		fn/unparsed-text.xml                      & prod/ExtensionExpr.xml                     \\
-		fn/unparsed-text-available.xml            & prod/ModuleImport.xml                      \\
-		fn/unparsed-text-lines.xml                & prod/NamedFunctionRef.xml                  \\
-		map/merge.xml                             & prod/NamespaceDecl.xml                     \\
-		prod/MapConstructor.xml                   & prod/OptionDecl.xml                        \\
-		map/contains.xml                          & prod/OptionDecl.serialization.xml          \\
-		map/find.xml                              & prod/UnaryLookup.xml                       \\
-		map/get.xml                               & prod/VersionDecl.xml                       \\
-		map/entry.xml                             & prod/WindowClause.xml                     
+	\begin{tabular}{|l|l|} 
+		\hline
+		fn/compare.xml                  & map/size.xml                       \\
+		fn/analyze-string.xml           & map/put.xml                        \\
+		fn/collation-key.xml            & map/remove.xml                     \\
+		fn/contains-token.xml           & map/for-each.xml                   \\
+		fn/data.xml                     & array/append.xml                   \\
+		fn/default-collation.xml        & array/filter.xml                   \\
+		fn/default-language.xml         & array/fold-left.xml                \\
+		fn/environment-variable.xml     & array/fold-right.xml               \\
+		fn/escape-html-uri.xml          & array/for-each.xml                 \\
+		fn/filter.xml                   & array/for-each-pair.xml            \\
+		fn/fold-left.xml                & array/get.xml                      \\
+		fn/fold-right.xml               & array/head.xml                     \\
+		fn/for-each.xml                 & array/insert-before.xml            \\
+		fn/for-each-pair.xml            & array/join.xml                     \\
+		fn/format-integer.xml           & array/put.xml                      \\
+		fn/format-number.xml            & array/remove.xml                   \\
+		fn/function-lookup.xml          & array/reverse.xml                  \\
+		fn/function-arity.xml           & array/sort.xml                     \\
+		fn/function-name.xml            & array/subarray.xml                 \\
+		fn/implicit-timezone.xml        & array/tail.xml                     \\
+		fn/iri-to-uri.xml               & xs/dateTimeStamp.xml               \\
+		fn/load-xquery-module.xml       & xs/error.xml                       \\
+		fn/local-name.xml               & xs/normalizedString.xml            \\
+		fn/local-name-from-QName.xml    & xs/numeric.xml                     \\
+		fn/namespace-uri-from-QName.xml & op/bang.xml                        \\
+		fn/parse-ietf-date.xml          & op/QName-equal.xml                 \\
+		fn/parse-json.xml               & prod/Annotation.xml                \\
+		fn/prefix-from-QName.xml        & prod/BaseURIDecl.xml               \\
+		fn/QName.xml                    & prod/ContextItemDecl.xml           \\
+		fn/random-number-generator.xml  & prod/ContextItemExpr.xml           \\
+		fn/resolve-uri.xml              & prod/DefaultCollationDecl.xml      \\
+		fn/sort.xml                     & prod/DefaultNamespaceDecl.xml      \\
+		fn/static-base-uri.xml          & prod/EQName.xml                    \\
+		fn/unparsed-text.xml            & prod/ExtensionExpr.xml             \\
+		fn/unparsed-text-available.xml  & prod/ModuleImport.xml              \\
+		fn/unparsed-text-lines.xml      & prod/NamedFunctionRef.xml          \\
+		map/merge.xml                   & prod/NamespaceDecl.xml             \\
+		prod/MapConstructor.xml         & prod/OptionDecl.xml                \\
+		map/contains.xml                & prod/OptionDecl.serialization.xml  \\
+		map/find.xml                    & prod/UnaryLookup.xml               \\
+		map/get.xml                     & prod/VersionDecl.xml               \\
+		map/entry.xml                   & prod/WindowClause.xml              \\
+		\hline
 	\end{tabular}
 	\caption{Item 2 - Fails, as expected since it is not supported yet}
 	\label{tab:Phase3_Item2}
+\end{table}
+
+\begin{table}
+	\centering
+	\begin{tabular}{|l|l|r|} 
+		\hline
+		\textbf{Type}         & \textbf{Status}  & \multicolumn{1}{c|}{\textbf{Supported Error Codes} }  \\ 
+		\hline
+		atomic                & supported        & FOAR0001                                              \\ 
+		\cline{1-2}
+		anyURI                & supported        & FOCA0002                                              \\ 
+		\cline{1-2}
+		base64Binary          & supported        & FODC0002                                              \\ 
+		\cline{1-2}
+		boolean               & supported        & FOFD1340                                              \\ 
+		\cline{1-2}
+		byte                  & not supported    & FOFD1350                                              \\ 
+		\cline{1-2}
+		date                  & supported        & JNDY0003                                              \\ 
+		\cline{1-2}
+		dateTime              & supported        & JNTY0004                                              \\ 
+		\cline{1-2}
+		dateTimeStamp         & not supported    & JNTY0024                                              \\ 
+		\cline{1-2}
+		dayTimeDuration       & supported        & JNTY0018                                              \\ 
+		\cline{1-2}
+		decimal               & supported        & RBDY0005                                              \\ 
+		\cline{1-2}
+		double                & supported        & RBML0001                                              \\ 
+		\cline{1-2}
+		duration              & supported        & RBML0002                                              \\ 
+		\cline{1-2}
+		float                 & not supported    & RBML0003                                              \\ 
+		\cline{1-2}
+		gDay                  & not supported    & RBML0004                                              \\ 
+		\cline{1-2}
+		gMonth                & not supported    & RBML0005                                              \\ 
+		\cline{1-2}
+		gYear                 & not supported    & RBST0001                                              \\ 
+		\cline{1-2}
+		gYearMonth            & not supported    & RBST0002                                              \\ 
+		\cline{1-2}
+		hexBinary             & supported        & RBST0003                                              \\ 
+		\cline{1-2}
+		int                   & not supported    & RBST0004                                              \\ 
+		\cline{1-2}
+		integer               & supported        & SENR0001                                              \\ 
+		\cline{1-2}
+		long                  & not supported    & XPDY0002                                              \\ 
+		\cline{1-2}
+		negativeInteger       & not supported    & XPDY0050                                              \\ 
+		\cline{1-2}
+		nonPositiveInteger    & not supported    & XPDY0130                                              \\ 
+		\cline{1-2}
+		nonNegativeInteger    & not supported    & XPST0003                                              \\ 
+		\cline{1-2}
+		positiveInteger       & not supported    & XPST0008                                              \\ 
+		\cline{1-2}
+		short                 & not supported    & XPST0017                                              \\ 
+		\cline{1-2}
+		string                & supported        & XPST0080                                              \\ 
+		\cline{1-2}
+		time                  & supported        & XPST0081                                              \\ 
+		\cline{1-2}
+		unsignedByte          & not supported    & XPTY0004                                              \\ 
+		\cline{1-2}
+		unsignedInt           & not supported    & XQDY0054                                              \\ 
+		\cline{1-2}
+		unsignedLong          & not supported    & XQST0016                                              \\ 
+		\cline{1-2}
+		unsignedShort         & not supported    & XQST0031                                              \\ 
+		\cline{1-2}
+		yearMonthDuration     & supported        & XQST0033                                              \\ 
+		\cline{1-2}
+		\multicolumn{1}{|l}{} &                  & XQST0034                                              \\
+		\multicolumn{1}{|l}{} &                  & XQST0038                                              \\
+		\multicolumn{1}{|l}{} &                  & XQST0039                                              \\
+		\multicolumn{1}{|l}{} &                  & XQST0047                                              \\
+		\multicolumn{1}{|l}{} &                  & XQST0048                                              \\
+		\multicolumn{1}{|l}{} &                  & XQST0049                                              \\
+		\multicolumn{1}{|l}{} &                  & XQST0052                                              \\
+		\multicolumn{1}{|l}{} &                  & XQST0059                                              \\
+		\multicolumn{1}{|l}{} &                  & XQST0069                                              \\
+		\multicolumn{1}{|l}{} &                  & XQST0088                                              \\
+		\multicolumn{1}{|l}{} &                  & XQST0089                                              \\
+		\multicolumn{1}{|l}{} &                  & XQST0094                                              \\
+		\hline
+	\end{tabular}
+	\caption{Rumble Supported Types and Error Codes}
+	\label{tab:Phase2_Supported Types}
+\end{table}
+
+\begin{table}
+	\centering
+	\begin{tabular}{|l|l|} 
+		\hline
+		\textbf{Dependency name}           & \textbf{Status}               \\ 
+		\hline
+		higherOrderFunctions               & supported                     \\ 
+		\hline
+		moduleImport                       & supported                     \\ 
+		\hline
+		arbitraryPrecisionDecimal          & supported                     \\ 
+		\hline
+		schemaValidation                   & not supported (XML specific)  \\ 
+		\hline
+		schemaImport                       & not supported (XML specific)  \\ 
+		\hline
+		advanced-uca-fallback              & not supported                 \\ 
+		\hline
+		non\_empty\_sequence\_collection   & not supported yet             \\ 
+		\hline
+		collection-stability               & not supported yet             \\ 
+		\hline
+		directory-as-collection-uri        & not supported yet             \\ 
+		\hline
+		non\_unicode\_codepoint\_collation & not supported                 \\ 
+		\hline
+		staticTyping                       & not supported yet             \\ 
+		\hline
+		simple-uca-fallback                & not supported                 \\ 
+		\hline
+		olson-timezone                     & not supported yet             \\ 
+		\hline
+		fn-format-integer-CLDR             & not supported yet             \\ 
+		\hline
+		xpath-1.0-compatibility            & not supported (XML specific)  \\ 
+		\hline
+		fn-load-xquery-module              & not supported yet             \\ 
+		\hline
+		fn-transform-XSLT                  & not supported yet             \\ 
+		\hline
+		namespace-axis                     & not supported (XML specific)  \\ 
+		\hline
+		infoset-dtd                        & not supported (XML specific)  \\ 
+		\hline
+		serialization                      & not supported yet             \\ 
+		\hline
+		fn-transform-XSLT30                & not supported yet             \\ 
+		\hline
+		remote\_http                       & not supported                 \\ 
+		\hline
+		typedData                          & not supported                 \\ 
+		\hline
+		schema-location-hint               & not supported (XML specific)  \\ 
+		\hline
+		calendar                           & not supported yet             \\ 
+		\hline
+		unicode-version                    & supported                     \\ 
+		\hline
+		unicode-normalization-form         & supported                     \\ 
+		\hline
+		format-integer-sequence            & not supported yet             \\ 
+		\hline
+		xsd-version                        & supported                     \\ 
+		\hline
+		xml-version                        & supported                     \\ 
+		\hline
+		default-language                   & only ën" supported            \\ 
+		\hline
+		language                           & only ën" supported            \\ 
+		\hline
+		spec                               & only "XT30+" not supported    \\ 
+		\hline
+		limits                             & not supported yet             \\
+		\hline
+	\end{tabular}
+	\caption{Rumble Supported Dependency List}
+	\label{tab:Phase2_DependencyList}
 \end{table}

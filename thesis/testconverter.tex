@@ -1,6 +1,8 @@
 
 \chapter{Test Converter}
-In Figure \ref{fig:Phase3_Architecture} we have represented architecture that proposes implementing Test Converter as separate module. The main idea driving us was having a clean architecture that would make the Test Driver easily maintainable and extensible. However, In Section \ref{Phase3_Description}, we have explained the down sides of hard-coded conversion using Java String.replace method. Just having the clean architecture would not solve the hard-coding issues in Test Converter. And ultimately, we want to produce purely JSONiq Test Suite similar to QT3TS for XQuery. Such Test Suite would be available for everyone to use and verify other JSONiq implementations such as Zorba \cite{Zorba}, IBM WebSphere \cite{WebSphere}, Xidel \cite{Xidel}.
+In Figure \ref{fig:Phase3_Architecture} we have represented architecture that proposes implementing Test Converter as separate module. The main idea driving us was having a clean architecture that would make the Test Driver easily maintainable and extensible. Thus, we will separate these two and we can look at them as two different Java console applications. Test Driver will only handle executing the test-cases on Rumble while Test Coverter will only handle converting XQuery test suite to a JSONiq one. 
+
+However, In Section \ref{Phase3_Description}, we have explained the down sides of hard-coded conversion using Java String.replace method. Just having the clean architecture would not solve the hard-coding issues in Test Converter. Ultimately, we want to produce purely JSONiq Test Suite similar to QT3TS for XQuery. Such Test Suite would be available for everyone to use and verify other JSONiq implementations such as Zorba \cite{Zorba}, IBM WebSphere \cite{WebSphere}, Xidel \cite{Xidel}.
 
 \section{Architecture}
 First we need to think about achieving a clean XQuery to JSONiq conversion without hard-coding. Let us recall Rumble and its entire Section \ref{sec:RumbleArchitecture}. We said that in order to finally execute the query, we are performing conversion from Expression Tree to tree of runtime iterators. The Expression Tree itself is a higher-level abstraction of JSONiq functional language that is composed of expressions. The entire Node Class Hierarchy that was implemented in Rumble is used to represent the Expression Tree.
@@ -86,7 +88,7 @@ Of course, not everything can be converted to JSONiq and it should not be conver
 	\item single or double dash preceding relativePathExpr within pathExpr
 \end{itemize}
 
-In addition to that, there are conversions that we are yet not able to perform as the implementation is missing in Rumble. Unfortunately, here we are again introducing dependency on Rumble. But it was the best approach in order to perform the clean conversion without hard-coding. Following conversions are classified as out of scope of the thesis and will be supported in future once Rumble is upgraded.
+In addition to that, there are conversions that we are yet not able to perform as the implementation is missing in Rumble. Unfortunately, here we are again introducing dependency on Rumble. But it was the best approach in order to perform the clean conversion without hard-coding. Following conversions are classified as out of scope of the thesis and will be supported in future once Rumble is upgraded:
 \begin{itemize}
 	\item defaultNamespaceDecl
 	\item decimalFormatDecl
