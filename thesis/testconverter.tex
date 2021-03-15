@@ -4,12 +4,12 @@ In Figure \ref{fig:Phase3_Architecture} we have represented architecture that pr
 
 However, In Section \ref{Phase3_Description}, we have explained the down sides of hard-coded conversion using Java String.replace method. Just having the clean architecture would not solve the hard-coding issues in Test Converter. Ultimately, we want to produce purely JSONiq Test Suite similar to QT3TS for XQuery. Such Test Suite would be available for everyone to use and verify other JSONiq implementations such as Zorba \cite{Zorba}, IBM WebSphere \cite{WebSphere}, Xidel \cite{Xidel}.
 
-\section{Architecture}
+\section{Rumble Architecture}
 First we need to think about achieving a clean XQuery to JSONiq conversion without hard-coding. Let us recall Rumble and its entire Section \ref{sec:RumbleArchitecture}. We said that in order to finally execute the query, we are performing conversion from Expression Tree to tree of runtime iterators. The Expression Tree itself is a higher-level abstraction of JSONiq functional language that is composed of expressions. The entire Node Class Hierarchy that was implemented in Rumble is used to represent the Expression Tree.
 
 If we are able to create Expression Tree from a query that is written in XQuery, it would mean that we have created JSONiq Expression Tree. Instead of creating the runtime iterator and executing the query, we can simply serialize Expression Tree to JSONiq query directly. We will reuse parts of Rumble and extends it's architecture so that it supports parsing queries written in XQuery. 
 
-This means that even though Test Converter and Test Driver will be two separate Java console applications, they will both use Rumble. One may argue that the success of standalone JSONiq Test Suite will in that case depend on Rumble implementation. And this is true, it will. But decision here is to use Rumble simply because using JSONiq Expression tree Rumble has is the cleanest possible solution for conversion. Finally, it will also improve Rumble itself by supporting additional query language - XQuery.
+This means that even though Test Converter and Test Driver will be two separate Java console applications, they will both use Rumble. One may argue that the success of standalone JSONiq Test Suite will in that case depend on Rumble implementation. And this is true, it will. But decision here is to use Rumble simply because using JSONiq Expression tree Rumble is the cleanest possible solution for conversion. Finally, it will also improve Rumble itself by supporting additional query language - XQuery.
 
 In Figure \ref{fig:Rumble_General_Architecture_With_XQuery} we have represented that will enable us to achieve the target. In the following sub sections we will explain the implementation details of XQuery Lexer \& Parser and Translator together with Serialization part. 
 
@@ -24,7 +24,7 @@ In Figure \ref{fig:Rumble_General_Architecture_With_XQuery} we have represented 
 Here we will go in details of implementation of each and every modification that has been performed in Rumble in order for us to be able to re-use the already existing classes in the Node Class Hierarchy. 
 
 \subsection{Lexer and Parser}
-If we recall Section \ref{sec:RumbleLexerParser}, for simple languages, these two modules can be automatically generated from grammar of language. XQuery is 95\% similar to JSONiq, therefore we just need to create a grammar file) similar to JSONiq.g4. 
+If we recall Section \ref{sec:RumbleLexerParser}, for simple languages, these two modules can be automatically generated from grammar of language. XQuery is 95\% similar to JSONiq, therefore we just need to create a grammar file similar to JSONiq.g4. 
 
 The initial approach was to implement the XQuery.g4 file ourselves based on already implemented JSONiq.g4 file in Rumble. However, XQuery is older than JSONiq and it was logical that such file was already implemented. Indeed, we managed to find an ANTLR4 implementation of xqDoc for XQuery \cite{XqueryGrammar}. It is licensed under the same Apache License 2.0 like Rumble and we can re-use it. The grammar is stable and it was not changed for more than 10 months so we we do not expect it to be updated. Also it is compliant with XQuery 3.1 W3C Recommendation \cite{XQueryRecommendation}. 
 
@@ -66,7 +66,7 @@ Names of certain labels in grammar file were changed in order to match the code 
 	\item arrowExpr was changed to use complexArrow instead of arrowFunctionSpecifier argumentList in order to match the implementation of TranslationVisitor class. This does not affect structure as it is equivalent in next level of nesting (complexArrow: arrowFunctionSpecifier argumentList;)
 \end{enumerate}
 
-We have also implemented another script for handling the XQuery.g4 and using it ANTLR auto-generated XQueryParser and XQueryLexer together with its corresponding XQueryParserBaseVisitor base class.
+We have also implemented another script for handling the XQuery.g4, and using it, ANTLR auto-generated XQueryParser and XQueryLexer together with its corresponding XQueryParserBaseVisitor base class.
 
 \subsection{Translator}
 The second part requires us to implement XQueryTranslationVisitor that extends the generated XQueryParserBaseVisitor class and wraps around Node class. With proper implementation we would be able to achieve converting XQuery into the JSONiq Expression Tree. The implementation is mainly based on the already implemented JSONiq TranslationVisitor with modifications that we will document here.
@@ -91,7 +91,7 @@ Of course, not everything can be converted to JSONiq and it should not be conver
 	\item single or double dash preceding relativePathExpr within pathExpr
 \end{itemize}
 
-In addition to that, there are conversions that we are yet not able to perform as the implementation is missing in Rumble. Unfortunately, here we are again introducing dependency on Rumble. But it was the best approach in order to perform the clean conversion without hard-coding. Following conversions are classified as out of scope of the thesis and will be supported in future once Rumble is upgraded:
+In addition to that, there are conversions that we are yet not able to perform as the implementation is missing in Rumble. Unfortunately, here we are again introducing dependency on Rumble. But it was the best approach in order to perform the clean conversion without hard-coding.\todo{remove previous two sentences} Following conversions are classified as out of scope of the thesis and will be supported in future once Rumble is upgraded:
 \begin{itemize}
 	\item defaultNamespaceDecl
 	\item decimalFormatDecl
@@ -106,7 +106,7 @@ In addition to that, there are conversions that we are yet not able to perform a
 
 For the versions that we support, since the grammar file is based on the XQuery 3.1 W3C Recommendation \cite{XQueryRecommendation}, we have decided to support XQuery versions 1.0, 3.0 and 3.1 as version  3.1 is backward compatible.
 
-For annotations, for now we only support single public annotations without prefix. Single since we can see from QT3TS in the prod/ModuleImport.xml, tests modules-pub-priv-29 to 36, we can see that "It is an error if a variable's annotations contains any combination of two annotations". In addition, according to the W3C Recommendation \cite{XQueryRecommendation} it is said that "If no prefix is present, the name is in thehttp://www.w3.org/2012/xquery namespace". This results in following implementation of annotation handling:
+For annotations, for now we only support single public annotations without prefix. Single since we can see from QT3TS in the prod/ModuleImport.xml, tests modules-pub-priv-29 to 36, we can see that "It is an error if a variable's annotations contains any combination of two annotations". In addition, according to the W3C Recommendation \cite{XQueryRecommendation} it is said that "If no prefix is present, the name is in the "http://www.w3.org/2012/xquery namespace". This results in following implementation of annotation handling:
 \begin{enumerate}
 	\item Throw an error if there is more than 1 annotation in the annotations list
 	\item Otherwise, extract the EQName
@@ -157,7 +157,7 @@ In Section \ref{sec:RumbleArchitecture}, we have presented the 4 phases that Rum
 
 To perform only serialization without obtaining results of the query, we have extended Java Rumble API with additional method serializeToJSONiq. This method performs the first same first 6 Steps described above. After that, we simply call the implementation of serializeToJSONiq of abstract Node class via Main Module from Step 6. We pass String Buffer as the argument which gets populated and then the Java Rumble API serializeToJSONiq method returns it as a String. Such implementation allowed Rumble to provide conversion out of the box via JSONiq Expression Tree.
 
-\section{Implementation}
+\section{Architecture}
 \label{sec:TestConverterImplementation}
 As we said before in Section \ref{Phase3_Description} we will distinguish 6 cases, but for this implementation we will need only first 2: 
 \begin{enumerate}
@@ -165,26 +165,38 @@ As we said before in Section \ref{Phase3_Description} we will distinguish 6 case
 	\item Fails, as expected since it is not supported yet - Documented in Table \ref{tab:Phase3_Item2}
 \end{enumerate}
 
-This separation is quite important to understand. Since we are trying to create a JSONiq Test Suite, independent of any JSONiq implementation in same manner like we have QT3TS for XQuery. Thus, all Item 1 should not be included as they simply are not JSONiq! On the other hand, all Item 2 should be included because they can be used to verify other JSONiq implementations. All Item 2 will only be excluded from Rumble as it does not support it yet.
+This separation is important to understand. As we want to produce standalone JSONiq Test Suite similar to QT3TS for XQuery, all Item 1 should not be included as they simply are not JSONiq! On the other hand, all Item 2 should be included because they can be used to verify other JSONiq implementations. 
 
-This means that final architecture of Test Converter can be seen in Figure \ref{fig:test_converter_final_architecture.png}. If we compare it with Test Driver architecture, we can conclude that there is a small difference. Test Converter does not need to execute the JSONiq query. Therefore as presented in Figure \ref{fig:Rumble_General_Architecture_With_XQuery}, we will simply call serializeToJSONiq instead of creating runtime iterators that would be executed on top of Spark i.e. we do not need Spark. 
-
-The Converter part is using method binding provided by Saxon. There is a Java method that is calling Rumble API and passing the test query and the returned string will then replace the test tag in the test-case. The same actions are then take for query result replacing the result tag of test-case making the conversion complete. It is quite similar to what we were performing in Test Driver with hard-coded conversion before but in a much cleaner approach.
-
-At the moment, Test Converter is dependent on Rumble as it was used to perform clean XQuery to JSONiq transformation. However, once Rumble is mature implementation supporting everything we have documented as missing, we will have an once and for all generated JSONiq Test Suite as the output of our work.
+Final architecture of Test Converter can be seen in Figure \ref{fig:test_converter_final_architecture.png}. There is a small difference compared to Test Driver architecture. Test Converter does not need to execute the JSONiq query. Therefore as presented in Figure \ref{fig:Rumble_General_Architecture_With_XQuery}, we will simply call serializeToJSONiq instead of creating runtime iterators that would be executed on top of Spark i.e. we do not need Spark. 
 
 \begin{figure}[h!]
-	\includegraphics[width=\linewidth]{test_converter_final_architecture.png}
 	\vspace*{-5mm}
+	\includegraphics[width=\linewidth]{test_converter_final_architecture.png}
+	\vspace*{-10mm}
 	\caption{Test Converter Final Architecture}
 	\label{fig:test_converter_final_architecture.png}
 \end{figure}
 
-On the other hand, in order to be able to focus on bugs that need to be fixed in Rumble itself, we will maintain a list of Item 2 that we will not execute in Test Driver for Rumble. This list will in future drop to 0 items. Test Driver will now take JSONiq Test Suite produced by Test Converter and execute it. It will be used to open issues and track the development progress of Rumble. Such architecture can be seen in Figure \ref{fig:test_driver_final_architecture.png}
+\vspace*{-5mm}
+Final Test Driver architecture can be seen in Figure \ref{fig:test_driver_final_architecture.png}. We will maintain a list of Item 2 that will not be executed in Test Driver for Rumble. Test Driver will now take JSONiq Test Suite produced by Test Converter and execute it. 
 
 \begin{figure}[h!]
-	\includegraphics[width=\linewidth]{test_driver_final_architecture.png}
 	\vspace*{-5mm}
+	\includegraphics[width=\linewidth]{test_driver_final_architecture.png}
+	\vspace*{-10mm}
 	\caption{Test Converter Final Architecture}
 	\label{fig:test_driver_final_architecture.png}
 \end{figure}
+
+\section{Implementation}
+The Converter part is using method binding provided by Saxon. First we define the ExtensionFunction and name under which it will be available in XQuery expression (convert). Secondly, we specify what is result of this function is (result of Java Convert method). Finally, we assign it a namespace (bf). We now define XQuery expression that has a function that recursively visits all nested XML tags. In case that they are test or result tags, it will pass the under-laying tag value to bf:convert and replace the tag value with returned result. We define external variable and pass the entire test-set to the XQuery expression. Check code below:
+
+\lstinputlisting[language=Java, frame=single, breaklines=true, showspaces=false, stringstyle=\color{ao}, keywordstyle=\color{chromeyellow}, basicstyle=\tiny]{source_code_method_binding.java}
+
+The Java Convert method simply uses Rumble API to call serializeToJSONiq method we have previously created making the conversion complete. There is a small remark to take into consideration here. The test-cases that have error codes will cause a RumbleException. Due to time constraints we were unable to make a better classification and check for which error codes we actually need to perform XQuery to JSONiq conversion of test tag. Thus, those test-cases will not be converted and return same result instead. Check code below:
+
+\lstinputlisting[language=Java, frame=single, breaklines=true, showspaces=false, stringstyle=\color{ao}, keywordstyle=\color{chromeyellow}, basicstyle=\small]{source_code_serializetojsoniq.java}
+
+At the moment, Test Converter is dependent on Rumble as it was used to perform clean XQuery to JSONiq transformation. However, once Rumble is mature implementation supporting everything we have documented as missing, we will have an once and for all generated JSONiq Test Suite as the output of our work. 
+
+On the other hand, Test Driver will not change much. We have a similar architecture as we had with hard-coded conversion before but in a much cleaner approach. Test Driver can be used directly with either JSONiq or XQuery Test Suite depending on configuration which we will explain in Section \ref{sec:overallsummary}. It will be helpful in  improving the Rumble implementation by fixing and enable opening/closing issues and tracking the development progress of Rumble. Fixing the bugs and adding features will lead also consequentially lead to Item 2 list to drop down to 0. 

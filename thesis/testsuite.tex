@@ -6,7 +6,7 @@ In this chapter, we will discuss design decisions that we have made during the d
  We view Rumble as black-box and the single point of communication with Rumble should only be via the Rumble Java public API. Therefore, we have decided to implement Test Driver as Java Console Application. Furthermore, Rumble is also written in Java. We decided to setup our Java Console Application project to have two modules - Test Driver and Rumble module. Rumble module is the branch in repository created for the purpose of this work \cite{RumbleBranch}. Making Test Driver module dependent on it, we are allowing possibility to directly use Rumble and its classes in case that not everything is possible to be achieved by treating Rumble as the black-box. 
 
 \subsection{Data Format}
-The XQuery/XPath 3.* Test Suite (QT3TS) is publicly available at W3C Public CVS Repository under module name 2011/QT3-test-suite \cite{TestSuiteCVSRepository}. Since April 1st 2019, CVS tree has been discontinued and the repository has been migrated to W3C Public GitHub repository \cite{TestSuiteGitHubRepository}. The tests are published as a set of files - test sets containing in total more than 30000 test cases. The tests are published as a set of files, mostly in XML format. W3C does not supply a Test Driver for executing the tests. Instead, for each implementation a Test Driver should be written. As these test sets are mostly written in XML format, the first component that our Test Driver will require is the XML parser. 
+The XQuery/XPath 3.* Test Suite (QT3TS) is publicly available at W3C Public CVS Repository under module name 2011/QT3-test-suite \cite{TestSuiteCVSRepository}. Since April 1st 2019, CVS tree has been discontinued and the repository has been migrated to W3C Public GitHub repository \cite{TestSuiteGitHubRepository}. The tests are published as a set of files - test sets containing in total more than 30000 test cases written mostly in XML format. W3C does not supply a Test Driver for executing the tests. Instead, for each implementation a Test Driver should be written. As these test sets are mostly written in XML format, the first component that our Test Driver will require is the XML parser. 
 
 \subsection{XML Parser}
 XML parser is a program that allows our application to read and write XML documents. For our work, we have investigated following possibilities:
@@ -26,7 +26,7 @@ XML parser is a program that allows our application to read and write XML docume
 
 For parsing XML, we have decided to use Saxon. One may argue that for all 4 listed components, Java also has its own API – JAXP for 1st, 2nd and 4th together with XQJ for 3rd. However, in practice, Saxon is easier to use and more flexible than JAXP. Apart from that, main arguments are:
 \begin{enumerate}
-	\item Saxon itself is one of the implementations for which Test Driver was also implemented. Based on Results Report \cite{SaxonReport}, it passes more than 99,9\% of the QT3TS tests.
+	\item Saxon itself is one of the implementations for which Test Driver was also implemented. Based on Results Report \cite{SaxonReport}, it passes more than 99,9\% of the QT3TS tests and it is considered a reference for XML.
 	\item Saxons implementation of the Test Driver can be used as a baseline for developing our own Test Driver. 
 \end{enumerate}
 
@@ -51,7 +51,7 @@ Test Driver's Test Result Handling Logic is in charge of determining which asser
 	\item assert-empty - This assertion requires result to return empty sequence
 	\item assert - This assertion requires us to run another query in which obtained result will be used as parameter of the new query. For example:
 	\lstinputlisting[language=XML, frame=single, breaklines=true, showspaces=false, otherkeywords={<result>,  </result>, <test>, </test>, <assert>, </assert>}, stringstyle=\color{ao}, keywordstyle=\color{chromeyellow}]{source_code_2.xml}
-	\item assert-eq - It requires us to run another query in form of obtained result "eq" value under the assert-eq tag
+	\item assert-eq - It requires us to run another query in form of obtained result "eq" value under this tag
 	\item assert-deep-eq - Similar to assert-eq but runs "deep-equal" query
 	\item assert-true - It requires result to return single Boolean value True
 	\item assert-false - Opposite of assert-true
@@ -59,8 +59,9 @@ Test Driver's Test Result Handling Logic is in charge of determining which asser
 	\item all-of - It contains multiple different assert tags described in this list and it requires all of them to be fulfilled 
 	\item any-of - Similar to all-of but requires only one of them to be fulfilled
 	\item assert-type - Requires to check if obtained result is instance of this tag
-	\item assert-count - It requires obtained result sequence size to be equal to the value under assert-count tag
+	\item assert-count - Requires obtained result sequence size to be equal to this
 	\item not - It requires to execute nested assertion with a negation
+	\item assert-permutation - Requires result sequence to be permutation of this
 	\item assert-xml - Requires result to be a XML document matching this one
 	\item serialization-matches - Requires serialization of result to match this
 \end{itemize}
@@ -183,7 +184,7 @@ In the Section \ref{Phase1_Description} we have described all the possible asser
 
 The issue with such query is that decimal number cannot have more than one decimal separation character (dot). Such a query should not parse and there is a correct error code that should be reported instead - XPST0003 - "It is a static error if an expression is not a valid instance of the grammar defined in." 
 
-The issue in Test Driver implementation is that when such a query is passed down to Rumble, it will cause a RumbleException which essentially breaks the execution of the code. Meaning that they need to be handled differently. Essentially, in case that executed query causes RumbleException, we need to check whether it has error codes as expected result. If not, it will be considered a Crash. If it has error code as expected result, we need to check whether it matches the RumbleException's error code. Often, test-cases have several error codes that they would accept under any-off assertion in the result tag. And this is exactly the check that we are performing. In case that we have a single match with any of the possible error codes, we consider test-case to be a Success. Otherwise, in case that any of the possible error codes matches the error codes that are in Table \ref{tab:Phase2_Supported Types} we consider test-case to be a Failed. Otherwise it will go into category Unsupported. The two tags for which we are not verifying assertion but checking error codes are:
+The issue in Test Driver implementation is that when such a query is passed down to Rumble, it will cause a RumbleException which essentially breaks the execution of the code. Meaning that they need to be handled differently. Essentially, in case that executed query causes RumbleException, we need to check whether it has error codes as expected result. If not, it will be considered a Crash. If it has error code as expected result, we need to check whether it matches the RumbleException's error code. Often, test-cases have several error codes that they would accept under any-off assertion in the result tag. And this is exactly the check that we are performing. In case that we have a single match with any of the possible error codes, we consider test-case to be a Success. Otherwise, in case that any of the possible error codes matches the error codes that are in Table \ref{tab:Phase2_Supported Types} we consider test-case to be a Failed. Otherwise it will go into category Unsupported Error. The two tags for which we are not verifying assertion but checking error codes are:
 \begin{itemize}
 	\item error - the code is under attribute code and starts with X
 	\item assert-serialization-error - similar as error but starts with S
@@ -209,7 +210,7 @@ The overview of scenario described in \ref{Phase2_Description} can be seen in Fi
 \end{figure}
 
 \subsection{Results}
-As we have seen in Section \ref{Phase2_Converter}, Crashes were not only capturing tests that are not JSONiq and needed conversion. They were also including the tests that could not succeed simply because Rumble does not support that feature, type or error code. In Table \ref{tab:Phase2_Supported Types} we can see the limited amount of supported types and error codes compared to XQuery w3 specification for which we are able to verify assertion. All others would then be ignored and classified differently. Furthermore, some of them were introducing dependencies. For example, in dependency tag it was possible to have request for particular version of XPath, XQuery or XSLT. While Rumble is backwards compatible with all versions of XPath and XQuery, it does not support XSLT. We have therefore created and divided test cases into 7 groups:
+As we have seen in Section \ref{Phase2_Converter}, Crashes were not only capturing tests that are not JSONiq and needed conversion. They were also including the tests that could not succeed simply because Rumble does not support that type or error code. In Table \ref{tab:Phase2_Supported Types} we can see the limited amount of supported types and error codes compared to XQuery W3C specification for which we are able to verify assertion. All others would then be ignored and classified differently. Furthermore, some of them were introducing dependencies. For example, in dependency tag it was possible to have request for particular version of XPath, XQuery or XSLT. While Rumble is backwards compatible with all versions of XPath and XQuery, it does not support XSLT. We have therefore created and divided test cases into 6 groups:
 \begin{enumerate}
 	\item Success – Test that is passing the assertion and does not need Converter
 	\item Managed – Tests that would have failed assertion, but they were modified with hard-coded conversion into JSONiq using Converter
@@ -220,7 +221,7 @@ As we have seen in Section \ref{Phase2_Converter}, Crashes were not only capturi
 \end{enumerate}
 
 %Decision: Skipped was not presented in the classification diagram. Also it takes only 5 test-cases that are hardcoded to be avoided. For now we will imagine that we have only Crashed that we are supposed to classify afterwards in 1 or 2.
-After introduction of the 7 above mentioned cases, together with small adjustments and bug changes, we were able to obtain:
+After introduction of the 6 above mentioned cases, together with small adjustments and bug changes, we were able to obtain:
 %Check 20201105_215309 (separation like in documentation) for the calculation and sources
 \begin{table}[h!]
 	\centering
