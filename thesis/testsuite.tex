@@ -119,20 +119,20 @@ After generating Phase 1 Implementation report described in Table \ref{tab:Phase
 
 \subsubsection{Result Binding}
 To better understand the issues we have encountered, we will provide following code snippet:
-%[}]
+
 \lstinputlisting[language=Java, frame=single, breaklines=true, showspaces=false, stringstyle=\color{ao}, keywordstyle=\color{chromeyellow}, basicstyle=\small]{source_code_without_results.java}
 
 If we examine the AssertEq implementation, we will notice that lines.get(0) assumes that obtained result is a single item and takes first one. It does not handle sequences! Furthermore, handling sequences was only possible for AssertStringEqual in case that our result is sequence of strings by performing string concatenation. All other assertions such as Assert, AssertEq, AssertDeepEq are not possible to be implemented. Finally, if we remember Assert example from Section \ref{Phase1_Description}, we will notice that we had to perform string replace of \$result with actual result obtained from the Rumble API. 
 
-Thus, Rumble was extended to support result binding. The change was made in Rumble implementation itself. The only modification required in Test Driver was to instantiate a new RumbleConfiguration and also new Rumble instance for each test-case that requires result binding. Check code below:
+Thus, Rumble implementation itself was extended to support result binding. The only modification required in Test Driver was to instantiate a new RumbleConfiguration and also new Rumble instance for each test-case that requires result binding. We then define external variable and pass the obtained result to the newly created (nested) XQuery expression. Check code below:
 
 \lstinputlisting[language=Java, frame=single, breaklines=true, showspaces=false, stringstyle=\color{ao}, keywordstyle=\color{chromeyellow}, basicstyle=\footnotesize]{source_code_with_results.java}
 
 The main concern of the new implementation was that performing many instantiates might cause the execution time to increase dramatically. However, after run-time increased only by 15seconds from 2minutes - only 12.5\%.
 
-Once the result binding was implemented, it allowed us to run the assert type also as a query instead of calling the publicly exposed methods of the Item class in the Rumble Java API. In Phase 1 implementation, we had a switch case for every possible type that Rumble Java API supports, making code difficult for future maintenance and extension with new supported types. With running assert type as "instance of" query , we managed to have a single point of conversion performed in the beginning and applied for both test case and the expected result. Within conversion we would discover the unsupported type errors without the need of second switch case to check whether Rumble's API Item class supports the type or not. Furthermore, the previously implemented switch case had unsupported type as default therefore hiding some types that were supported but not specified in the documentation. The mentioned conversion will be explained more in detail in Section \ref{Phase2_Converter}. 
+In Phase 1 implementation, for assert-type we had a switch case for every possible type that Rumble's Item class supports. Type information was obtained using methods of the Item class, which introduced dependency on Rumble making code difficult for future maintenance and extension with new supported types. Once the result binding was implemented, it allowed us to run the assert-type also as "instance of" query. It also allowed to have a single point of conversion performed in the beginning and applied for both test case and the expected result. Within conversion we would discover the unsupported type errors without the need of switch case to check whether Rumble's Item class supports the type or not. Furthermore, the previously implemented switch case had unsupported type as default therefore hiding some types that were supported but not specified in the documentation. The mentioned conversion will be explained more in detail in Section \ref{Phase2_Converter}. 
 
-The clean separation that was performed here initialized idea and was a base plan for XQuery to JSONiq conversion logic separation. In Section \ref{Phase3_Description} we will describe Architecture that has separate application that takes XQuery as input, performs conversion and outputs JSONiq test suite. Such approach would make the Test Driver easily maintainable and extensible!
+The clean implementation using nested XQuery expression initialized idea and was a base plan for XQuery to JSONiq conversion logic separation. In Section \ref{Phase3_Description} we will describe Architecture that has separate application that takes XQuery as input, performs conversion and outputs JSONiq test suite. Such approach would make the Test Driver easily maintainable and extensible!
 
 \subsubsection{Converter}
 \label{Phase2_Converter}
