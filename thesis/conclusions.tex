@@ -1,10 +1,10 @@
 \chapter{Conclusion and Future Work} 
 \label{chapter:conclusions}
-As mentioned in Chapter \ref{chapter:introduction}, the high level idea of this work is to implement a Test Driver that can directly use QT3TS in order to test and verify Rumble implementation. However, during our work, we have managed to go beyond this scope and achieve even more which we will present in Section \ref{sec:overallsummary}.
+As mentioned in Chapter \ref{chapter:introduction}, the high-level idea of this work is to implement a Test Driver that can directly use QT3TS in order to test and verify Rumble implementation. However, during our work, we have managed to go beyond this scope and achieve even more, which we will present in Section \ref{sec:overallsummary}.
 
 \section{Result Summary}
 \label{sec:overallsummary}
-Apart from implementation of Test Driver, the results can be divided in total of 4 major areas:
+Apart from the implementation of the Test Driver, the results can be divided into a total of 4 major areas:
 \begin{enumerate}
 	\item Implementation of Test Driver for Rumble
 	\item Improvement of Rumble implementation
@@ -13,17 +13,17 @@ Apart from implementation of Test Driver, the results can be divided in total of
 \end{enumerate}
 
 \subsection{Implementation of Test Driver for Rumble}
-As we said, the published QT3TS Repository \cite{TestSuiteGitHubRepository} can be used to test any XML (XQuery, XPath, XSLT) implementation. Rumble as engine uses JSONiq language that inherits 95\% of its features from XQuery. For each implementation, Test Driver has to be written in order to be able to use the QT3TS. And we have achieved that, we have fully operational Test Driver that can parse the QT3TS and execute it on top of Rumble. Depending on configuration it can be used in 3 modes:
+As we said, the published QT3TS Repository \cite{TestSuiteGitHubRepository} can be used to test any XML (XQuery, XPath, XSLT) implementation. Rumble as an engine uses JSONiq language that inherits 95\% of its features from XQuery. For each implementation, Test Driver has to be written in order to be able to use the QT3TS. And we have achieved that. We have a fully operational Test Driver that can parse the QT3TS and execute it on top of Rumble. Depending on configuration, it can be used in 3 modes:
 \begin{enumerate}
 	\item Preferred way of testing Rumble implementation is using the original QT3TS and perform hard-coded conversion to JSONiq within Test Driver.
-	\item  Verify implementation of XQuery Parser of Rumble by using the original QT3TS without performing hard-coded conversion to JSONiq within Test Driver.
+	\item  Verify implementation of XQuery Parser of Rumble by using the original QT3TS without performing the hard-coded conversion to JSONiq within Test Driver.
 	\item Future way of testing Rumble implementation is using the JSONiq Test Suite generated from original QT3TS by Test Converter without performing hard-coded conversion to JSONiq within Test Driver.
 \end{enumerate} 
 
 \subsection{Improvement of Rumble Implementation}
-In this subsection we will discuss the impact and the usage that Test Driver had on Rumble implementation. Let us take another look at Table \ref{tab:Phase2_ResultTable}. This is one of the versions in which Test Driver itself was not very stable as it still had bugs in implementation. The fully stable version after which we had code freeze on Test Driver was implemented on 12th January 2021. After this version, we have performed manual inspection of failed and crashed test cases. We have opened over 50 issues on Rumble Repository \cite{RumbleRepository}. Here, we will omit the test-cases that were skipped and aggregate categories in order to present simple classification as we had in Table \ref{tab:Phase1_ResultTable}.
+In this subsection, we will discuss the impact and the usage that Test Driver had on Rumble implementation. Let us take another look at Table \ref{tab:Phase2_ResultTable}. This is one of the versions in which Test Driver itself was not very stable as it still had bugs in the implementation. The fully stable version after which we had code freeze on Test Driver was implemented on 12th January 2021. After this version, we have performed a manual inspection of failed and crashed test cases. We have opened over 50 issues on Rumble Repository \cite{RumbleRepository}. Here, we will omit the test-cases that were skipped and aggregate categories in order to present simple classification as we had in Table \ref{tab:Phase1_ResultTable}.
 
-In Table \ref{tab:bugsimprovement} we can see how did Rumble engine improved over period of 2 months by implementing bugfixes of the 50 above mentioned issues.
+In Table \ref{tab:bugsimprovement} we can see how did Rumble engine improve over the period of 2 months by implementing bugfixes of the 50 above-mentioned issues.
  
 %data taken from 20210309_001946 (bugfixes JSONiq Parser) and 20210112_224907 (added skip list)
 \begin{table}[h!]
@@ -43,19 +43,19 @@ In Table \ref{tab:bugsimprovement} we can see how did Rumble engine improved ove
 The Crashes that are still visible in Table \ref{tab:bugsimprovement} can be improved by further classification of test-sets and test-cases into Item 1 or Item 2 that should be skipped as explained in Section \ref{sec:TestConverterImplementation}. It can also be improved by extending Test Driver to support assert-xml and assert-serialization-matches.
 
 \subsection{XQuery Parser Extension of Rumble}
-So far, Rumble was able to use only JSONiq as querying language. In order to convert the QT3TS - XQuery Test Suite to JSONiq, we decided to reuse the JSONiq Expression Tree already existing in Rumble. We first implemented XQuery Parser and XQueryTranslationVisitor that enabled us to obtain the JSONiq Expression Tree from query written in XQuery. We then implemented serialization that takes the JSONiq Expression Tree and outputs query written in JSONiq. The byproduct of such an exercise, resulted in extending the Rumble such that it is now able to operate using XQuery language as well.
+So far, Rumble was able to use only JSONiq as querying language. In order to convert the QT3TS - XQuery Test Suite to JSONiq, we decided to reuse the JSONiq Expression Tree already existing in Rumble. We first implemented XQuery Parser and XQueryTranslationVisitor that enabled us to obtain the JSONiq Expression Tree from query written in XQuery. We then implemented serialization that takes the JSONiq Expression Tree and outputs query written in JSONiq. The byproduct of such an exercise resulted in extending the Rumble such that it is now able to operate using XQuery language as well.
 
 \subsection{Standalone JSONiq Test Suite}
-One of the biggest achievements of our work is producing purely JSONiq Test Suite similar to QT3TS for XQuery. This Test Suite uses .xml file format similar to QT3TS and it can be published and used by anyone to verify their JSONiq implementations. Anyone could write their own Test Driver and use our JSONiq Test Suite in similar fashion as we used the QT3TS one.
+One of the most significant achievements of our work is producing purely JSONiq Test Suite similar to QT3TS for XQuery. This Test Suite uses a .xml file format similar to QT3TS and it can be published and used by anyone to verify their JSONiq implementations. Anyone could write their own Test Driver and use our JSONiq Test Suite in a similar fashion as we used the QT3TS one.
 
 \section{Future Work}
-Throughout this work, we have discussed many ideas and developed many prototypes. The prototypes are fully operational, however they can be extended or improved. The open problems that remained unresolved are:
+Throughout this work, we have discussed many ideas and developed many prototypes. The prototypes are fully operational, however, they can be extended or improved. The open problems that remained unresolved are:
 \begin{itemize}
 	\item Test Driver and Test Converter - Extending Test Driver and Test Converter to support the last two missing assertions: serialization-matches and assert-xml.
-	\item Test Driver - Implement a separate class for outputting the results. Right now, all the outputs are in form of log files in .txt or .csv file format. The step forward would be to implement class that would form a HTML web-page similar to one QT3TS has.
+	\item Test Driver - Implement a separate class for outputting the results. Right now, all the outputs are in the form of log files in .txt or .csv file format. The step forward would be to implement a class that would form an HTML web-page similar to the one QT3TS has.
 	\item Test Driver - extend Test Driver such that it can automatically detect bugs based on test cases that are not succeeding and automatically open/close issues on Rumble Repository.
 	\item Test Converter - Improve serialization to JSONiq such that it has better file formatting with new lines and brackets.
-	\item Test Converter - Some test cases are written in a way that they do not parse or cause other errors. Some of them should not be converted and Test Converter can be extended to not convert certain test cases based on their expected error code.
+	\item Test Converter - Some test cases are written in a way that they do not parse or cause other errors. Some of them should not be converted, and Test Converter can be extended not to convert certain test cases based on their expected error code.
 	\item Rumble - Improve XQuery Parser such that it passes more test cases using the original QT3TS.
 	\item Rumble - Enable Rumble to automatically detect the under-laying query language and use the appropriate JSONiq or XQuery parser in order to execute the query. 
 \end{itemize}
