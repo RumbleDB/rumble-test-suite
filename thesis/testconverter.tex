@@ -165,7 +165,7 @@ As we said before in Section \ref{Phase3_Description} we will distinguish 6 case
 	\item Fails, as expected since it is not supported yet - Documented in Table \ref{tab:Phase3_Item2}
 \end{enumerate}
 
-This separation is important to understand. As we want to produce standalone JSONiq Test Suite similar to QT3TS for XQuery, all Item 1 should not be included as they simply are not JSONiq! On the other hand, all Item 2 should be included because they can be used to verify other JSONiq implementations. 
+This separation is important to understand. As we want to produce standalone JSONiq Test Suite similar to QT3TS for XQuery, all Item 1 should not be included as they simply are not JSONiq. On the other hand, all Item 2 should be included because they can be used to verify other JSONiq implementations. 
 
 Final architecture of Test Converter can be seen in Figure \ref{fig:test_converter_final_architecture.png}. There is a small difference compared to Test Driver architecture. Test Converter does not need to execute the JSONiq query. Therefore as presented in Figure \ref{fig:Rumble_General_Architecture_With_XQuery}, we will simply call serializeToJSONiq instead of creating runtime iterators that would be executed on top of Spark i.e. we do not need Spark. 
 
