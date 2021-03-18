@@ -1,0 +1,16 @@
+<test-case name="fn-absint1args-1">
+   <description>
+      Test: absint1args-1 The "abs" function
+      with the arguments set as follows:
+      $arg = xs:int(lower bound)
+   </description>
+   <created by="Carmelo Montanez" on="2004-12-13"/>
+   <environment ref="empty"/>
+   <test>fn:abs(xs:int("-2147483648"))</test>
+   <result>
+      <all-of>
+         <assert-eq>2147483648</assert-eq>
+         <assert-type>xs:integer</assert-type>
+      </all-of>
+   </result>
+</test-case>

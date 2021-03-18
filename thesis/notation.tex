@@ -1,0 +1,85 @@
+% !TEX root = ../main.tex
+%
+%  ADD NEW NOTATION at the bottom
+%
+%-------------------------------------------------------------------------------
+%  Font and Notation
+%-------------------------------------------------------------------------------
+\newcommand{\xmath}[1]{\ensuremath{#1}\xspace}
+
+%-------------------------------------------------------------------------------
+%  Fonts used in this project
+%-------------------------------------------------------------------------------
+\newcommand{\command}[1]{\xmath{\textsc{#1}}}
+\newcommand{\algorithm}[1]{\xmath{\textsf{#1}}}
+\newcommand{\variable}[1]{\xmath{\texttt{#1}}}
+\newcommand{\parameter}[1]{\xmath{\texttt{#1}}}
+
+%Nice empty set
+\let\oldemptyset\emptyset
+\let\emptyset\varnothing
+
+%-------------------------------------------------------------------------------
+%  General notation
+%-------------------------------------------------------------------------------
+%Fields, sets, functions
+\newcommand{\aset}[1]{\left\{ { #1 }\right\}}% {#1}
+\newcommand{\union}{\ensuremath{\cup}}  
+%\newcommand{\nicevec}[1]{\overrightarrow{#1}}
+
+%Distribution
+\newcommand{\getsDist}{\twoheadleftarrow} %<<--
+
+%Player sets, adversary
+\newcommand{\party}{P\xspace}
+\newcommand{\PS}{\mathcal{P}} 
+\newcommand{\HS}{\mathcal{H}} %honest parties
+\newcommand{\crashedP}{\mathcal{C}}
+\newcommand{\passiveP}{\mathcal{Z}^p}
+\newcommand{\semiP}{\mathcal{Z}^s}
+\newcommand{\failstopP}{\mathcal{Z}^f}
+\newcommand{\Adv}[1][\relax]{\xmath{\mathcal{A}_{#1}}} 
+\newcommand{\simulator}{\mathcal{S}}
+
+%-------------------------------------------------------------------------------
+% Global parameters 
+%-------------------------------------------------------------------------------
+
+%Booleans
+\newcommand{\false}{\parameter{false}}
+\newcommand{\true}{\parameter{true}}
+\newcommand{\og}{\parameter{OutputGiven}}
+
+%Security param
+\newcommand{\secparam}{\xmath{\kappa}}
+\newcommand{\negl}{\text{negl}}
+\newcommand{\poly}{\mathsf{poly}}
+
+\newcommand{\abort}{\variable{abort}}
+
+\newcommand{\pbc}{\mathcal{N}}
+\newcommand{\sender}{S}
+\newcommand{\receiver}{R}
+\newcommand{\recipients}{\mathcal{\receiver}}
+
+%3-cast protocol notation
+\newcommand{\ready}{\mathtt{READY}}
+\newcommand{\msg}{\mathtt{MSG}}
+\newcommand{\echo}{\mathtt{ECHO}}
+
+\newcommand{\rbc}{\mathsf{RBC}}
+
+%b-cast protocol notation
+
+\newcommand{\done}{\mathtt{DONE}}
+\newcommand{\levels}{\mathtt{LEVELS}}
+
+\newcommand{\readymsg}[3]{(\mathtt{READY}, #1, #2, #3)}
+\newcommand{\recipientsfor}[3]{\mathbf{R}^{#1}_{(#2, #3)}}
+\newcommand{\evidence}[3]{\done^{#1}(#2, #3)}
+\newcommand{\localpredicate}[4]{\mathtt{P}_{#1}^{#2}(#3, #4)}
+\newcommand{\resiliencepredicate}[4]{\mathtt{Q}_{#1}^{#2}(#3, #4)}
+
+
+\newcommand{\bcprotocol}[2]{\Pi_{\mathtt{BC}}^{#1, #2}}
+\newcommand{\rbcprotocol}[2]{\Pi_{\mathtt{LBC}}^{#1, #2}}
