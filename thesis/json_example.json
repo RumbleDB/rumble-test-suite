@@ -1,0 +1,19 @@
+{
+	"firstName": "Stevan",
+	"lastName": "Mihajlovic",
+	"birthday": "1993-06-22",
+	"nationality" : "Serbian",
+	"address": {
+		"city": {
+			"name": "Glattbrugg",
+			"code": "8152"
+		},
+		"country": {
+			"name": "Switzerland",
+			"code": "CH"
+		}
+	},
+	"skills": [ "C#", "Java", "Python" ],
+	"car": null,
+	"isStudent": true
+}

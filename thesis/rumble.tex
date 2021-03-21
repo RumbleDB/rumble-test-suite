@@ -92,7 +92,7 @@ For emphasizing the power of Spark, we have found a nice comparison with Hadoop 
 \section{Querying Language}
 \subsection{JSON}
 \label{sec:JSON}
-JavaScript Object Notation - JSON \cite{JSON}is a text-only, human-readable data format. It originates from JavaScript, but today it is a widely spread language-independent data format supported by many programming languages. \todo{Maybe a picture of a JSON document}
+JavaScript Object Notation - JSON \cite{JSON}is a text-only, human-readable data format. It originates from JavaScript, but today it is a widely spread language-independent data format supported by many programming languages. 
 
 As we have seen, DataFrames in Spark and table data shape in general, which can be stored in CSV data format, is not suitable for heterogeneous data and de-normalization does not work. On the other hand, tree data shape and JSON as the data format is the perfect choice for nested heterogeneous data. It supports nesting by using 2 structured data types:
 \begin{itemize}
@@ -101,6 +101,10 @@ As we have seen, DataFrames in Spark and table data shape in general, which can 
 \end{itemize} 
 
 JSON also supports the four atomic data types that can be String, Number, Boolean and Null.
+
+To better understand why JSON is good for nested data, we will provide an example. The code below shows that the value of the address is a nested JSON object consisting of two more nested JSON objects. Also, skills that have multiple values are presented using a JSON array.
+
+\lstinputlisting[language=json]{json_example.json}
 
 \subsection{JSONiq}
 \label{sec:JSONiq}
@@ -112,7 +116,7 @@ When it comes to the data model, everything is expressed as a Sequence of Items.
 
 We say it is functional because Expression takes Sequence of Items as the input and produces again Sequence of Items as the output. It means that Expressions can be nested in any desired way.
 
-An Expression can be: \todo{Check is this the correct List or create a better one such that it matches table for categorizing the runtime iterators}
+An Expression can be: \todo{@ Ghislain Fourny: Check if  this is the correct List. Check if it  matches Table 2.1 for categorizing the runtime iterators}
 \begin{itemize}
 	\item Arithmetic
 	\item Logic
@@ -125,10 +129,12 @@ An Expression can be: \todo{Check is this the correct List or create a better on
 	\item FLWOR expression.
 \end{itemize} 
 
-FLWOR expression is the most powerful. Using its own clauses, it is capable of everything Select From Where in SQL does - Selection, Projection, Grouping, Ordering, Join. It can also be nested any number of times in almost any order which SQL does not quite support. \cite{JSONiqBook}
-\todo{Maybe image with example queries}
+FLWOR expression is the most powerful. Using its own clauses, it is capable of everything Select From Where in SQL does - Selection, Projection, Grouping, Ordering, Join. It can also be nested any number of times in almost any order which SQL does not quite support \cite{JSONiqBook}. To fully understand the power of FLWOR expression, we will provide an example. It is pretty declarative and intuitive for everyone who had a chance to write an SQL query before. We first select persons living in Glattbrugg. Then we are grouping them by nationality. Finally, we count persons in groups and select only those with more than 1000 to be displayed ordered. We can see freedom in writing this query - where can be applied multiple times, also let can be placed anywhere.
 
-Each clause produces a tuple stream in the FLWOR expression. It is a set of key-value pairs representing a binding from variable name to the corresponding Sequence of Items. The clauses can consume these tuple streams and produce tuple streams. So between themselves, clauses communicate via tuple streams. Since all Expressions operate on Sequence of Items, return clause that always has to be included in every FLWOR expression will actually consume tuple steam and produce Sequence of Items. \cite{JSONiqBook}
+%in,
+\lstinputlisting[language=XML, frame=single, breaklines=true, showspaces=false,,otherkeywords={descending, for, where, eq, group, let, where, gt, order, by, return}, stringstyle=\color{ao}, keywordstyle=\color{chromeyellow}]{jsoniq_example.json}
+
+Each clause produces a tuple stream in the FLWOR expression. It is a set of key-value pairs representing a binding from variable name to the corresponding Sequence of Items. The clauses can consume these tuple streams and produce tuple streams. So between themselves, clauses communicate via tuple streams. Since all Expressions operate on Sequence of Items, return clause that always has to be included in every FLWOR expression will actually consume tuple steam and produce Sequence of Items \cite{JSONiqBook}.
    
 \section{Rumble}
 Rumble is a query execution engine for large, heterogeneous, and nested collections of JSON objects built on top of Apache Spark \cite{RumblePaper}. In this section, we will explain Rumble from the user perspective, also mappings from JSONiq to Spark via Rumble and General Architecture of Rumble.
