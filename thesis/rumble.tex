@@ -151,7 +151,7 @@ Rumble is a query execution engine for large, heterogeneous, and nested collecti
 The user can use Rumble via command line or using the Rumble API for Java. The architecture overview is quite simple and presented in Figure \ref{fig:Rumble_Architecture}. A user only sees JSONiq query language and uses it to write the desired query. Rumble then takes this query and it has logic capable of mapping and passing the query down to Spark. Spark is then able to execute the query in the cluster. Spark usually reads from DFS, most typically HDFS we mentioned before. More in general, it can run on any file system or database. Typical input for a query is a JSON Lines document. JSON Lines document uses JSON data format and the only difference from a typical JSON document is that every line in the document is a single object. Such a document has a bit lower human-readability for nested data compared to JSON document, but it is quite commonly used in other fields such as Web Programming. \cite{RumbleYouTube}
 
 \begin{figure}[h!]
-	\vspace*{-5mm}
+	%\vspace*{-5mm}
 	\includegraphics[width=\linewidth]{rumble_architecture.png}
 	\caption{Rumble Architecture Overview}
 	\label{fig:Rumble_Architecture}
@@ -175,7 +175,7 @@ So far, we were referring to Rumble as an engine. Essentially it is a compiler i
 
 \begin{figure}[h!]
 	\includegraphics[width=\linewidth]{parsing_architecture.png}
-	\vspace*{-5mm}
+	%\vspace*{-5mm}
 	\caption{Rumble General Architecture}
 	\label{fig:Rumble_General_Architecture}
 \end{figure}
@@ -214,41 +214,41 @@ As pointed out in \cite{RumblePaper} "The main novelty in the design of Rumble i
 		\vspace{-1mm}
 	\centering
 	\resizebox{\textwidth}{!}{%
-	\begin{tabular}{|l|l|l|l|l|l|} 
+	\begin{tabular}{|l|l|l|l|l|} 
 		\hline
-		\textbf{Category}                      & \textbf{Expression/Clause}                                  & \textbf{As in JSONiq~}                                                                                                   & \textbf{L}         & \textbf{R}         & \textbf{D}          \\ 
+		\textbf{Category}                     & \textbf{Expression/Clause}                                 & \textbf{L}         & \textbf{R}         & \textbf{D}          \\ 
 		\hline
-		\multirow{5}{*}{local-only}            & (),~\{\$k:\$v\},~[\$seq],~\$\$,~+,~-,~mod,~                 & \multirow{5}{*}{\begin{tabular}[c]{@{}l@{}}Arithmetic,\\Comparison,\\Logic,\\Literal,\\JSON construction\end{tabular}} & \multirow{5}{*}{+} & \multirow{5}{*}{}  & \multirow{5}{*}{}   \\ 
+		\multirow{5}{*}{local-only}            & (), \{\$k:\$v\}, [\$seq], \$\$, +, -, mod,                 & \multirow{5}{*}{+} & \multirow{5}{*}{}  & \multirow{5}{*}{}   \\ 
 		\cline{2-2}
-		& div,~idiv,~eq,~ne,~gt,~lt,~ge,~le,~and,~                    &                                                                                                                        &                    &                    &                     \\ 
+		& div, idiv, eq, ne, gt, lt, ge, le, and,                    &                    &                    &                     \\ 
 		\cline{2-2}
-		& or,~not,~\$a\textbar{}\textbar{}\$b,~\$f(\$x),~\$m~to~\$n,~ &                                                                                                                        &                    &                    &                     \\ 
+		& or, not, \$a\textbar{}\textbar{}\$b, \$f(\$x), \$m to \$n, &                    &                    &                     \\ 
 		\cline{2-2}
-		& try catch, instance~of, castable,                           &                                                                                                                        &                    &                    &                     \\ 
+		& try catch, instance of, castable,                          &                    &                    &                     \\ 
 		\cline{2-2}
-		& cast, some~\$x~in~\$y~satisfies...                          &                                                                                                                        &                    &                    &                     \\ 
+		& cast, some \$x in \$y satisfies...                         &                    &                    &                     \\ 
 		\hline
-		\multirow{2}{*}{sequence-transforming} & \$seq[...],~\$a[\$i],~\$a[],~\$a[[]],~\$o.\$s,              & \multirow{2}{*}{JSON navigation}                                                                                       & \multirow{2}{*}{+} & \multirow{2}{*}{+} & \multirow{2}{*}{+}  \\ 
+		\multirow{2}{*}{sequence-transforming} & \$seq[...], \$a[\$I], \$a[], \$a[[]], \$o.\$s,             & \multirow{2}{*}{+} & \multirow{2}{*}{+} & \multirow{2}{*}{+}  \\ 
 		\cline{2-2}
-		& \$seq!..., annotate, treat                                  &                                                                                                                        &                    &                    &                     \\ 
+		& \$seq!..., annotate, treat                                 &                    &                    &                     \\ 
 		\hline
-		\multirow{3}{*}{sequence-producing}    & json-file, parquet-file, libsvm-file,~                      & \multirow{3}{*}{}                                                                                                      & \multirow{3}{*}{+}  & \multirow{3}{*}{+} & \multirow{3}{*}{+}  \\ 
+		\multirow{3}{*}{sequence-producing}    & json-file, parquet-file, libsvm-file,                      & \multirow{3}{*}{+} & \multirow{3}{*}{+} & \multirow{3}{*}{+}  \\ 
 		\cline{2-2}
-		& text-file, csv-file,~avro-file, root- file,                 &                                                                                                                        &                    &                    &                     \\ 
+		& text-file, csv-file, avro-file, root- file,                &                    &                    &                     \\ 
 		\cline{2-2}
-		& structured-json-file, parallelize                           &                                                                                                                        &                    &                    &                     \\ 
+		& structured-json-file, parallelize                          &                    &                    &                     \\ 
 		\hline
-		\multirow{3}{*}{sequence-combining}    & seq1,\$seq2, if (\$c) then... else...,                      & \multirow{3}{*}{}                                                                                                      & \multirow{3}{*}{+} & \multirow{3}{*}{+} & \multirow{3}{*}{+}  \\ 
+		\multirow{3}{*}{sequence-combining}    & seq1,\$seq2, if (\$c) then... else...,                     & \multirow{3}{*}{+} & \multirow{3}{*}{+} & \multirow{3}{*}{+}  \\ 
 		\cline{2-2}
-		& switch (\$x) case... default...,                            &                                                                                                                        &                    &                    &                     \\ 
+		& switch (\$x) case... default...,                           &                    &                    &                     \\ 
 		\cline{2-2}
-		& typeswitch (\$x) case... default...                         &                                                                                                                        &                    &                    &                     \\ 
+		& typeswitch (\$x) case... default...                        &                    &                    &                     \\ 
 		\hline
-		\multirow{2}{*}{FLWOR}                 & for,~let,~where,~group~by,~                                 & \multirow{2}{*}{FLWOR}                                                                                                 & \multirow{2}{*}{+} & \multirow{2}{*}{}  & \multirow{2}{*}{+}  \\ 
+		\multirow{2}{*}{FLWOR}                 & for, let, where, group by,                                 & \multirow{2}{*}{+} & \multirow{2}{*}{}  & \multirow{2}{*}{+}  \\ 
 		\cline{2-2}
-		& order~by,~count, return                                     &                                                                                                                        &                    &                    &                     \\
+		& order by, count, return                                    &                    &                    &                     \\
 		\hline
-	\end{tabular}}
+\end{tabular}}
 	\caption{Runtime iterator categorization for JSONiq expressions and clauses}
 	\label{tab:RuntimeCategoriesMapping}
 	\vspace{-3mm}
