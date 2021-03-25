@@ -21,7 +21,7 @@ As we said, the published QT3TS Repository \cite{TestSuiteGitHubRepository} can 
 \end{enumerate} 
 
 \subsection{Improvement of Rumble Implementation}
-In this subsection, we will discuss the impact and the usage that Test Driver had on Rumble implementation. Let us take another look at Table \ref{tab:Phase2_ResultTable}. This is one of the versions in which Test Driver itself was not very stable as it still had bugs in the implementation. The fully stable version after which we had code freeze on Test Driver was implemented on 12th January 2021. After this version, we have performed a manual inspection of failed and crashed test cases. We have opened over 50 issues on Rumble Repository \cite{RumbleRepository}. Here, we will omit the test-cases that were skipped and aggregate categories in order to present simple classification as we had in Table \ref{tab:Phase1_ResultTable}.
+In this subsection, we will discuss the impact and the usage that Test Driver had on Rumble implementation. Let us take another look at Table \ref{tab:Phase2_ResultTable}. This is one of the versions in which Test Driver itself was not very stable as it still had bugs in the implementation. The fully stable version after which we had code freeze on Test Driver was implemented on 12th January 2021. After this version, we have performed a manual inspection of failed and crashed test cases. We have opened over 50 issues on Rumble Repository \cite{RumbleRepository}. Here, we will omit the test cases that were skipped and aggregate categories in order to present simple classification as we had in Table \ref{tab:Phase1_ResultTable}.
 
 In Table \ref{tab:bugsimprovement} we can see how did Rumble engine improve over the period of 2 months by implementing bugfixes of the 50 above-mentioned issues.
  
@@ -30,7 +30,7 @@ In Table \ref{tab:bugsimprovement} we can see how did Rumble engine improve over
 	\centering
 	\begin{tabular}{|l|l|l|l|l|}
 		\hline
-		Scenario & \multicolumn{2}{l|}{Total not skipped test-cases} & \multicolumn{2}{l|}{\% of not skipped test-cases} \\ \hline
+		Scenario & \multicolumn{2}{l|}{Total not skipped test cases} & \multicolumn{2}{l|}{\% of not skipped test cases} \\ \hline
 		Date     & 12.01.21                & 12.03.21                & 12.01.21                & 12.03.21                \\ \hline
 		Success  & 8837                    & 9764                    & 58.4                    & 64.5                    \\ \hline
 		Fail     & 1351                    & 999                     & 8.9                     & 7.6                     \\ \hline
@@ -40,7 +40,7 @@ In Table \ref{tab:bugsimprovement} we can see how did Rumble engine improve over
 	\label{tab:bugsimprovement}
 \end{table}
 
-The Crashes that are still visible in Table \ref{tab:bugsimprovement} can be improved by further classification of test-sets and test-cases into Item 1 or Item 2 that should be skipped as explained in Section \ref{sec:TestConverterImplementation}. It can also be improved by extending Test Driver to support assert-xml and assert-serialization-matches.
+The Crashes that are still visible in Table \ref{tab:bugsimprovement} can be improved by further classification of test sets and test cases into Item 1 or Item 2 that should be skipped as explained in Section \ref{sec:TestConverterImplementation}. It can also be improved by extending Test Driver to support assert-xml and assert-serialization-matches.
 
 \subsection{XQuery Parser Extension of Rumble}
 So far, Rumble was able to use only JSONiq as querying language. In order to convert the QT3TS - XQuery Test Suite to JSONiq, we decided to reuse the JSONiq Expression Tree already existing in Rumble. We first implemented XQuery Parser and XQueryTranslationVisitor that enabled us to obtain the JSONiq Expression Tree from query written in XQuery. We then implemented serialization that takes the JSONiq Expression Tree and outputs query written in JSONiq. The byproduct of such an exercise resulted in extending the Rumble such that it can now operate using XQuery language as well.

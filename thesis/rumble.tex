@@ -116,18 +116,27 @@ When it comes to the data model, everything is expressed as a Sequence of Items.
 
 We say it is functional because Expression takes Sequence of Items as the input and produces again Sequence of Items as the output. It means that Expressions can be nested in any desired way.
 
-An Expression can be: \todo{@ Ghislain Fourny: Check if  this is the correct List. Check if it  matches Table 2.1 for categorizing the runtime iterators}
-\begin{itemize}
-	\item Arithmetic
-	\item Logic
-	\item Comparison
-	\item Literal
-	\item JSON construction
-	\item JSON navigation
-	\item Sequence Construction
-	\item Built-in function
-	\item FLWOR expression.
-\end{itemize} 
+The Expressions can be organized in the following categories:
+\begin{multicols}{2}
+	\begin{itemize}
+		\item Arithmetic
+		\item Logic
+		\item Comparison
+		\item Literal
+		\item JSON construction
+		\item JSON navigation
+		\item Sequence Construction
+		\item Built-in function
+		\item FLWOR expression
+		\item Variable references
+		\item Context item references
+		\item Named function references
+		\item Control flow expressions
+		\item Type 
+		\item Static function calls
+		\item Dynamic function calls
+	\end{itemize}
+\end{multicols}
 
 FLWOR expression is the most powerful. Using its own clauses, it is capable of everything Select From Where in SQL does - Selection, Projection, Grouping, Ordering, Join. It can also be nested any number of times in almost any order which SQL does not quite support \cite{JSONiqBook}. To fully understand the power of FLWOR expression, we will provide an example. It is pretty declarative and intuitive for everyone who had a chance to write an SQL query before. We first select persons living in Glattbrugg. Then we are grouping them by nationality. Finally, we count persons in groups and select only those with more than 1000 to be displayed ordered. We can see freedom in writing this query - where can be applied multiple times, also let can be placed anywhere.
 
@@ -142,7 +151,7 @@ Rumble is a query execution engine for large, heterogeneous, and nested collecti
 The user can use Rumble via command line or using the Rumble API for Java. The architecture overview is quite simple and presented in Figure \ref{fig:Rumble_Architecture}. A user only sees JSONiq query language and uses it to write the desired query. Rumble then takes this query and it has logic capable of mapping and passing the query down to Spark. Spark is then able to execute the query in the cluster. Spark usually reads from DFS, most typically HDFS we mentioned before. More in general, it can run on any file system or database. Typical input for a query is a JSON Lines document. JSON Lines document uses JSON data format and the only difference from a typical JSON document is that every line in the document is a single object. Such a document has a bit lower human-readability for nested data compared to JSON document, but it is quite commonly used in other fields such as Web Programming. \cite{RumbleYouTube}
 
 \begin{figure}[h!]
-	\vspace*{-1mm}
+	\vspace*{-5mm}
 	\includegraphics[width=\linewidth]{rumble_architecture.png}
 	\caption{Rumble Architecture Overview}
 	\label{fig:Rumble_Architecture}
@@ -150,10 +159,9 @@ The user can use Rumble via command line or using the Rumble API for Java. The a
 
 \subsection{Mapping}
 \label{sec:RumbleMapping}
-We said that Rumble has a logic that is capable of mapping the query to Spark primitives. We also said that in JSONiq, everything is a Sequence of Items. Therefore, Rumble uses interface Item in the code \cite{RumbleRepository}. All 6 types mentioned in Section \ref{sec:JSON} implement this interface. After that, Item is wrapped using the Spark JavaRDD generic class and the mapping is complete. Spark is now able to execute queries using objects of the wrapper class.\todo{@Ghislain Fourny: Is anything else needed for explaining - Maybe I should present the full inheritance tree with subtypes or any other ideas?}
+We said that Rumble has a logic that is capable of mapping the query to Spark primitives. We also said that in JSONiq, everything is a Sequence of Items. Therefore, Rumble uses interface Item in the code \cite{RumbleRepository}. All 6 types mentioned in Section \ref{sec:JSON} implement this interface. After that, the Item is wrapped using the Spark JavaRDD generic class or DataFrame if the Sequence of Items is structured and the mapping is complete. Spark is now able to execute queries using objects of the wrapper class.
 
 As also said, FLWOR Expressions are the most powerful ones and we can view them as a set of clauses. Between themselves, clauses operate by consuming tuple streams instead of operating on Sequence of Items. Sequence of Items is produced only in the end with the mandatory Return clause. Therefore, in the code \cite{RumbleRepository}, Rumble uses class FlworTuple for wrapping to the Spark Dataset generic class that is used for DataFrames. For each clause, we have a RuntimeTupleIterator and they all, with the exception of Return, have a reference to FlworTuple. More details in Subsection \ref{sec:Generator}.
-\todo{@Ghislain Fourny: In theory I could also delete the whole Mapping, I do explain it briefly afterwards in iterators and how SQL is used}
 
 \subsection{General Architecture}
 \label{sec:RumbleArchitecture}
@@ -224,7 +232,7 @@ As pointed out in \cite{RumblePaper} "The main novelty in the design of Rumble i
 		\cline{2-2}
 		& \$seq!..., annotate, treat                                  &                                                                                                                        &                    &                    &                     \\ 
 		\hline
-		\multirow{3}{*}{sequence-producing}    & json-file, parquet-file, libsvm-file,~                      & \multirow{3}{*}{}                                                                                                      & \multirow{3}{*}{}  & \multirow{3}{*}{+} & \multirow{3}{*}{+}  \\ 
+		\multirow{3}{*}{sequence-producing}    & json-file, parquet-file, libsvm-file,~                      & \multirow{3}{*}{}                                                                                                      & \multirow{3}{*}{+}  & \multirow{3}{*}{+} & \multirow{3}{*}{+}  \\ 
 		\cline{2-2}
 		& text-file, csv-file,~avro-file, root- file,                 &                                                                                                                        &                    &                    &                     \\ 
 		\cline{2-2}
@@ -246,7 +254,6 @@ As pointed out in \cite{RumblePaper} "The main novelty in the design of Rumble i
 	\vspace{-3mm}
 \end{table}
 
-\todo{@Ghislain Fourny: Check if table makes sense for the plus signs. In paper it was written which mode sequence-transforming, producing and combining use and I wanted to copy that. But from our last conversation I think this is the current state. Do I need to explain in words which primitives are used (RDD union, flatmap etc...) or is this enough?}
 Local-only iterators executed in the local execution mode come down to implementing the Expression's behavior in Java. On the other hand, RDD and DataFrame-based execution modes require a mapping to Spark primitives as explained in Section \ref{sec:RumbleMapping}. There is an essential difference between these two modes that are running on top of Spark. The DataFrame-based mode is used in the case that internal structure is known statically. This mode is also preferred over RDD-based mode as it faster in execution. On the other hand, the RDD-based mode is used whenever the structure is unknown. 
 
 Rumble, in its initial version, was using RDD-based mode for FLWOR Expressions. However, all FLWOR Clauses Iterators, with the exception of Return, operate with FlworTuple. From the query, it is possible to derive the static type of the variables in the tuples and therefore represent them as columns in DataFrame. Today, the RuntimeTupleIterator is using SQL queries instead of RDD transformations of Spark. We will not explain the mappings for each and every FLWOR Clause in detail, but we will make a parallel to For Clause and reuse an example from \cite{RumblePaper}. If the current variables are x, y, and z, and the new variable introduced by the for clause is i, then the for clause is mapped to the following:

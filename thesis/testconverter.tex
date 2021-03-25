@@ -1,8 +1,8 @@
 
 \chapter{Test Converter}
-Figure \ref{fig:Phase3_Architecture} represents architecture that proposes implementing Test Converter as a separate module. The main idea driving us was having a clean architecture that would make the Test Driver easily maintainable and extensible. Thus, we will separate these two even more and implement them as two different Java console applications. Test Driver will only handle executing the test-cases on Rumble. Test Converter will only handle converting the XQuery test suite to a JSONiq one, basically, it covers orange blocks from Figure \ref{fig:Phase3_Architecture}. 
+Figure \ref{fig:Phase3_Architecture} represents architecture that proposes implementing Test Converter as a separate module. The main idea driving us was having a clean architecture that would make the Test Driver easily maintainable and extensible. Thus, we will separate these two even more and implement them as two different Java console applications. Test Driver will only handle executing the test cases on Rumble. Test Converter will only handle converting the XQuery test suite to a JSONiq one, basically, it covers orange blocks from Figure \ref{fig:Phase3_Architecture}. 
 
-However, In Section \ref{Phase3_Description}, we have explained the downsides of hard-coded conversion using Java String.replace method. Just having the clean architecture would not solve the hard-coding issues in Test Converter. Ultimately, we want to produce purely JSONiq Test Suite (similar to QT3TS for XQuery). Such Test Suite would be available for everyone to use and verify other JSONiq implementations such as Zorba \cite{Zorba}, IBM WebSphere \cite{WebSphere}, Xidel \cite{Xidel}.
+However, in Section \ref{Phase3_Description}, we have explained the downsides of hard-coded conversion using Java String.replace method. Just having the clean architecture would not solve the hard-coding issues in Test Converter. Ultimately, we want to produce purely JSONiq Test Suite (similar to QT3TS for XQuery). Such Test Suite would be available for everyone to use and verify other JSONiq implementations such as Zorba \cite{Zorba}, IBM WebSphere \cite{WebSphere}, Xidel \cite{Xidel}.
 
 \section{Rumble Architecture}
 First, we need to think about achieving a clean XQuery to JSONiq conversion without hard-coding. Let us recall Rumble and its entire Section \ref{sec:RumbleArchitecture}. We said that in order to finally execute the query, we are performing conversion from Expression Tree to a tree of runtime iterators. The Expression Tree itself is a higher-level abstraction of JSONiq functional language that is composed of expressions. The entire Node class hierarchy that was implemented in Rumble is used to represent the Expression Tree.
@@ -163,7 +163,6 @@ As we said before in Section \ref{Phase3_Description} we will distinguish 6 case
 \begin{enumerate}
 	\item Fails, as expected and should not be converted to JSONiq. It will never be supported. - Documented in Table \ref{tab:Phase3_Item1}
 	\item Fails, as expected since it is not supported yet - Documented in Table \ref{tab:Phase3_Item2}
-	\todo{@Ghislain Fourny - These two were also compiled during our email exchange in the Excel sheet. Do I need to cite anything?}
 \end{enumerate}
 
 This separation is important to understand. As we want to produce a standalone JSONiq Test Suite similar to QT3TS for XQuery, all Item 1 should not be included as they are not JSONiq. On the other hand, all Item 2 should be included because they can be used to verify other JSONiq implementations. 
@@ -190,11 +189,11 @@ Final Test Driver architecture can be seen in Figure \ref{fig:test_driver_final_
 \end{figure}
 
 \section{Implementation}
-The Converter part is using method binding provided by Saxon. First, we define the ExtensionFunction and the name under which it will be available in XQuery expression (convert). Secondly, we specify what the result of this function is (the result of the Java Convert method). Finally, we assign it a namespace (bf). We now declare XQuery expression that has a function that recursively visits all nested XML tags. In case that they are test or result tags, it will pass the under-laying tag value to bf:convert and replace the tag value with the returned result. We declare external variable and pass the entire test-set to the XQuery expression. Check the code below:
+The Converter part is using method binding provided by Saxon. First, we define the ExtensionFunction and the name under which it will be available in XQuery expression (convert). Secondly, we specify what the result of this function is (the result of the Java Convert method). Finally, we assign it a namespace (bf). We now declare XQuery expression that has a function that recursively visits all nested XML tags. In case that they are test or result tags, it will pass the under-laying tag value to bf:convert and replace the tag value with the returned result. We declare external variable and pass the entire test set to the XQuery expression. Check the code below:
 
 \lstinputlisting[language=Java, frame=single, breaklines=true, showspaces=false, stringstyle=\color{ao}, keywordstyle=\color{chromeyellow}, basicstyle=\tiny]{source_code_method_binding.java}
 
-The Java Convert method simply uses Rumble API to call serializeToJSONiq method we have previously created, making the conversion complete. There is a small remark to take into consideration here. The test-cases that have error codes will cause a RumbleException. Due to time constraints, we could not make a better classification and check for which error codes we need to perform XQuery to JSONiq conversion of test tag. Thus, those test-cases will not be converted and return the same result instead. Check the code below:
+The Java Convert method simply uses Rumble API to call serializeToJSONiq method we have previously created, making the conversion complete. There is a small remark to take into consideration here. The test setses that have error codes will cause a RumbleException. Due to time constraints, we could not make a better classification and check for which error codes we need to perform XQuery to JSONiq conversion of test tag. Thus, those test sets will not be converted and return the same result instead. Check the code below:
 
 \lstinputlisting[language=Java, frame=single, breaklines=true, showspaces=false, stringstyle=\color{ao}, keywordstyle=\color{chromeyellow}, basicstyle=\small]{source_code_serializetojsoniq.java}
 
