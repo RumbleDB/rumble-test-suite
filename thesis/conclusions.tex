@@ -15,29 +15,29 @@ Apart from the implementation of the Test Driver, the results can be divided int
 \subsection{Implementation of Test Driver for Rumble}
 As we said, the published QT3TS Repository \cite{TestSuiteGitHubRepository} can be used to test any XML (XQuery, XPath, XSLT) implementation. Rumble as an engine uses JSONiq language that inherits 95\% of its features from XQuery. For each implementation, Test Driver has to be written in order to be able to use the QT3TS. And we have achieved that. We have a fully operational Test Driver that can parse the QT3TS and execute it on top of Rumble. Depending on the configuration, it can be used in three modes:
 \begin{enumerate}
-	\item Preferred way of testing Rumble implementation uses the original QT3TS and performs hard-coded conversion to JSONiq within Test Driver.
+	\item The preferred way of testing Rumble implementation uses the original QT3TS and performs hard-coded conversion to JSONiq within Test Driver. Once Rumble implementation is mature enough, it will consequently lead to a mature JSONiq Test Suite. Then using QT3TS will become obsolete, while using JSONiq Test Suite will be preferred.
 	\item  Verify implementation of XQuery Parser of Rumble by using the original QT3TS without performing the hard-coded conversion to JSONiq within Test Driver.
 	\item Future way of testing Rumble implementation is using the JSONiq Test Suite generated from original QT3TS by Test Converter without performing the hard-coded conversion to JSONiq within Test Driver.
 \end{enumerate} 
 
 \subsection{Improvement of Rumble Implementation}
-In this subsection, we will discuss the impact and the usage that Test Driver had on Rumble implementation. Let us take another look at Table \ref{tab:Phase2_ResultTable}. This is one of the versions in which Test Driver itself was not very stable as it still had bugs in the implementation. The fully stable version after which we had code freeze on Test Driver was implemented on 12th January 2021. After this version, we have performed a manual inspection of failed and crashed test cases. We have opened over 50 issues on Rumble Repository \cite{RumbleRepository}. Here, we will omit the test cases that were skipped and aggregate categories in order to present simple classification as we had in Table \ref{tab:Phase1_ResultTable}.
-
-In Table \ref{tab:bugsimprovement} we can see how did Rumble engine improve over the period of 2 months by implementing bugfixes of the 50 above-mentioned issues.
+In this subsection, we will discuss the impact and the usage that Test Driver had on Rumble implementation. Let us take another look at Table \ref{tab:Phase2_ResultTable}. This is one of the versions in which Test Driver itself was not very stable as it still had bugs in the implementation. The fully stable version after which we had code freeze on Test Driver was implemented on 12th January 2021. After this version, we have performed a manual inspection of failed and crashed test cases. We have opened over 50 issues on Rumble Repository \cite{IssuesSubmitted}. Here, we will omit the test cases that were skipped and aggregate categories in order to present simple classification as we had in Table \ref{tab:Phase1_ResultTable}. In Table \ref{tab:bugsimprovement} we can see how did Rumble engine improve over the period of 2 months by implementing bugfixes of the 50 above-mentioned issues. Column \# presents total number of test cases per category while column \% presents the percentage the category takes in subset of all non skipped test cases.
  
 %data taken from 20210309_001946 (bugfixes JSONiq Parser) and 20210112_224907 (added skip list)
 \begin{table}[h!]
+	\vspace{-4mm}
 	\centering
-	\begin{tabular}{|l|l|l|l|l|}
-		\hline
-		Scenario & \multicolumn{2}{l|}{Total not skipped test cases} & \multicolumn{2}{l|}{\% of not skipped test cases} \\ \hline
-		Date     & 12.01.21                & 12.03.21                & 12.01.21                & 12.03.21                \\ \hline
-		Success  & 8837                    & 9764                    & 58.4                    & 64.5                    \\ \hline
-		Fail     & 1351                    & 999                     & 8.9                     & 7.6                     \\ \hline
-		Crash    & 4938                    & 4372                    & 32.7                    & 28.9                    \\ \hline
+	\begin{tabular}{|l|r|r|r|l|r|r|}
+		\cline{1-3} \cline{5-7}
+		\multicolumn{3}{|c|}{\textbf{Result from 12.01.21}}          & \multicolumn{1}{l|}{}          & \multicolumn{3}{c|}{\textbf{Result from 12.03.21}}           \\ \cline{1-3} \cline{5-7} 
+		Scenario & \multicolumn{1}{l|}{\#} & \multicolumn{1}{l|}{\%} & \multicolumn{1}{l|}{\textbf{}} & Scenario & \multicolumn{1}{l|}{\#} & \multicolumn{1}{l|}{\%} \\ \cline{1-3} \cline{5-7} 
+		Success  & 8837                    & 58.4                    &                                & Success  & 9764                    & 64.5                    \\ \cline{1-3} \cline{5-7} 
+		Fail     & 1351                    & 8.9                     &                                & Fail     & 999                     & 7.6                     \\ \cline{1-3} \cline{5-7} 
+		Crash    & 4938                    & 32.7                    &                                & Crash    & 4372                    & 28.9                    \\ \cline{1-3} \cline{5-7} 
 	\end{tabular}
 	\caption{Rumble Implementation Improvement}
 	\label{tab:bugsimprovement}
+	\vspace{-5mm}
 \end{table}
 
 The Crashes that are still visible in Table \ref{tab:bugsimprovement} can be improved by further classification of test sets and test cases into Item 1 or Item 2 that should be skipped as explained in Section \ref{sec:TestConverterImplementation}. It can also be improved by extending Test Driver to support assert-xml and assert-serialization-matches.

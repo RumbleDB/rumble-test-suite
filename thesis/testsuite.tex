@@ -2,9 +2,11 @@
 \section{Analysis}
 In this chapter, we will discuss design decisions that we have made during Test Driver development. The core idea is to develop Test Driver completely independently from Rumble by maintaining the code outside of Rumble.
 
+\vspace{-1mm}
 \subsection{Programming Language}
- We view Rumble as a black-box, and the single point of communication with Rumble should only be via the Rumble Java public API. Therefore, we have decided to implement Test Driver as Java Console Application. Furthermore, Rumble is also written in Java. We decided to setup our Java Console Application project to have two modules - Test Driver and Rumble module. Rumble module is the branch in the repository created for the purpose of this work \cite{RumbleBranch}. Making the Test Driver module dependent on it, we are allowing the possibility to directly use Rumble and its classes in case that not everything is possible to be achieved by treating Rumble as the black-box. 
+We try to view Rumble as a black-box whenever possible. Ideally, the single point of communication with Rumble should only be via the Rumble Java public API. In addition, as Rumble is also written in Java, the best option is to implement Test Driver as Java Console Application. In the early Phases of Implementation, it might not be possible to view Rumble as a black-box completely. Thus, we will setup our Java Console Application project to have two modules - Test Driver and Rumble module. Rumble module is the branch in the repository created for the purpose of this work \cite{RumbleBranch}. Including Rumble as a separate module and making the Test Driver module dependent on it, we allow the possibility to directly use Rumble and its classes in case that not everything can be achieved by treating Rumble as the black-box. 
 
+\vspace{-1mm}
 \subsection{Data Format}
 The XQuery/XPath 3.* Test Suite (QT3TS) is publicly available at W3C Public CVS Repository under module name 2011/QT3-test-suite \cite{TestSuiteCVSRepository}. Since April 1st 2019, the CVS tree has been discontinued and the repository has been migrated to the W3C Public GitHub repository \cite{TestSuiteGitHubRepository}. The tests are published as a set of files - test sets containing in total more than 30000 test cases written in XML format. W3C does not supply a Test Driver for executing the tests. Instead, for each implementation, a Test Driver should be written \cite{TestSuite}. As these test sets are written in XML format, the first component that our Test Driver will require is the XML parser. 
 
@@ -43,7 +45,7 @@ The two most important tags in each test case are:
 	\item Result - this is the expected result of the test tag. As it can be seen in the provided example, there are several types of assertions that we need to verify.
 \end{itemize}
 
-Test Driver's Test Case Handling Logic is supposed to iterate over catalog.xml using the Saxon API. This XML document contains list of all test sets. Next, we iterate over test cases in each of the test sets. For each test case, we are explicitly asking Saxon XML parser to get items under Test and Result tags. To use Saxon API, we need to know the structure. But, once Test Case Handling Logic obtains information under Test tag, it passes it down "as is" to Rumble API in order to execute the query. Rumble API returns the result, which is then passed down to Test Result Handling Logic. 
+Test Driver's Test Case Handling Logic is supposed to iterate over catalog.xml using the Saxon API. This XML document contains list of all test sets. Next, we iterate over test cases in each of the test sets. For each test case, we are explicitly asking Saxon XML parser to get items under Test and Result tags. To use Saxon API, we need to know the structure. But, once the Test Case Handling Logic obtains information under Test tag, it passes it down "as is" to Rumble API in order to execute the query. Rumble API returns the result, which is then passed down to Test Result Handling Logic. 
 
 Test Driver's Test Result Handling Logic is in charge of determining which assertion needs to be performed. Here we provide the list of possible assertions:
 
@@ -292,12 +294,12 @@ In addition to test sets assigned to Item 2, we are adding the Unsupported and D
 	\begin{tabular}{|l|r|r|}
 		\hline
 		\multicolumn{1}{|c|}{Scenario} & \multicolumn{1}{c|}{Total test cases} & \multicolumn{1}{c|}{\% of all test cases} \\ \hline
-		Item 1                         & 3675                                  & 11.65                                     \\ \hline
-		Item 2                         & 12751                                 & 40.41                                     \\ \hline
-		Item 3                         & 7007                                  & 22.20                                     \\ \hline
-		Item 4                         & 4424                                  & 14.02                                     \\ \hline
-		Item 5                         & 999                                   & 3.17                                      \\ \hline
-		Item 6                         & 2701                                  & 8.56                                      \\ \hline
+		Item 1 (not JSONiq)                        & 3675                                  & 11.65                                     \\ \hline
+		Item 2 (not supported yet)                        & 12751                                 & 40.41                                     \\ \hline
+		Item 3 (simple conversion)                        & 7007                                  & 22.20                                     \\ \hline
+		Item 4 (can be converted)                        & 4424                                  & 14.02                                     \\ \hline
+		Item 5 (bug in Rumble)                         & 999                                   & 3.17                                      \\ \hline
+		Item 6 (succeeds)                        & 2701                                  & 8.56                                      \\ \hline
 	\end{tabular}
 	\caption{Phase 3 Results Overview}
 	\label{tab:Phase3_ResultTable}

@@ -1,5 +1,5 @@
 
-\chapter{Test Converter}
+\chapter{Test Converter for Test Suite}
 Figure \ref{fig:Phase3_Architecture} represents architecture that proposes implementing Test Converter as a separate module. The main idea driving us was having a clean architecture that would make the Test Driver easily maintainable and extensible. Thus, we will separate these two even more and implement them as two different Java console applications. Test Driver will only handle executing the test cases on Rumble. Test Converter will only handle converting the XQuery test suite to a JSONiq one, basically, it covers orange blocks from Figure \ref{fig:Phase3_Architecture}. 
 
 However, in Section \ref{Phase3_Description}, we have explained the downsides of hard-coded conversion using Java String.replace method. Just having the clean architecture would not solve the hard-coding issues in Test Converter. Ultimately, we want to produce purely JSONiq Test Suite (similar to QT3TS for XQuery). Such Test Suite would be available for everyone to use and verify other JSONiq implementations such as Zorba \cite{Zorba}, IBM WebSphere \cite{WebSphere}, Xidel \cite{Xidel}.
