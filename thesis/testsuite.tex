@@ -1,10 +1,10 @@
 \chapter{Test Driver for Test Suite}
 \section{Analysis}
-In this chapter, we will discuss design decisions that we have made during Test Driver development. The core idea is to develop Test Driver completely independently from Rumble by maintaining the code outside of Rumble.
+In this chapter, we will discuss the design decisions that we made during a Test Driver development. The core idea is to develop the Test Driver completely independently from Rumble by maintaining the code outside of Rumble.
 
 \vspace{-1mm}
 \subsection{Programming Language}
-We try to view Rumble as a black-box whenever possible. Ideally, the single point of communication with Rumble should only be via the Rumble Java public API. In addition, as Rumble is also written in Java, the best option is to implement Test Driver as Java Console Application. In the early Phases of Implementation, it might not be possible to view Rumble as a black-box completely. Thus, we will setup our Java Console Application project to have two modules - Test Driver and Rumble module. Rumble module is the branch in the repository created for the purpose of this work \cite{RumbleBranch}. Including Rumble as a separate module and making the Test Driver module dependent on it, we allow the possibility to directly use Rumble and its classes in case that not everything can be achieved by treating Rumble as the black-box. 
+We try to view Rumble as a black-box whenever possible. Ideally, the single point of communication with Rumble should be via the Rumble Java public API. In addition, as Rumble is written in Java, the best option is to implement the Test Driver as Java Console Application. In the early Phases of Implementation, it might not be possible to view Rumble as a black-box completely. Thus, we setup our Java Console Application project to have two modules - Test Driver and Rumble module. The Rumble module is the branch in the repository created for the purpose of this work \cite{RumbleBranch}. By including Rumble as a separate module and making the Test Driver module dependent on it, we allow the possibility to directly use Rumble and its classes in case that not everything can be achieved by treating Rumble as the black-box. 
 
 \vspace{-1mm}
 \subsection{Data Format}
@@ -15,7 +15,7 @@ XML parser is a program that allows our application to read and write XML docume
 \begin{itemize}
 	\item DOM (Document Object Model) - This parser loads the entire XML document in memory and uses interfaces to access the information. It can access a couple of item elements at the same time. It can be used for both reading and writing.
 	\item SAX (Simple API for XML parsing) - This parser does not load XML document in memory. Instead, it allows us to register a handler with a SAX parser. When the parser goes through the file, it keeps invoking methods on the handler class for each item. It processes it in sequence one at a time. For each new item it reads, it forgets the state of previous items. Therefore, on each read, we need to take appropriate action in our application. It is read-only and it is also known as a push parser. There is no handler on the XML document side, only in our application.
-	\item STAX (Streaming API for XML parsing) - This parser allows us to read and write multiple documents simultaneously. Unlike SAX that reads one item at a time, STAX can be explicitly asked to get a certain item from the XML document without loading it in memory. Therefore, we can look at it as a mixture of DOM and SAX. It is a pull parser and has a handler on XML document as well
+	\item STAX (Streaming API for XML parsing) - This parser allows us to read and write multiple documents simultaneously. Unlike SAX that reads one item at a time, STAX can be explicitly asked to get a certain item from the XML document without loading it in memory. Therefore, we can look at it as a mixture of DOM and SAX. It is a pull parser and has a handler on XML document as well.
 	\item JAXP (JAVA API for XML parsing) - Since JDK 1.5, the JAXP API has been available as a standard part of the Java platform. It provides access to XSLT transformation, schema validation, and XPath processing services.
 	\item Saxon \cite{Saxon} - Open Source XSLT \& XQuery processor developed by Saxonica Limited. The Saxon package is a collection of tools for processing XML documents. The main components accessible via API are:
 	\begin{enumerate}
@@ -26,16 +26,16 @@ XML parser is a program that allows our application to read and write XML docume
 	\end{enumerate}
 \end{itemize}
 
-For parsing XML, we have decided to use Saxon. One may argue that for all four listed components, Java also has its own API – JAXP for 1st, 2nd and 4th together with XQJ for 3rd. However, in practice, Saxon is easier to use and more flexible than JAXP. Apart from that, the main arguments are:
+For parsing XML, we decided to use Saxon. One may argue that for all four listed components, Java also has its own API – JAXP for 1st, 2nd and 4th together with XQJ for 3rd. However, in practice, Saxon is easier to use and more flexible than JAXP. Apart from that, the main arguments are:
 \begin{enumerate}
 	\item Saxon itself is one of the implementations for which Test Driver was also implemented. Based on Results Report \cite{SaxonReport}, it passes more than 99,9\% of the QT3TS tests and it is considered a reference for XML.
-	\item Saxons implementation of the Test Driver can be used as a baseline for developing our own Test Driver. 
+	\item Saxon's implementation of the Test Driver can be used as a baseline for developing our own Test Driver. 
 \end{enumerate}
 
 \section{Phase 1 Implementation}
 \subsection{Description}
 \label{Phase1_Description}
-In the first Phase of the implementation, we have analyzed the structure of QT3TS. We had to understand the underlaying structure of each and every test case. We had to see under which tags the information is stored in order to obtain it using Saxon API. Example test case in XML format:
+In the first Phase, we have analyzed the structure of QT3TS. It involved understanding the underlaying structure of each and every test case, and finding under which tags the information is stored in order to parse it using Saxon API. Example test case in XML format:
 
 \lstinputlisting[language=XML, frame=single, breaklines=true, showspaces=false, otherkeywords={test, test-case, description, created, environment, result, all-of,assert-eq,assert-type, <, /, >}, stringstyle=\color{ao}, keywordstyle=\color{chromeyellow}]{source_code_1.xml}
 
@@ -45,33 +45,33 @@ The two most important tags in each test case are:
 	\item Result - this is the expected result of the test tag. As it can be seen in the provided example, there are several types of assertions that we need to verify.
 \end{itemize}
 
-Test Driver's Test Case Handling Logic is supposed to iterate over catalog.xml using the Saxon API. This XML document contains list of all test sets. Next, we iterate over test cases in each of the test sets. For each test case, we are explicitly asking Saxon XML parser to get items under Test and Result tags. To use Saxon API, we need to know the structure. But, once the Test Case Handling Logic obtains information under Test tag, it passes it down "as is" to Rumble API in order to execute the query. Rumble API returns the result, which is then passed down to Test Result Handling Logic. 
+Test Driver's Test Case Handling Logic is meant to iterate over catalog.xml using the Saxon API. This XML document contains list of all test sets. Next, we iterate over test cases in each of the test sets. For each test case, we are explicitly asking Saxon XML parser to get items under Test and Result tags. To use Saxon API, we need to know the structure of the test case. But, once the Test Case Handling Logic obtains information under Test tag, it passes it down "as is" to Rumble API in order to execute the query. Rumble API returns the result, which is then passed down to Test Result Handling Logic. 
 
 Test Driver's Test Result Handling Logic is in charge of determining which assertion needs to be performed. Here we provide the list of possible assertions:
 
 \begin{itemize}
-	\item assert-empty - This assertion requires result to return an empty sequence
+	\item assert-empty - This assertion requires the result to be an empty sequence
 	\item assert - This assertion requires us to run another query in which obtained result will be used as the parameter of the new query. For example:
 	\lstinputlisting[language=XML, frame=single, breaklines=true, showspaces=false, otherkeywords={<result>,  </result>, <test>, </test>, <assert>, </assert>}, stringstyle=\color{ao}, keywordstyle=\color{chromeyellow}]{source_code_2.xml}
-	\item assert-eq - It requires us to run another query in the form of obtained result "eq" value under this tag
+	\item assert-eq - Requires us to run another query in the form of obtained result "eq" value under this tag
 	\item assert-deep-eq - Similar to assert-eq but runs "deep-equal" query
-	\item assert-true - It requires result to return single Boolean value True
+	\item assert-true - Requires result to return single Boolean value True
 	\item assert-false - Opposite of assert-true
-	\item assert-string-value - It requires that each item in the obtained result sequence is type of String and also "eq" to the sequence under this tag
-	\item all-of - It contains multiple different assert tags described in this list and it requires all of them to be fulfilled 
+	\item assert-string-value - Requires that each item in the obtained result sequence is type of String and also "eq" to the sequence under this tag
+	\item all-of - Contains multiple different assert tags described in this list and it requires all of them to be fulfilled 
 	\item any-of - Similar to all-of but requires only one of them to be fulfilled
 	\item assert-type - Requires to check if obtained result is instance of this tag
 	\item assert-count - Requires obtained result sequence size to be equal to this
-	\item not - It requires to execute nested assertion with a negation
+	\item not - Requires to execute nested assertion with a negation
 	\item assert-permutation - Requires result sequence to be permutation of this
 	\item assert-xml - Requires result to be an XML document matching this one
 	\item serialization-matches - Requires serialization of result to match this
 \end{itemize}
 
-After the assertion is performed, we need to classify the results. The idea is to make statistics that are described in \ref{Phase1_Results}. With such a classification, we would be able to improve Rumble by reporting bugs in its implementation.
+After the assertion is performed, we need create classification for the results and obtain statistics as described in \ref{Phase1_Results}. Such a classification enables us to improve Rumble by reporting bugs in its implementation.
 
 \subsection{Architecture}
-The overview of scenario described in \ref{Phase1_Description} can be seen in Figure \ref{fig:Phase1_Architecture}
+The overview of the scenario described in \ref{Phase1_Description} can be seen in Figure \ref{fig:Phase1_Architecture}
  \begin{figure}[h!]
  	\vspace*{-5mm}
  	\includegraphics[width=\linewidth]{architecture_diagram_phase_1.jpeg}
@@ -85,7 +85,7 @@ The overview of scenario described in \ref{Phase1_Description} can be seen in Fi
 \subsection{Results}
 
 \label{Phase1_Results}
-As explained in \ref{Phase1_Description}, the result obtained via Rumble API was compared with the expected result by applying the correct assertion check. In case assertion passed, a test case was considered a Success and otherwise Fail. The block of code performing these operations was surrounded by try and catch. In case that test failed because the syntax was not completely JSONiq, it would throw a RumbleException or more generally, an Exception - Crash. An important note is that due to time limits, two assertions were not implemented. Thus, assert-xml and serialization-matches will always result in Crash. With this implementation, we were to be able to distinguish three possible scenarios:
+As explained in \ref{Phase1_Description}, the result obtained via Rumble API was compared with the expected result by applying the correct assertion check. In case assertion passed, a test case was considered a Success and otherwise a Fail. The block of code performing these operations was surrounded by try and catch. In case that test failed because the syntax was not completely JSONiq, it would throw a RumbleException or, more generally, an Exception - Crash. An important note is that, due to time limits, serialization-matches and assert-xml assertions were not implemented and will always result in a Crash. With this implementation, we were to be able to distinguish three possible scenarios:
 
 \begin{enumerate}
 	\item Success - Test case succeed
@@ -93,7 +93,7 @@ As explained in \ref{Phase1_Description}, the result obtained via Rumble API was
 	\item Crash - Test case failed because it is not compatible with Rumble
 \end{enumerate}
 
-The report is generated as a .csv file having test sets as rows and the total number of test cases per scenario in the columns. In Table \ref{tab:Phase1_ResultTable} we will present the aggregated sum over all rows in the .csv file:
+The report is generated as a .csv file having test sets as rows and the total number of test cases per scenario in the columns. Table \ref{tab:Phase1_ResultTable} we presents the aggregated sum over all rows in the .csv file:
 %Check 20201105_181449 (only 3 cases for report) for the calculation and sources
 \begin{table}[h!]
 	\centering
@@ -111,11 +111,11 @@ The report is generated as a .csv file having test sets as rows and the total nu
 \section{Phase 2 Implementation}
 \subsection{Description}
 \label{Phase2_Description}
-After generating Phase 1 Implementation report described in Table \ref{tab:Phase1_ResultTable}, we carefully examined our implementation and identified four major pain points:
+After generating the Phase 1 Implementation report described in Table \ref{tab:Phase1_ResultTable}, we carefully examined our implementation and identified four major issues:
 \begin{itemize}
-	\item Unstable implementation of assertion which resulted in implementing a proper way of result binding in Rumble
-	\item Too many crashing tests which resulted in implementing the converter
-	\item Improving Test Driver implementation resulted in breaking previously implemented features. Therefore, regression tests were introduced
+	\item Unstable implementation of assertion, which resulted in implementing a proper way of result binding in Rumble
+	\item Too many crashing tests, which resulted in implementing the converter
+	\item Improving the Test Driver implementation resulted in breaking previously implemented features. Therefore, regression tests were introduced
 	\item Some tests were supposed to Crash with expected error codes and our granularity was not appropriate for distinguishing all test cases
 \end{itemize}
 
@@ -124,34 +124,34 @@ To better understand the issues we have encountered, we will provide following c
 
 \lstinputlisting[language=Java, frame=single, breaklines=true, showspaces=false, stringstyle=\color{ao}, keywordstyle=\color{chromeyellow}, basicstyle=\small]{source_code_without_results.java}
 
-If we examine the AssertEq implementation, we will notice that lines.get(0) assumes that obtained result is a single item and takes the first one. It does not handle sequences. Furthermore, handling sequences was only possible for AssertStringEqual in case that our result is a sequence of strings by performing string concatenation. All other assertions such as Assert, AssertEq, AssertDeepEq are not possible to be implemented. Finally, if we remember Assert example from Section \ref{Phase1_Description}, we will notice that we had to use String.replace method replacing \$result with actual result obtained from the Rumble API. 
+If we examine the AssertEq implementation, we will notice that lines.get(0) assumes that the obtained result is a single item and takes the first one. It does not handle sequences. Furthermore, handling sequences was only possible for AssertStringEqual in case that our result is a sequence of strings by performing string concatenation. All other assertions such as Assert, AssertEq, AssertDeepEq could not be implemented. Finally, in a case such as Assert example in Section \ref{Phase1_Description}, we had to use String.replace method replacing \$result with the actual result obtained from the Rumble API. 
 
-Thus, Rumble implementation itself was extended to support result binding. The only modification required in Test Driver was to instantiate a new RumbleConfiguration and also new Rumble instance for each test case that requires result binding. We then declare external variable and pass the obtained result to the newly created (nested) XQuery expression. Check the code below:
+Thus, Rumble implementation itself was extended to support result binding. The only modification required in the Test Driver was to instantiate a new RumbleConfiguration and also new Rumble instance for each test case that requires result binding. We then declare external variable and pass the obtained result to the newly created (nested) XQuery expression, as shown below:
 
 \lstinputlisting[language=Java, frame=single, breaklines=true, showspaces=false, stringstyle=\color{ao}, keywordstyle=\color{chromeyellow}, basicstyle=\footnotesize]{source_code_with_results.java}
 
-The main concern of the new implementation was that many new instantiates might cause the execution time to increase dramatically. However, run-time increased only by 15seconds from 2minutes - only 12.5\%.
+The main concern of the new implementation was that many new instantiations could cause a dramatic increase in the execution time. However, run-time increased only by 15 seconds from 2 minutes - only 12.5\%.
 
-In Phase 1 Implementation, for AsserType, we had a switch case for every possible type that Rumble's Item class supports. Type information was obtained using methods of the Item class, which introduced a dependency on Rumble. Such code would be complex for future maintenance and extension with new supported types. Once the result binding was implemented, it allowed us to run the AssertType also as an "instance of" query. It also allowed to have a single point of the conversion performed in the beginning and applied for both the test case and the expected result. Within conversion, we would discover the unsupported type errors without the need of switch case to check whether Rumble's Item class supports the type or not. Furthermore, the previously implemented switch case had an unsupported type as default, therefore hiding some types that were supported but not specified in the documentation. The mentioned conversion will be explained more in detail in Section \ref{Phase2_Converter}. 
+In the Phase 1, for AssertType, we had a switch case for every possible type that Rumble's Item class supports. Type information was obtained using methods of the Item class, which introduced a dependency on Rumble. Such code would be complex for future maintenance and extension with new supported types. Once the result binding was implemented, it allowed us to run the AssertType also as an "instance of" query. It also allowed to have a single point of the conversion performed in the beginning and applied for both the test case and the expected result. Within conversion, we would discover the unsupported type errors without the need of switch case to check whether Rumble's Item class supports the type or not. Furthermore, the previously implemented switch case had an unsupported type as default, therefore hiding some types that were supported but not specified in the documentation. The mentioned conversion will be explained in detail in Section \ref{Phase2_Converter}. 
 
-The clean implementation using nested XQuery expression initialized idea and was a base plan for XQuery to JSONiq conversion logic separation. In Section \ref{Phase3_Description} we will describe architecture with a separate module that takes XQuery as input, performs the conversion, and outputs JSONiq test suite. Such an approach would make the Test Driver easily maintainable and extensible.
+The clean implementation using nested XQuery expression initialized an idea for the XQuery to JSONiq conversion logic separation. In Section \ref{Phase3_Description} we describe the architecture with a separate module that takes XQuery as input, performs the conversion, and outputs a JSONiq Test Suite. Such an approach would make the Test Driver easily maintainable and extensible.
 
 \subsubsection{Converter}
 \label{Phase2_Converter}
-As seen in Table \ref{tab:Phase1_ResultTable}, we had less than 10\% Success test cases as almost all of them required conversion to JSONiq. Here we will document all the conversions that we have performed on both Test and Result tags in this Phase. 
+As seen in Table \ref{tab:Phase1_ResultTable}, we had less than 10\% Success test cases as almost all of them required conversion to JSONiq. We now document all the conversions that we have performed on both Test and Result tags in this Phase. 
 
-The first conversion that we have performed is between types. Both XQuery and JSONiq have simple(atomic) and complex(non-atomic) types. 
+The first conversion that we performed is between types. Both XQuery and JSONiq have simple(atomic) and complex(non-atomic) types. 
 
-The list of atomic types that Rumble currently supports was taken from official Rumble documentation \cite{RumbleSupportedTypes} and hard-coded conversion was implemented accordingly. For all types that are not supported, our code throws UnsupportedTypeException. 
+The list of atomic types that Rumble currently supports was taken from official Rumble documentation \cite{RumbleSupportedTypes} and a hard-coded conversion was implemented accordingly. For all types that are not supported, our code throws UnsupportedTypeException. 
 
-Following 3 complex (non-atomic) types were handled by following conversion:
+The following three complex (non-atomic) types were handled as:
 \begin{enumerate}
 	\item array(*) was replaced with array*
 	\item item() was replaced with item
 	\item map(string, atomic) was replaced with object 
 \end{enumerate}
 
-On the other hand, following 7 complex (non-atomic) types could not be converted and they all throw UnsupportedTypeException:
+On the other hand, the following seven complex (non-atomic) types could not be converted and they all throw UnsupportedTypeException:
 \begin{enumerate}
 	\item document
 	\item element
@@ -175,19 +175,19 @@ Other conversions that were performed:
 Other items that were unsupported in Phase 2 were node(), empty-sequence() and xs:NOTATION together with all error codes that are not in Table \ref{tab:Phase2_Supported Types} that was taken from \cite{RumbleSupportedErrorCodes}.
 
 \subsubsection{Regression Tests}
-During Phase 1, we were performing iterations with the goal to improve Test Driver's implementation overall. The good metric while performing these iterations was the total number of test case Crashes. Our goal was to reduce those numbers as much as possible. This was mainly handled by making the following changes: bug fixes, software enhancements, configuration changes. Creating such changes in software development can usually lead to creating new issues that were not present before or re-emergence of old issues. In these cases, it is quite common that software development requires regression testing. Regression testing (rarely non-regression testing) is re-running functional and non-functional tests to ensure that previously developed and tested software still performs after a change. If not, that would be called a regression \cite{RegressionTesting}. During iterations, it was noticed that our approach of fixing and improving the application is highly exposed to changes that require regression testing. 
+During Phase 1, we were performing iterations with the goal to improve Test Driver's implementation overall. We measured the performance of each iteration by the total number of test case Crashes. Our goal was to reduce this metric as much as possible. This was mainly handled by making the following changes: bug fixes, software enhancements, configuration changes. Creating such changes in software development can usually lead to new issues that were not present before or re-emergence of old issues. In these cases, it is quite common that software development requires regression testing. Regression testing (rarely non-regression testing) is re-running functional and non-functional tests to ensure that previously developed and tested software still performs after a change. If not, that would be called a regression \cite{RegressionTesting}. During iterations, it was noticed that our approach of fixing and improving the application is highly exposed to changes that require regression testing. 
 
-While performing iterations, we had to ensure that any further implementation would not break the test cases that were passing before and at the same time not introduce new test cases that are Crashing. Thus, for each iteration, we have maintained log files of all Passed (Success + Managed) and Crashed test cases. In every next iteration, we made two comparisons between new and previous log files. We have performed a check that compared whether all the passed test cases from the previous implementation were also contained in the new implementation or not and created "List of test cases that were passing before but not anymore". For Crashes, we did the opposite check and created list of "Tests that were not crashing before, but are now and not in list above". 
+While performing iterations, we had to ensure that any further implementation would not break the test cases that were passing before and at the same time not introduce new test cases that are Crashing. Thus, for each iteration, we have maintained log files of all Passed (Success + Managed) and Crashed test cases. For every new iteration, we made two comparisons between new and previous log files. First, we checked whether all the passed test cases from the previous implementation were also contained in the new implementation or not and created "List of test cases that were passing before but not anymore". Secondly, for Crashes, we did the opposite check and created list of "Tests that were not crashing before, but are now and not in list above". 
 
 \subsubsection{Handling Error Codes and better granularity}
 \label{Phase2_ErrorCodes}
-In Section \ref{Phase1_Description}, we have described all the possible assertions for which we can verify whether the result of the executed query matches the expected result. However, some of the test cases are different. They are there to verify that certain queries cannot be parsed or executed because they are not compliant with the XML language. To better understand, we provide an example below:
+In Section \ref{Phase1_Description}, we have described all the possible assertions for which we can verify whether the result of the executed query matches the expected result. However, some of the test cases are different. They aim to verify that certain queries cannot be parsed or executed because they are not compliant with the XML language. For better understanding, we provide an example below:
 
 \lstinputlisting[language=XML, frame=single, breaklines=true, showspaces=false, otherkeywords={test, test-case, description, created, environment, result, all-of,assert-eq,assert-type, <, /, >}, stringstyle=\color{ao}, keywordstyle=\color{chromeyellow}]{error_code.xml}
 
 The issue is that a decimal number cannot have more than one decimal separation character (dot). Such a query should not parse, and there is a correct error code that should be reported instead - XPST0003 - "It is a static error if an expression is not a valid instance of the grammar defined in." 
 
-The issue in Test Driver implementation is that when such a query is passed down to Rumble, it will cause a RumbleException which breaks the execution of the code. Meaning that such queries need to be handled differently. Essentially, in case that executed query causes RumbleException, we need to check whether it has error codes as the expected result. If not, it will be considered a Crash. If it has an error code as the expected result, we need to check whether it matches the RumbleException's error code. Often, test cases have several error codes that they would accept under any-off assertion in the result tag. This is exactly the check that we are performing. In case that we have a single match with any of the possible error codes, we consider the test case to be a Success. They are there to verify that certain queries cannot be parsed or executed because they are not compliant with the XML language. Otherwise, it will go into the category Unsupported Error. The two tags for which we are not verifying assertion but checking error codes are:
+The issue in the Test Driver implementation is that when such a query is passed down to Rumble, it will cause a RumbleException which breaks the execution of the code. Meaning that such queries need to be handled differently. They are there to verify that certain queries cannot be parsed or executed because they are not compliant with the XML language. Essentially, in case that executed query causes RumbleException, we need to check whether it has error code as the expected result. If not, it will be considered a Crash. If it has an error code as the expected result, we need to check whether it matches the RumbleException's error code. Often, test cases have several error codes that they would accept under any-off assertion in the result tag. This is exactly the check that we are performing. If there is a single match with any of the possible error codes, we consider the test case to be a Success. Otherwise, it will go into the category Unsupported Error or Fail. The two tags for which we are not verifying assertion but checking error codes are:
 \begin{itemize}
 	\item error - the code is under attribute code and starts with X
 	\item assert-serialization-error - similar as error but starts with S
@@ -203,7 +203,7 @@ The complete classification diagram is shown in Figure \ref{fig:Phase2_ErrorCode
 \end{figure}
 
 \subsection{Architecture}
-The overview of scenario described in \ref{Phase2_Description} can be seen in Figure \ref{fig:Phase2_Architecture}
+The overview of the scenario described in \ref{Phase2_Description} can be seen in Figure \ref{fig:Phase2_Architecture}
 \begin{figure}[h!]
 	\vspace*{-5mm}
 	\includegraphics[width=\linewidth]{architecture_diagram_phase_2.jpg}
@@ -214,7 +214,7 @@ The overview of scenario described in \ref{Phase2_Description} can be seen in Fi
 
 \subsection{Results}
 \label{Phase2_Results}
-As we have seen in previous sections, Crashes were not only capturing tests that are not JSONiq and needed conversion. They also include the tests that could not succeed because they contained type or error code that Rumble does not support. Such tests were now classified as Unsupported. Furthermore, some of them were introducing dependencies. For example, in the Dependency tag, it was possible to have a request for a particular version of XPath, XQuery or XSLT. While Rumble is backward compatible with all versions of XPath and XQuery, it does not support XSLT. Dependencies that were found in Test Suite were documented and classified according to Rumble documentation. From all dependencies, we have compiled into a list presented in Table \ref{tab:Phase2_DependencyList}. We have therefore created and divided test cases into six groups:
+As shown in the previous sections, Crashes were not only capturing tests that are not JSONiq and needed conversion. They also include the tests that could not succeed because they contained type or error code that Rumble does not support. Such tests are now classified as Unsupported. Furthermore, some of them were introducing dependencies. For example, in the Dependency tag, it is possible to have a request for a particular version of XPath, XQuery or XSLT. While Rumble is backward compatible with all versions of XPath and XQuery, it does not support XSLT. Dependencies found in Test Suite were documented and classified according to the Rumble documentation. From all the dependencies, we compiled a list presented in Table \ref{tab:Phase2_DependencyList}. We have therefore created and divided test cases into six groups:
 \begin{enumerate}
 	\item Success – Test that is passing the assertion and does not need Converter
 	\item Managed – Tests that would have failed assertion, but they were modified with hard-coded conversion into JSONiq using Converter
@@ -225,7 +225,7 @@ As we have seen in previous sections, Crashes were not only capturing tests that
 \end{enumerate}
 
 %Decision: Skipped was not presented in the classification diagram. Also it takes only 5 test-cases that are hardcoded to be avoided. For now we will imagine that we have only Crashed that we are supposed to classify afterwards in 1 or 2.
-After the introduction of the six above-mentioned cases, together with small adjustments and bug changes, we were able to obtain:
+After the introduction of the six above-mentioned cases, together with small adjustments and bug fixes, we were able to obtain:
 %Check 20201105_215309 (separation like in documentation) for the calculation and sources
 \begin{table}[h!]
 	\centering
@@ -244,38 +244,38 @@ After the introduction of the six above-mentioned cases, together with small adj
 \end{table}
 
 \vspace{-5mm}
-Managed category was introduced as it was identified that with simple hard-coded conversion, we could obtain around 4200 passed tests increasing the total percentage of passed tests by roughly 12\%. At first, it seems that Success and Managed should be grouped into a single category, but we decided to keep them separated. We want to keep track of Managed ones because in Phase 3 Implementation we are planning to generalize the hard-coded conversion and create a pure JSONiq Test Suite based on given XML ones.
+The Managed category was introduced as it was identified that with simple hard-coded conversion, we could obtain around 4200 passed tests increasing the total percentage of passed tests by roughly 12\%. At first, it seems that Success and Managed should be grouped into a single category, but we decided to keep them separated. We want to keep track of Managed ones because in Phase 3 Implementation we are planning to generalize the hard-coded conversion and create a pure JSONiq Test Suite based on given XML ones.
 
 As mentioned earlier, during Phase 1 we were performing iterations and going through all the Crashes, trying to eliminate them completely. By doing so, we would also improve the statistics by classifying them into other categories. At the same time, we were manually investigating test cases and trying to find the root cause. For some of them, our Test Driver implementation was improved. For some, it was identified that Rumble did not yet support the XQuery function or it had bugs, so Rumble implementation was also improved. We also identified both test cases that fail but can be converted to JSONiq and those that cannot be converted.
 
 \section{Phase 3 Implementation}
 \subsection{Description}
 \label{Phase3_Description}
-The main issue of Converter described in Section \ref{Phase2_Converter} was that it was hard-coded conversion using Java String.replace method. Such implementation can be very unstable. For example, we can look at 5th item of "other conversions" mentioned in Section \ref{Phase2_Converter} - replacing ' with ". For example, test case Literals009 is verifying whether "test' is a valid String Literal. With our hard-coded conversion, we will make this test case valid String Literal instead of it causing an Error Code XPST0003. Therefore, we have decided to implement Test Converter as a separate module. Its main purpose is to generalize the hard-coded conversion. It would take QT3TS as the input and generate pure JSONiq Test Suite as the output.
+The main issue of the Converter described in Section \ref{Phase2_Converter} was that it was hard-coded conversion using Java String.replace method. Such implementation can be very unstable. For example, we can look at 5th item of "other conversions" mentioned in Section \ref{Phase2_Converter} - replacing ' with ". For example, test case Literals009 is verifying whether "test' is a valid String Literal. With our hard-coded conversion, we make this test case a valid String Literal instead of it causing an Error Code XPST0003. Therefore, we have decided to implement Test Converter as a separate module. Its main purpose is to generalize the hard-coded conversion. It takes QT3TS as the input and generate pure JSONiq Test Suite as the output.
 
-For implementing Test Converter, we decided to create the following classification of test cases:
+For implementing the Test Converter, we created the following classification of test cases:
 \begin{enumerate}
 	\item Fails, as expected and should not be converted to JSONiq. It will never be supported
 	\item Fails, as expected since it is not supported yet
-	\item Fails, but can be rescued with a simple conversion. Any simple conversion like removing the "fn" prefix 
-	\item Fails, but can be converted to JSONiq. Any complicated conversion like XML to JSON
+	\item Fails, but can be rescued with a simple conversion. (Any simple conversion like removing the "fn" prefix)
+	\item Fails, but can be converted to JSONiq. (Any complicated conversion like XML to JSON)
 	\item Fails, because it is a bug in Rumble
 	\item Succeeds
 \end{enumerate}
 
-With this classification, we want to reuse most of Phase 2 Implementation Results findings and also classification presented in Table \ref{tab:Phase2_ResultTable}.
+With this classification, we want to reuse most of Phase 2 Implementation Results findings and the classification presented in Table \ref{tab:Phase2_ResultTable}.
 
-If we compare the above-described classification with classification in Table \ref{tab:Phase2_ResultTable}, we can notice that Item 5 corresponds to Fail, Item 6 to Success, Managed to Item 3. Item 2 to both Unsupported and Dependency. 
+Comparing the above-described classification with classification in Table \ref{tab:Phase2_ResultTable}, shows that Item 5 corresponds to Fail, Item 6 to Success, Managed to Item 3, and Item 2 to both Unsupported and Dependency. 
 
-Performing iterations as mentioned in Section \ref{Phase2_Results}, enabled us to identify and distribute Crashes into Item 4 or Item 1 category. It was in our interest to identify as many test cases as possible as Item 4 and perform the conversion in Test Converter. Everything that we could not convert due to any constraints, we classified as Item 1. 
+Performing iterations as mentioned in Section \ref{Phase2_Results} enabled us to identify and distribute Crashes into Item 4 or Item 1 category. It was in our interest to identify as many test cases as possible as Item 4 and perform the conversion in Test Converter. Everything that we could not convert due to any constraints, we classified as Item 1. 
 
-Items 1 will be excluded from the Test Converter output. Items 2, on the other hand, will be excluded from Test Driver input. However, we also need to take into account that over time, as Rumble implementation improves, tests from Item 2 will be distributed into four other categories. Therefore, we want to make highly modular and extensible architecture. The important design decision remaining is the Data Format of the Test Converted output.
+Items 1 will be excluded from the Test Converter output. Items 2, on the other hand, will be excluded from Test Driver input. However, we also need to take into account that over time, as Rumble implementation improves, tests from Item 2 will be distributed into four other categories. Therefore, we aim for a highly modular and extensible architecture. The important design decision remaining is the Data Format of the Test Converted output.
 
 \subsubsection{JSONiq and Test Converter Data Format}
 The JSONiq extension to XQuery allows processing XML and JSON natively and with a single language. This extension is based on the same data model as the core JSONiq and is based on the same logical concepts. Because of the complexity of the XQuery grammar, the JSONiq extension to XQuery has a less pleasant syntax than the JSONiq core \cite{JSONIQORG}. When designing the Test Converter, we could have decided to use either XML or JSON as the underlaying language. However, as our Test Driver was already implemented in the previous Phase and was expecting XML as input and using the before mentioned Saxon API for parsing it, we have decided to keep the same language for the output of the Test Converter. 
 
 \subsection{Architecture}
-The overview of scenario described in \ref{Phase3_Description} can be seen in Figure \ref{fig:Phase3_Architecture}
+The overview of the scenario described in \ref{Phase3_Description} can be seen in Figure \ref{fig:Phase3_Architecture}
 \begin{figure}[h!]
 	\vspace*{-5mm}
 	\includegraphics[width=\linewidth]{architecture_diagram_phase_3.jpg}
@@ -285,7 +285,7 @@ The overview of scenario described in \ref{Phase3_Description} can be seen in Fi
 \end{figure}
 
 \subsection{Results}
-After carefully analyzing the complete QT3TS, we have concluded that out of 424 test sets QT3TS consists of, a total of 143 can be classified as belonging to Item 1 or Item 2 of classification documented in this Phase of Implementation. More specifically, we have assigned 61 test sets to Item 1 presented in Table \ref{tab:Phase3_Item1} and 84 test sets to Item 2 presented in Table \ref{tab:Phase3_Item2}.
+After carefully analyzing the complete QT3TS, we have concluded that out of 424 test sets QT3TS consists of, a total of 143 can be classified as belonging to Item 1 or Item 2. More specifically, we have assigned 61 test sets to Item 1 presented in Table \ref{tab:Phase3_Item1} and 84 test sets to Item 2 presented in Table \ref{tab:Phase3_Item2}.
 
 In addition to test sets assigned to Item 2, we are adding the Unsupported and Dependency. Furthermore, several bugs were fixed in Rumble between Phase 2 and Phase 3 Implementation and results are presented in Table \ref{tab:Phase3_ResultTable}.
 %Check 20210126_173411 (method binding) for the calculation and sources
