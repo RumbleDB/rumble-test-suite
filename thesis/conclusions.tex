@@ -1,27 +1,27 @@
 \chapter{Conclusion and Future Work} 
 \label{chapter:conclusions}
-As mentioned in Chapter \ref{chapter:introduction}, the high-level goal of this work is to implement a Test Driver that can directly use QT3TS in order to test and verify Rumble implementation. However, during our work, we have managed to go beyond this scope and achieve even more, which we will present in Section \ref{sec:overallsummary}.
+As mentioned in Chapter \ref{chapter:introduction}, the high-level goal of this work is to implement a Test Driver that can directly use QT3TS in order to test and verify Rumble's implementation. However, during our work, we went beyond this scope and achieved even more, which we will present in Section \ref{sec:overallsummary}.
 
 \section{Result Summary}
 \label{sec:overallsummary}
 Apart from the implementation of the Test Driver, the results can be divided into a total of four major areas:
 \begin{enumerate}
 	\item Implementation of Test Driver for Rumble
-	\item Improvement of Rumble implementation
+	\item Improvement of Rumble's implementation
 	\item XQuery Parser extension of Rumble
 	\item Standalone JSONiq Test Suite
 \end{enumerate}
 
 \subsection{Implementation of Test Driver for Rumble}
-As previously mentioned, the published QT3TS repository \cite{TestSuiteGitHubRepository} can be used to test any XML (XQuery, XPath, XSLT) implementation. Rumble as an engine uses JSONiq language that inherits 95\% of its features from XQuery. For each implementation, a Test Driver has to be written in order to be able to use the QT3TS. And we have achieved that, we have implemented a fully operational Test Driver that can parse the QT3TS and execute it on top of Rumble. Depending on the configuration, it can be used in three modes:
+As previously mentioned, the published QT3TS repository \cite{TestSuiteGitHubRepository} can be used to test any XML (XQuery, XPath, XSLT) implementation. Rumble as an engine uses the JSONiq language that inherits 95\% of its features from XQuery. For each implementation, a Test Driver has to be written in order to be able to use the QT3TS. And we have achieved that, we have implemented a fully operational Test Driver that can parse the QT3TS and execute it on top of Rumble. Depending on the configuration, it can be used in three modes:
 \begin{enumerate}
-	\item The preferred way of testing Rumble implementation uses the original QT3TS and performs hard-coded conversion to JSONiq within Test Driver. Once Rumble's implementation is mature enough, it will consequently lead to a mature JSONiq Test Suite. Then using QT3TS will become obsolete, while using JSONiq Test Suite will be preferred.
+	\item The preferred way of testing Rumble's implementation uses the original QT3TS and performs hard-coded conversion to JSONiq within Test Driver. Once Rumble's implementation is mature enough, it will consequently lead to a mature JSONiq Test Suite. Then using QT3TS will become obsolete, while using JSONiq Test Suite will be preferred.
 	\item  To verify the implementation of XQuery Parser of Rumble by using the original QT3TS without performing the hard-coded conversion to JSONiq within Test Driver.
 	\item The future way of testing Rumble's implementation uses the JSONiq Test Suite generated from the original QT3TS by Test Converter without performing the hard-coded conversion to JSONiq within Test Driver.
 \end{enumerate} 
 
-\subsection{Improvement of Rumble Implementation}
-In this subsection, we will discuss the impact and the usage that Test Driver had on Rumble's implementation. Let us take another look at Table \ref{tab:Phase2_ResultTable}. This is one of the versions in which the Test Driver itself was not very stable as it still had bugs in the implementation. The fully stable version after which we had code freeze on Test Driver was implemented on 12th January 2021. 
+\subsection{Improvement of Rumble's Implementation}
+In this section, we discuss the impact and the usage that Test Driver had on Rumble's implementation. Let us take another look at Table \ref{tab:Phase2_ResultTable}. This is one of the versions in which the Test Driver itself was not very stable as it still had bugs in the implementation. The fully stable version after which we had a code freeze on the Test Driver was implemented on 12th January 2021. 
 
 After this version, we have performed a manual inspection of failed and crashed test cases in order to create and file bug reports. Bug reports were filed as issues on Rumble GitHub repository \cite{RumbleRepository}. We have created a standardized template for all the submitted issues. It contains the following information:
 \begin{itemize}
@@ -35,8 +35,8 @@ After this version, we have performed a manual inspection of failed and crashed 
 
 In total, we have submitted over 40 issues. We will not present nor add to the appendix of this report the complete list of all the filed bug reports. Instead, everything is well documented on the Rumble GitHub repository \cite{IssuesSubmitted}. For better understanding, we will provide a couple of interesting examples:
 \begin{itemize}
-	\item current-dateTime() eq current-dateTime() - This query was returning false even though it should return true. We have proposed that the issue is probably assigning current time to two different temporary variables happening at a different time.
-	\item integer("-999999999999999999") - This query could not perform cast from string to integer. However, cast was working for smaller numbers. Integer should have an infinite range compared to int (limited to 32b).
+	\item \texttt{current-dateTime() eq current-dateTime()} - This query was returning false even though it should return true. We have proposed that the issue is probably assigning current time to two different temporary variables happening at a different time.
+	\item \texttt{integer("-999999999999999999")} - This query could not perform cast from string to integer. However, cast was working for smaller numbers. Integer should have an infinite range compared to int (limited to 32b).
 \end{itemize}
 
 Implementing bugfixes was not in the scope of this work and will not be documented in this report. The assumptions on how they should be handled were usually provided in the description of the submitted issue. In Table \ref{tab:bugsimprovement} we can see how Rumble engine improved over the period of 2 months by implementing bugfixes for some of the 40 above-mentioned issues. Here, we will omit the test cases that were skipped and aggregate categories in order to present a simple classification as in Table \ref{tab:Phase1_ResultTable}. Column \# presents the total number of test cases per category, while column \% presents the category's percentage in the subset of all non skipped test cases.
@@ -52,7 +52,7 @@ Implementing bugfixes was not in the scope of this work and will not be document
 		Fail                           & 1351                    & 8.9                     &                                & Fail                          & 999                     & 7.6                     \\ \cline{1-3} \cline{5-7} 
 		Crash                          & 4938                    & 32.7                    &                                & Crash                         & 4372                    & 28.9                    \\ \cline{1-3} \cline{5-7} 
 	\end{tabular}
-	\caption{Rumble Implementation Improvement}
+	\caption{Rumble's Implementation Improvement}
 	\label{tab:bugsimprovement}
 \end{table}
 
