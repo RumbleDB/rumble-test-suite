@@ -26,7 +26,7 @@ XML parser is a program that allows our application to read and write XML docume
 	\end{enumerate}
 \end{itemize}
 
-For parsing XML, we decided to use Saxon. One may argue that for all four listed components, Java also has its own API – JAXP for 1st, 2nd and 4th together with XQJ for 3rd. However, in practice, Saxon is easier to use and more flexible than JAXP. Apart from that, the main arguments are:
+For parsing XML, we have decided to use Saxon. One may argue that for all four listed components, Java also has its own API – JAXP for 1st, 2nd and 4th together with XQJ for 3rd. However, in practice, Saxon is easier to use and more flexible than JAXP. Apart from that, the main arguments are:
 \begin{enumerate}
 	\item Saxon itself is one of the implementations for which Test Driver was also implemented. Based on Results Report \cite{SaxonReport}, it passes more than 99,9\% of the QT3TS tests and it is considered a reference for XML.
 	\item Saxon's implementation of the Test Driver can be used as a baseline for developing our own Test Driver. 
@@ -41,7 +41,7 @@ In the first Phase, we have analyzed the structure of QT3TS. It involved underst
 
 The two most important tags in each test case are:
 \begin{itemize}
-	\item Test  - this is the test query that should be executed on Rumble. It can be XSLT, XPath or XQuery expression.
+	\item Test  - this is the test query that should be executed in Rumble. It can be XSLT, XPath or XQuery expression.
 	\item Result - this is the expected result of the test tag. As it can be seen in the provided example, there are several types of assertions that we need to verify.
 \end{itemize}
 
@@ -85,7 +85,7 @@ The overview of the scenario described in \ref{Phase1_Description} can be seen i
 \subsection{Results}
 
 \label{Phase1_Results}
-As explained in \ref{Phase1_Description}, the result obtained via Rumble API was compared with the expected result by applying the correct assertion check. In case assertion passed, a test case was considered a Success and otherwise a Fail. The block of code performing these operations was surrounded by try and catch. In case that test failed because the syntax was not completely JSONiq, it would throw a RumbleException or, more generally, an Exception - Crash. An important note is that, due to time limits, serialization-matches and assert-xml assertions were not implemented and will always result in a Crash. With this implementation, we were to be able to distinguish three possible scenarios:
+As explained in \ref{Phase1_Description}, the result obtained via Rumble API was compared with the expected result by applying the correct assertion check. In case assertion passed, a test case was considered a Success and otherwise a Fail. The block of code performing these operations was surrounded by try and catch. In case that test failed because the syntax was not completely JSONiq, it would throw a RumbleException or, more generally, an Exception - Crash. An important note is that, due to time limits, serialization-matches and assert-xml assertions were not implemented and will always result in a Crash. With this implementation, we were able to distinguish three possible scenarios:
 
 \begin{enumerate}
 	\item Success - Test case succeed
@@ -140,7 +140,7 @@ The clean implementation using nested XQuery expression initialized an idea for 
 \label{Phase2_Converter}
 As seen in Table \ref{tab:Phase1_ResultTable}, we had less than 10\% Success test cases as almost all of them required conversion to JSONiq. We now document all the conversions that we have performed on both Test and Result tags in this Phase. 
 
-The first conversion that we performed is between types. Both XQuery and JSONiq have simple (atomic) and complex (non-atomic) types. 
+The first conversion that we have performed is between types. Both XQuery and JSONiq have simple (atomic) and complex (non-atomic) types. 
 
 The list of atomic types that Rumble currently supports was taken from official Rumble documentation \cite{RumbleSupportedTypes} and a hard-coded conversion was implemented accordingly. For all types that are not supported, our code throws UnsupportedTypeException. 
 
@@ -242,7 +242,7 @@ After the introduction of the six above-mentioned cases, together with small adj
 \end{table}
 
 \vspace{-5mm}
-The Managed category was introduced as it was identified that with simple hard-coded conversion, we could obtain around 4200 passed tests increasing the total percentage of passed tests by roughly 12\%. At first, it seems that Success and Managed should be grouped into a single category, but we decided to keep them separated. We want to keep track of Managed ones because in Phase 3 Implementation we are planning to generalize the hard-coded conversion and create a pure JSONiq Test Suite based on given XML ones.
+The Managed category was introduced as it was identified that with simple hard-coded conversion, we could obtain around 4200 passed tests increasing the total percentage of passed tests by roughly 13\%. At first, it seems that Success and Managed should be grouped into a single category, but we decided to keep them separated. We want to keep track of Managed ones because in Phase 3 Implementation we are planning to generalize the hard-coded conversion and create a pure JSONiq Test Suite based on QT3TS.
 
 As mentioned earlier, during Phase 1 we were performing iterations and going through all the Crashes, trying to eliminate them completely. By doing so, we would also improve the statistics by classifying them into other categories. At the same time, we were manually investigating test cases and trying to find the root cause. For some of them, our Test Driver implementation was improved. For some, it was identified that Rumble did not yet support the XQuery function or it had bugs, so Rumble's implementation was also improved. We also identified both test cases that fail but can be converted to JSONiq and those that cannot be converted.
 
