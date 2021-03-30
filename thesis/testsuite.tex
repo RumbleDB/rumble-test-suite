@@ -35,7 +35,7 @@ For parsing XML, we decided to use Saxon. One may argue that for all four listed
 \section{Phase 1 Implementation}
 \subsection{Description}
 \label{Phase1_Description}
-In the first Phase, we have analyzed the structure of QT3TS. It involved understanding the underlaying structure of each and every test case, and finding under which tags the information is stored in order to parse it using Saxon API. Example test case in XML format:
+In the first Phase, we have analyzed the structure of QT3TS. It involved understanding the underlying structure of each and every test case, and finding under which tags the information is stored in order to parse it using Saxon API. Example test case in XML format:
 
 \lstinputlisting[language=XML, frame=single, breaklines=true, showspaces=false, otherkeywords={test, test-case, description, created, environment, result, all-of,assert-eq,assert-type, <, /, >}, stringstyle=\color{ao}, keywordstyle=\color{chromeyellow}]{source_code_1.xml}
 
@@ -272,7 +272,7 @@ Performing iterations as mentioned in Section \ref{Phase2_Results} enabled us to
 Items 1 will be excluded from the Test Converter output. Items 2, on the other hand, will be excluded from Test Driver input. However, we also need to take into account that over time, as Rumble implementation improves, tests from Item 2 will be distributed into four other categories. Therefore, we aim for a highly modular and extensible architecture. The important design decision remaining is the Data Format of the Test Converted output.
 
 \subsubsection{JSONiq and Test Converter Data Format}
-The JSONiq extension to XQuery allows processing XML and JSON natively and with a single language. This extension is based on the same data model as the core JSONiq and is based on the same logical concepts. Because of the complexity of the XQuery grammar, the JSONiq extension to XQuery has a less pleasant syntax than the JSONiq core \cite{JSONIQORG}. When designing the Test Converter, we could have decided to use either XML or JSON as the underlaying language. However, as our Test Driver was already implemented in the previous Phase and was expecting XML as input and using the before mentioned Saxon API for parsing it, we have decided to keep the same language for the output of the Test Converter. 
+The JSONiq extension to XQuery allows processing XML and JSON natively and with a single language. This extension is based on the same data model as the core JSONiq and is based on the same logical concepts. Because of the complexity of the XQuery grammar, the JSONiq extension to XQuery has a less pleasant syntax than the JSONiq core \cite{JSONIQORG}. When designing the Test Converter, we could have decided to use either XML or JSON as the underlying language. However, as our Test Driver was already implemented in the previous Phase and was expecting XML as input and using the before mentioned Saxon API for parsing it, we have decided to keep the same language for the output of the Test Converter. 
 
 \subsection{Architecture}
 The overview of the scenario described in \ref{Phase3_Description} can be seen in Figure \ref{fig:Phase3_Architecture}

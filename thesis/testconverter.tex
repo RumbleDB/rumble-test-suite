@@ -189,7 +189,7 @@ Figure \ref{fig:test_driver_final_architecture.png} shows the final Test Driver 
 \end{figure}
 
 \section{Implementation}
-The Converter part uses the method binding provided by Saxon. Firstly, we define the ExtensionFunction and the name under which it will be available in XQuery expression (convert). Secondly, we specify what the result of this function is (the result of the Java Convert method). Finally, we assign it a namespace (bf). We now declare an XQuery expression that has a function that recursively visits all nested XML tags. In case that they are test or result tags, it passes the underlaying tag value to bf:convert and replace the tag value with the returned result. We declare external variable and pass the entire test set to the XQuery expression. Check the code below:
+The Converter part uses the method binding provided by Saxon. Firstly, we define the ExtensionFunction and the name under which it will be available in XQuery expression (convert). Secondly, we specify what the result of this function is (the result of the Java Convert method). Finally, we assign it a namespace (bf). We now declare an XQuery expression that has a function that recursively visits all nested XML tags. In case that they are test or result tags, it passes the underlying tag value to bf:convert and replace the tag value with the returned result. We declare external variable and pass the entire test set to the XQuery expression. Check the code below:
 
 \lstinputlisting[language=Java, frame=single, breaklines=true, showspaces=false, stringstyle=\color{ao}, keywordstyle=\color{chromeyellow}, basicstyle=\tiny]{source_code_method_binding.java}
 
