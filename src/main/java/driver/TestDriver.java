@@ -3,7 +3,6 @@ package driver;
 import net.sf.saxon.s9api.*;
 import net.sf.saxon.s9api.streams.Steps;
 import org.apache.commons.lang.StringUtils;
-import org.apache.spark.sql.SparkSession;
 import org.rumbledb.api.Item;
 import org.rumbledb.api.Rumble;
 import org.rumbledb.api.SequenceOfItems;
@@ -19,21 +18,16 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class TestDriver {
-    private String testsRepositoryScriptFileName = "get-tests-repository.sh";
-    private String catalogFileName = "catalog.xml";
     private Path testsRepositoryDirectoryPath;
     // Set this field if you want to run a specific test set that starts with string below
     private String testSetToTest = ""; //
     // Set this field if you want to run a specific test case that starts with string below
     private String testCaseToTest = ""; //
-    private SparkSession sparkSession;
     private Rumble rumbleInstance;
     private int numberOfFails;
     private int numberOfSuccess;
-    private String resultVariableName = "result";
     private int numberOfSkipped;
     private int numberOfCrashes;
     private int numberOfDependencies;
@@ -44,8 +38,59 @@ public class TestDriver {
     private List<String> testSetsToSkip;
 
     // For JSON-doc
-    private Map<String, String> URItoPathLookupTable = new HashMap<>();
-    private String jsonDocName = "fn/json-doc";
+    private final Map<String, String> URItoPathLookupTable = new HashMap<>();
+
+    private final String[] skipTestCaseList = new String[] {
+            "fn-distinct-values-2"
+    };
+
+    private final String[] supportedErrorCodes = new String[] {
+            "FOAR0001",
+            "FOCA0002",
+            "FODC0002",
+            "FOFD1340",
+            "FOFD1350",
+            "JNDY0003",
+            "JNTY0004",
+            "JNTY0024",
+            "JNTY0018",
+            "RBDY0005",
+            "RBML0001",
+            "RBML0002",
+            "RBML0003",
+            "RBML0004",
+            "RBML0005",
+            "RBST0001",
+            "RBST0002",
+            "RBST0003",
+            "RBST0004",
+            "SENR0001",
+            "XPDY0002",
+            "XPDY0050",
+            "XPDY0130",
+            "XPST0003",
+            "XPST0008",
+            "XPST0017",
+            "XPST0080",
+            "XPST0081",
+            "XPTY0004",
+            "XQDY0054",
+            "XQST0016",
+            "XQST0031",
+            "XQST0033",
+            "XQST0034",
+            "XQST0038",
+            "XQST0039",
+            "XQST0047",
+            "XQST0048",
+            "XQST0049",
+            "XQST0052",
+            "XQST0059",
+            "XQST0069",
+            "XQST0088",
+            "XQST0089",
+            "XQST0094"
+    };
 
     void execute() {
         getTestsRepository();
@@ -57,6 +102,7 @@ public class TestDriver {
                 Constants.WORKING_DIRECTORY_PATH.resolve("TestSetsToSkip.txt"),
                 Charset.defaultCharset()
             );
+            String catalogFileName = "catalog.xml";
             processCatalog(new File(testsRepositoryDirectoryPath.resolve(catalogFileName).toString()));
         } catch (SaxonApiException | IOException e) {
             e.printStackTrace();
@@ -75,6 +121,7 @@ public class TestDriver {
         } else {
             System.out.println("Running sh script to obtain the required tests repository!");
             try {
+                String testsRepositoryScriptFileName = "get-tests-repository.sh";
                 ProcessBuilder pb = new ProcessBuilder(
                         Constants.WORKING_DIRECTORY_PATH.resolve(testsRepositoryScriptFileName).toString()
                 );
@@ -84,7 +131,7 @@ public class TestDriver {
 
                 BufferedReader stdout = new BufferedReader(new InputStreamReader(p.getInputStream()));
                 BufferedReader stderr = new BufferedReader(new InputStreamReader(p.getErrorStream()));
-                String line = "";
+                String line;
                 String testsDirectory = "";
 
                 if (exitValue == 0) {
@@ -116,15 +163,6 @@ public class TestDriver {
                     "json"
                 }
         );
-
-        // Initialize Spark - not needed when I have part of code from org.rumbledb.cli.JsoniqQueryExecutor.java
-        sparkSession = SparkSession.builder()
-            .master("local")
-            .appName("rumble-test-suite")
-            .getOrCreate();
-
-        // org.rumbledb.cli.JsoniqQueryExecutor.java does this for some reason in the ctor
-        // SparkSessionManager.COLLECT_ITEM_LIMIT = rumbleConf.getResultSizeCap();
 
         // Initialize Rumble
         rumbleInstance = new Rumble(rumbleConf);
@@ -159,10 +197,11 @@ public class TestDriver {
         File testSetFile = new File(testsRepositoryDirectoryPath.resolve(testSetFileName).toString());
         XdmNode testSetDocNode = catalogBuilder.build(testSetFile);
 
+        String jsonDocName = "fn/json-doc";
         if (testSetFileName.contains(jsonDocName))
             prepareJsonDocEnvironment(testSetDocNode);
 
-        if (testSetToTest.equals("") || testSetFileName.contains(testSetToTest)) {
+        if (testSetToTest.isEmpty() || testSetFileName.contains(testSetToTest)) {
             resetCounters();
             for (XdmNode testCase : testSetDocNode.select(Steps.descendant("test-case")).asList()) {
                 if (!testSetsToSkip.contains(testSetFileName))
@@ -223,7 +262,7 @@ public class TestDriver {
     }
 
     private void prepareJsonDocEnvironment(XdmNode testSetDocNode) {
-        // For some reason we have to access the first one and then we will see the environments
+        // For some reason we have to access the first one, and then we will see the environments
         List<XdmNode> environments = testSetDocNode.children()
             .iterator()
             .next()
@@ -254,8 +293,7 @@ public class TestDriver {
     private void processTestCase(XdmNode testCase, XPathCompiler xpc) throws SaxonApiException {
         String testCaseName = testCase.attribute("name");
         if (!Arrays.asList(skipTestCaseList).contains(testCaseName)) {
-            if (testCaseToTest.equals("") || testCaseName.contains(testCaseToTest)) {
-                XdmNode resultNode = testCase.select(Steps.child("result")).asNode();
+            if (testCaseToTest.isEmpty() || testCaseName.contains(testCaseToTest)) {
                 XdmNode testNode = testCase.select(Steps.child("test")).asNode();
 
                 try {
@@ -264,14 +302,13 @@ public class TestDriver {
                     List<XdmNode> dependencies = testCase.select(Steps.child("dependency")).asList();
                     dependencies.addAll(testCase.getParent().select(Steps.child("dependency")).asList());
 
-                    if (dependencies != null && dependencies.size() != 0) {
-                        boolean allDependenciesSatisfied = false;
+                    if (!dependencies.isEmpty()) {
                         for (XdmNode dependencyNode : dependencies) {
                             String type = dependencyNode.attribute("type");
                             String value = dependencyNode.attribute("value");
                             if (type == null || value == null) {
                                 // Should never happen
-                                LogSkipped(testCaseName + dependencyNode.toString());
+                                LogSkipped(testCaseName + dependencyNode);
                                 return;
                             }
 
@@ -280,7 +317,7 @@ public class TestDriver {
                             switch (type) {
                                 case "calendar": {
                                     // CB - I don't think we support any other calendar
-                                    LogDependency(testCaseName + dependencyNode.toString());
+                                    LogDependency(testCaseName + dependencyNode);
                                     return;
                                 }
                                 case "unicode-version": {
@@ -297,7 +334,7 @@ public class TestDriver {
                                 }
                                 case "format-integer-sequence": {
                                     // ⒈,Α,α - I am not sure what this is, I would need to see the tests.
-                                    LogDependency(testCaseName + dependencyNode.toString());
+                                    LogDependency(testCaseName + dependencyNode);
                                     return;
 
                                 }
@@ -345,7 +382,7 @@ public class TestDriver {
                                             value.contains("arbitraryPrecisionDecimal")
                                             || value.contains("staticTyping"))
                                     ) {
-                                        LogDependency(testCaseName + dependencyNode.toString());
+                                        LogDependency(testCaseName + dependencyNode);
                                         return;
                                     }
 
@@ -354,7 +391,7 @@ public class TestDriver {
                                 case "default-language": {
                                     // fr-CA not supported - we just support en
                                     if (!value.contains("en")) {
-                                        LogDependency(testCaseName + dependencyNode.toString());
+                                        LogDependency(testCaseName + dependencyNode);
                                         return;
                                     }
 
@@ -363,7 +400,7 @@ public class TestDriver {
                                 case "language": {
                                     // xib,de,fr,it not supported - we just support en
                                     if (!value.contains("en")) {
-                                        LogDependency(testCaseName + dependencyNode.toString());
+                                        LogDependency(testCaseName + dependencyNode);
                                         return;
                                     }
 
@@ -375,7 +412,7 @@ public class TestDriver {
                                     // not
                                     // if (!value.contains("XSLT") && !value.contains("XT")) {
                                     if (!(value.contains("XQ") || value.contains("XP"))) {
-                                        LogDependency(testCaseName + dependencyNode.toString());
+                                        LogDependency(testCaseName + dependencyNode);
                                         return;
                                     }
 
@@ -383,11 +420,11 @@ public class TestDriver {
                                 }
                                 case "limit": {
                                     // year_lt_0 - I am not sure I don't think we have this limit.
-                                    LogDependency(testCaseName + dependencyNode.toString());
+                                    LogDependency(testCaseName + dependencyNode);
                                     return;
                                 }
                                 default: {
-                                    LogDependency(testCaseName + dependencyNode.toString());
+                                    LogDependency(testCaseName + dependencyNode);
                                     return;
                                 }
                             }
@@ -397,16 +434,16 @@ public class TestDriver {
                     // This exception means there are no dependencies and we can proceed with running the query
                 }
 
-                String testString = "";
+                StringBuilder testString = new StringBuilder();
 
                 List<XdmNode> environments = testCase.select(Steps.child("environment")).asList();
 
-                if (environments != null && environments.size() > 0) {
+                if (environments != null && !environments.isEmpty()) {
                     XdmNode environment = environments.get(0);
-                    Iterator externalVariables = environment.children("param").iterator();
+                    Iterator<XdmNode> externalVariables = environment.children("param").iterator();
                     if (externalVariables.hasNext()) {
                         while (externalVariables.hasNext()) {
-                            XdmNode param = (XdmNode) externalVariables.next();
+                            XdmNode param = externalVariables.next();
                             String name = param.attribute("name");
                             String source = param.attribute("source");
 
@@ -414,17 +451,17 @@ public class TestDriver {
                             if (source == null) {
                                 String select = param.attribute("select");
                                 // value = xpc.evaluate(select, (XdmItem) null);
-                                testString += "let $" + name + " := " + select + " ";
+                                testString.append("let $").append(name).append(" := ").append(select).append(" ");
                             } else {
                                 // runNestedQuery(source, assertion);
                                 // Variable name should be the name and not hardcoded result
                             }
                         }
-                        testString += "return ";
+                        testString.append("return ");
                     }
                 }
 
-                testString += testNode.getStringValue();
+                testString.append(testNode.getStringValue());
 
                 // TODO figure out alternative results afterwards - this is if then else or...
                 // Place above try catch block to have assertion available in the catch!
@@ -432,7 +469,7 @@ public class TestDriver {
 
                 try {
                     // Hard Coded converter
-                    String convertedTestString = Convert(testString);
+                    String convertedTestString = Convert(testString.toString());
 
                     // JsonDoc converter
                     if (testCaseName.startsWith("json-doc")) {
@@ -449,7 +486,7 @@ public class TestDriver {
                     TestPassOrFail(
                         checkAssertion(resultAsList, assertion),
                         testCaseName,
-                        convertedTestString.equals(testString)
+                        convertedTestString.contentEquals(testString)
                     );
                 } catch (UnsupportedTypeException ute) {
                     LogUnsupportedType(testCaseName);
@@ -535,13 +572,13 @@ public class TestDriver {
             AssertError(assertion, testCaseName, e.getErrorCode());
             return;
         } else if (tag.equals("any-of")) {
-            Iterator childIterator = assertion.children("*").iterator();
+            Iterator<XdmNode> childIterator = assertion.children("*").iterator();
             boolean foundSingleMatch = false;
             boolean seenUnsupportedCode = false;
             boolean seenSingleErrorInAny = false;
 
             while (childIterator.hasNext() && !foundSingleMatch) {
-                XdmNode childNode = (XdmNode) childIterator.next();
+                XdmNode childNode = childIterator.next();
                 String childTag = childNode.getNodeName().getLocalName();
                 if (childTag.equals("error") || childTag.equals("assert-serialization-error")) {
                     seenSingleErrorInAny = true;
@@ -678,10 +715,9 @@ public class TestDriver {
     }
 
     private boolean AssertAnyOf(List<Item> resultAsList, XdmNode assertion) throws UnsupportedTypeException {
-        Iterator childIterator = assertion.children("*").iterator();
 
-        while (childIterator.hasNext()) {
-            if (checkAssertion(resultAsList, (XdmNode) childIterator.next()))
+        for (XdmNode xdmItems : assertion.children("*")) {
+            if (checkAssertion(resultAsList, xdmItems))
                 return true;
         }
         return false;
@@ -705,6 +741,7 @@ public class TestDriver {
                 }
         );
 
+        String resultVariableName = "result";
         configuration.setExternalVariableValue(
             Name.createVariableInNoNamespace(resultVariableName),
             resultAsList
@@ -729,7 +766,7 @@ public class TestDriver {
     }
 
     private boolean AssertEmpty(List<Item> resultAsList) {
-        return resultAsList.size() == 0;
+        return resultAsList.isEmpty();
     }
 
     private boolean AssertStringValue(List<Item> resultAsList, XdmNode assertion) throws UnsupportedTypeException {
@@ -770,10 +807,9 @@ public class TestDriver {
     }
 
     private boolean AssertAllOf(List<Item> resultAsList, XdmNode assertion) throws UnsupportedTypeException {
-        Iterator childIterator = assertion.children("*").iterator();
 
-        while (childIterator.hasNext()) {
-            if (!checkAssertion(resultAsList, (XdmNode) childIterator.next()))
+        for (XdmNode xdmItems : assertion.children("*")) {
+            if (!checkAssertion(resultAsList, xdmItems))
                 return false;
         }
         return true;
@@ -793,17 +829,6 @@ public class TestDriver {
         queryResult.populateListWithWarningOnlyIfCapReached(resultAsList);
         return resultAsList;
     }
-
-    private String singleItemToString(List<Item> itemList) {
-        if (itemList.size() != 1)
-            return null;
-        else
-            return itemList.stream().map(x -> x.serialize()).collect(Collectors.toList()).get(0);
-    }
-
-    private String[] skipTestCaseList = new String[] {
-        "fn-distinct-values-2"
-    };
 
     private String ConvertAtomicTypes(String testString) throws UnsupportedTypeException {
         // List complies with Supported Types list available at https://rumble.readthedocs.io/en/latest/JSONiq/
@@ -973,54 +998,6 @@ public class TestDriver {
         return testString;
     }
 
-    private class UnsupportedTypeException extends Throwable {
+    private static class UnsupportedTypeException extends Throwable {
     }
-
-    private String[] supportedErrorCodes = new String[] {
-        "FOAR0001",
-        "FOCA0002",
-        "FODC0002",
-        "FOFD1340",
-        "FOFD1350",
-        "JNDY0003",
-        "JNTY0004",
-        "JNTY0024",
-        "JNTY0018",
-        "RBDY0005",
-        "RBML0001",
-        "RBML0002",
-        "RBML0003",
-        "RBML0004",
-        "RBML0005",
-        "RBST0001",
-        "RBST0002",
-        "RBST0003",
-        "RBST0004",
-        "SENR0001",
-        "XPDY0002",
-        "XPDY0050",
-        "XPDY0130",
-        "XPST0003",
-        "XPST0008",
-        "XPST0017",
-        "XPST0080",
-        "XPST0081",
-        "XPTY0004",
-        "XQDY0054",
-        "XQST0016",
-        "XQST0031",
-        "XQST0033",
-        "XQST0034",
-        "XQST0038",
-        "XQST0039",
-        "XQST0047",
-        "XQST0048",
-        "XQST0049",
-        "XQST0052",
-        "XQST0059",
-        "XQST0069",
-        "XQST0088",
-        "XQST0089",
-        "XQST0094"
-    };
 }

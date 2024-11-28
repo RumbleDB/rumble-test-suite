@@ -18,35 +18,34 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class TestConverter {
-    private String testsRepositoryScriptFileName = "get-tests-repository.sh";
-    private String catalogFileName = "catalog.xml";
+    private final String catalogFileName = "catalog.xml";
     private Path testsRepositoryDirectoryPath;
     private List<String> testSetsToSkip = null;
     private List<String> testCasesToSkip = null;
     private static Path outputSubDirectoryPath;
     private int testSetsOutputted = 0;
-    private String nameSpace = "http://www.w3.org/2010/09/qt-fots-catalog";
+    private final String nameSpace = "http://www.w3.org/2010/09/qt-fots-catalog";
     private int testCasesOutputted = 0;
     private String catalogContent;
+    private final String[] helperDirectories = new String[] {
+            "fn/json-doc",
+            "fn/json-to-xml"
+    };
 
-    void execute() {
+    void execute() throws SaxonApiException, IOException, InterruptedException {
         getTestsRepository();
         loadTestsToSkip();
         if (Constants.PRODUCE_OUTPUT) {
             createOutputDirectory();
             copyHelperDirectories();
         }
-
-        try {
             processCatalog(new File(testsRepositoryDirectoryPath.resolve(catalogFileName).toString()));
-        } catch (SaxonApiException e) {
-            e.printStackTrace();
-        }
     }
 
-    private void getTestsRepository() {
+    public void getTestsRepository() throws IOException, InterruptedException {
         System.out.println("Running sh script to obtain the required tests repository!");
-        try {
+
+            String testsRepositoryScriptFileName = "get-tests-repository.sh";
             ProcessBuilder pb = new ProcessBuilder(
                     Constants.WORKING_DIRECTORY_PATH.resolve(testsRepositoryScriptFileName).toString()
             );
@@ -56,7 +55,7 @@ public class TestConverter {
 
             BufferedReader stdout = new BufferedReader(new InputStreamReader(p.getInputStream()));
             BufferedReader stderr = new BufferedReader(new InputStreamReader(p.getErrorStream()));
-            String line = "";
+            String line;
             String testsDirectory = "";
 
             if (exitValue == 0) {
@@ -73,23 +72,16 @@ public class TestConverter {
             }
             testsRepositoryDirectoryPath = Constants.WORKING_DIRECTORY_PATH.resolve(testsDirectory);
             System.out.println(testsRepositoryDirectoryPath);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+
         System.out.println("Tests repository obtained!");
     }
 
-    private void loadTestsToSkip() {
+    private void loadTestsToSkip() throws IOException {
         Path testSetsToSkipPath = Constants.WORKING_DIRECTORY_PATH.resolve(Constants.TEST_SETS_TO_SKIP_FILENAME);
         Path testCasesToSkipPath = Constants.WORKING_DIRECTORY_PATH.resolve(Constants.TEST_CASES_TO_SKIP_FILENAME);
         Charset charset = Charset.defaultCharset();
-        try {
             testSetsToSkip = Files.readAllLines(testSetsToSkipPath, charset);
             testCasesToSkip = Files.readAllLines(testCasesToSkipPath, charset);
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
 
     private void createOutputDirectory() {
@@ -102,7 +94,7 @@ public class TestConverter {
             outputSubDirectory.mkdirs();
     }
 
-    private void copyHelperDirectories() {
+    private void copyHelperDirectories() throws IOException {
         for (String directory : helperDirectories) {
             Path source = testsRepositoryDirectoryPath.resolve(directory);
             File srcDir = new File(source.toString());
@@ -110,15 +102,12 @@ public class TestConverter {
             Path destination = outputSubDirectoryPath.resolve(directory);
             File destDir = new File(destination.toString());
 
-            try {
                 FileUtils.copyDirectory(srcDir, destDir);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+
         }
     }
 
-    private void processCatalog(File catalogFile) throws SaxonApiException {
+    private void processCatalog(File catalogFile) throws SaxonApiException, IOException {
         Processor testDriverProcessor = new Processor(false);
 
         // TODO check if it is okay to use the default Tiny tree or not
@@ -149,7 +138,7 @@ public class TestConverter {
     }
 
     private void processTestSet(DocumentBuilder catalogBuilder, XPathCompiler xpc, XdmNode testSetNode)
-            throws SaxonApiException {
+            throws SaxonApiException, IOException {
 
         // TODO skip creating an Environment - its mainly for HE, EE, PE I think
 
@@ -172,7 +161,7 @@ public class TestConverter {
             String testSetContent = root.toString();
             Matcher testSetHeader = Pattern.compile("<test-set([^<]*)>", Pattern.DOTALL).matcher(testSetContent);
             if (testSetHeader.find())
-                testSetBody.append("<test-set" + testSetHeader.group(1) + ">");
+                testSetBody.append("<test-set").append(testSetHeader.group(1)).append(">");
             else
                 System.exit(1);
 
@@ -220,7 +209,7 @@ public class TestConverter {
                 createOutputXMLFile(testSetFileName, testSetBody);
         } else {
             String regex = testSetFileName.replace("/", "\\/");
-            regex = "<test-set([^<]*)file=\"" + regex + "\"\\/>\n";
+            regex = "<test-set([^<]*)file=\"" + regex + "\"/>\n";
             catalogContent = catalogContent.replaceAll(regex, "");
             testSetsToSkip.remove(testSetFileName);
         }
@@ -268,14 +257,14 @@ public class TestConverter {
             // System.out.println("& FOUND");
             // }
             // TODO maybe same issue like with header
-            Pattern testRegex = Pattern.compile("<test>(.*)<\\/test>", Pattern.DOTALL);
+            Pattern testRegex = Pattern.compile("<test>(.*)</test>", Pattern.DOTALL);
             Matcher testMatcher = testRegex.matcher(testCaseBody);
             // TODO figure out files <test file="normalize-unicode/fn-normalize-unicode-11.xq"/>
             if (!testMatcher.find())
                 return "";
             String convertedTestString = this.Convert(testMatcher.group(1));
             testCaseBody = testMatcher.replaceAll(Matcher.quoteReplacement("<test>" + convertedTestString + "</test>"));
-            Pattern resultRegex = Pattern.compile("<result>(.*)<\\/result>", Pattern.DOTALL);
+            Pattern resultRegex = Pattern.compile("<result>(.*)</result>", Pattern.DOTALL);
             Matcher resultMatcher = resultRegex.matcher(testCaseBody);
             if (!resultMatcher.find())
                 System.exit(1);
@@ -295,9 +284,8 @@ public class TestConverter {
         return testString;
     }
 
-    private void createOutputXMLFile(String testSetFileName, StringBuffer testSetBody) {
-        try {
-            // It uses / in the filename found in catalog.xml file. It is independent from platform
+    private void createOutputXMLFile(String testSetFileName, StringBuffer testSetBody) throws IOException {
+            // It uses / in the filename found in catalog.xml file. It is independent of platform
             String[] directoryAndFile = testSetFileName.split("/");
             Path testSetOutputDirectoryPath = outputSubDirectoryPath.resolve(directoryAndFile[0]);
             File prefixSubDirectory = new File(testSetOutputDirectoryPath.toString());
@@ -318,24 +306,12 @@ public class TestConverter {
             );
             String endRootTag = "</test-set>";
             Files.write(Paths.get(testSetOutputFilePath.toString()), endRootTag.getBytes(), StandardOpenOption.APPEND);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
     }
 
-    private void createOutputCatalog() {
-        try {
+    private void createOutputCatalog() throws FileNotFoundException {
             Path testSetOutputFilePath = outputSubDirectoryPath.resolve(catalogFileName);
             PrintWriter printWriter = new PrintWriter(testSetOutputFilePath.toString());
             printWriter.write(catalogContent);
             printWriter.close();
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        }
     }
-
-    private String[] helperDirectories = new String[] {
-        "fn/json-doc",
-        "fn/json-to-xml"
-    };
 }
