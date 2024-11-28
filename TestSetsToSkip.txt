@@ -1,3 +1,5 @@
+op/to.xml
+prod/VarDecl.xml
 fn/base-uri.xml
 fn/compare.xml
 fn/analyze-string.xml
