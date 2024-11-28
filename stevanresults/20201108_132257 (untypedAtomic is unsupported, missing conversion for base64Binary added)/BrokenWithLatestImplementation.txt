@@ -1,3 +1,0 @@
-List of all test cases:
-K2-CodepointEqual-1
-group-021

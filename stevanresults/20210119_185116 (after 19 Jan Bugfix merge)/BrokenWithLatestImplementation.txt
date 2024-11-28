@@ -1,6 +1,0 @@
-List of test cases that were passing before but not anymore:
-K-SeqMAXFunc-55
-
-Tests that were not crashing before, but are now and not in list above:
-K2-OrderbyExprWithout-25
-K2-OrderbyExprWithout-26

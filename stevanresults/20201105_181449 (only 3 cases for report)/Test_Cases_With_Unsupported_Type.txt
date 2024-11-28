@@ -1,5 +1,0 @@
-List of all test cases:
-ArrayTest-033
-ArrayTest-034
-inline-fn-032
-SquareArray-001
