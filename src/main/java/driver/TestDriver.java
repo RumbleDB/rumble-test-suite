@@ -40,56 +40,52 @@ public class TestDriver {
     // For JSON-doc
     private final Map<String, String> URItoPathLookupTable = new HashMap<>();
 
-    private final String[] skipTestCaseList = new String[] {
-            "fn-distinct-values-2"
-    };
-
     private final String[] supportedErrorCodes = new String[] {
-            "FOAR0001",
-            "FOCA0002",
-            "FODC0002",
-            "FOFD1340",
-            "FOFD1350",
-            "JNDY0003",
-            "JNTY0004",
-            "JNTY0024",
-            "JNTY0018",
-            "RBDY0005",
-            "RBML0001",
-            "RBML0002",
-            "RBML0003",
-            "RBML0004",
-            "RBML0005",
-            "RBST0001",
-            "RBST0002",
-            "RBST0003",
-            "RBST0004",
-            "SENR0001",
-            "XPDY0002",
-            "XPDY0050",
-            "XPDY0130",
-            "XPST0003",
-            "XPST0008",
-            "XPST0017",
-            "XPST0080",
-            "XPST0081",
-            "XPTY0004",
-            "XQDY0054",
-            "XQST0016",
-            "XQST0031",
-            "XQST0033",
-            "XQST0034",
-            "XQST0038",
-            "XQST0039",
-            "XQST0047",
-            "XQST0048",
-            "XQST0049",
-            "XQST0052",
-            "XQST0059",
-            "XQST0069",
-            "XQST0088",
-            "XQST0089",
-            "XQST0094"
+        "FOAR0001",
+        "FOCA0002",
+        "FODC0002",
+        "FOFD1340",
+        "FOFD1350",
+        "JNDY0003",
+        "JNTY0004",
+        "JNTY0024",
+        "JNTY0018",
+        "RBDY0005",
+        "RBML0001",
+        "RBML0002",
+        "RBML0003",
+        "RBML0004",
+        "RBML0005",
+        "RBST0001",
+        "RBST0002",
+        "RBST0003",
+        "RBST0004",
+        "SENR0001",
+        "XPDY0002",
+        "XPDY0050",
+        "XPDY0130",
+        "XPST0003",
+        "XPST0008",
+        "XPST0017",
+        "XPST0080",
+        "XPST0081",
+        "XPTY0004",
+        "XQDY0054",
+        "XQST0016",
+        "XQST0031",
+        "XQST0033",
+        "XQST0034",
+        "XQST0038",
+        "XQST0039",
+        "XQST0047",
+        "XQST0048",
+        "XQST0049",
+        "XQST0052",
+        "XQST0059",
+        "XQST0069",
+        "XQST0088",
+        "XQST0089",
+        "XQST0094"
     };
 
     void execute() {
@@ -102,6 +98,7 @@ public class TestDriver {
                 Constants.WORKING_DIRECTORY_PATH.resolve("TestSetsToSkip.txt"),
                 Charset.defaultCharset()
             );
+            System.out.println(testSetsToSkip);
             String catalogFileName = "catalog.xml";
             processCatalog(new File(testsRepositoryDirectoryPath.resolve(catalogFileName).toString()));
         } catch (SaxonApiException | IOException e) {
@@ -168,7 +165,7 @@ public class TestDriver {
         rumbleInstance = new Rumble(rumbleConf);
     }
 
-    private void processCatalog(File catalogFile) throws SaxonApiException {
+    private void processCatalog(File catalogFile) throws SaxonApiException, IOException {
         Processor testDriverProcessor = new Processor(false);
 
         // TODO check if it is okay to use the default Tiny tree or not
@@ -189,7 +186,8 @@ public class TestDriver {
     }
 
     private void processTestSet(DocumentBuilder catalogBuilder, XPathCompiler xpc, XdmNode testSetNode)
-            throws SaxonApiException {
+            throws SaxonApiException,
+                IOException {
 
         // TODO skip creating an Environment - its mainly for HE, EE, PE I think
 
@@ -290,9 +288,14 @@ public class TestDriver {
         numberOfManaged = 0;
     }
 
-    private void processTestCase(XdmNode testCase, XPathCompiler xpc) throws SaxonApiException {
+    private void processTestCase(XdmNode testCase, XPathCompiler xpc) throws SaxonApiException, IOException {
         String testCaseName = testCase.attribute("name");
-        if (!Arrays.asList(skipTestCaseList).contains(testCaseName)) {
+        List<String> testCasesToSkip = Files.readAllLines(
+            Constants.WORKING_DIRECTORY_PATH.resolve("TestCasesToSkip.txt"),
+            Charset.defaultCharset()
+        );
+        if (!testCasesToSkip.contains(testCaseName)) {
+            System.out.println(testCaseName);
             if (testCaseToTest.isEmpty() || testCaseName.contains(testCaseToTest)) {
                 XdmNode testNode = testCase.select(Steps.child("test")).asNode();
 
