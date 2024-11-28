@@ -14,8 +14,9 @@ public class Constants {
     public static final boolean PRODUCE_LOGS = true;
 
     // Log files here
-    public static final String TEST_CASE_HEADER = "TestSetFileName,Success,Managed,Fails,Skipped,Dependencies,Crashes," +
-                                                  "UnsupportedTypes,UnsupportedErrorCodes,Sum,Processed,Matches\n";
+    public static final String TEST_CASE_HEADER = "TestSetFileName,Success,Managed,Fails,Skipped,Dependencies,Crashes,"
+        +
+        "UnsupportedTypes,UnsupportedErrorCodes,Sum,Processed,Matches\n";
     public static final String TEST_CASE_TEMPLATE = "%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%s\n";
 
     public static final String TEST_CASE_FILENAME = "Statistics.csv";

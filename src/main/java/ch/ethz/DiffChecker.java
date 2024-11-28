@@ -11,8 +11,10 @@ import java.util.List;
 
 public class DiffChecker {
     private static String logDirectoryName = "stevanresults";
-    private static String firstFilePathFromResults = "20201129_180351 (implemented assert string equal via result binding compared after \" \" fix was implemented)";
-    private static String secondFilePathFromResults = "20201130_165451 (implemented assert string equal via result binding compared before \" \" fix was implemented)";
+    private static String firstFilePathFromResults =
+        "20201129_180351 (implemented assert string equal via result binding compared after \" \" fix was implemented)";
+    private static String secondFilePathFromResults =
+        "20201130_165451 (implemented assert string equal via result binding compared before \" \" fix was implemented)";
     private static StringBuffer diffCheckerSB = new StringBuffer();
     private static String diffCheckerDirectoryName = "2 DiffChecker";
 
@@ -32,15 +34,15 @@ public class DiffChecker {
             allSecondBrokenTests = Files.readAllLines(secondFilePath, charset);
 
 
-            for (String firstBrokenTest : allFirstBrokenTests){
-                if (!allSecondBrokenTests.contains(firstBrokenTest)){
+            for (String firstBrokenTest : allFirstBrokenTests) {
+                if (!allSecondBrokenTests.contains(firstBrokenTest)) {
                     diffCheckerSB.append(firstBrokenTest + "\n");
                 }
             }
 
             diffCheckerSB.append("\n" + "Exists in " + secondFilePath + " but not in " + firstFilePath + "\n");
-            for (String secondBrokenTest : allSecondBrokenTests){
-                if (!allFirstBrokenTests.contains(secondBrokenTest)){
+            for (String secondBrokenTest : allSecondBrokenTests) {
+                if (!allFirstBrokenTests.contains(secondBrokenTest)) {
                     diffCheckerSB.append(secondBrokenTest + "\n");
                 }
             }
