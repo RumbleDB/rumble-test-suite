@@ -2,16 +2,16 @@ package converter;
 
 import net.sf.saxon.s9api.*;
 import net.sf.saxon.s9api.streams.Steps;
-import org.apache.commons.io.FileUtils;
+import driver.Constants;
 
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Iterator;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -19,21 +19,14 @@ public class TestConverter {
     private final String catalogFileName = "catalog.xml";
     private Path testsRepositoryDirectoryPath;
     private static Path outputSubDirectoryPath;
-    private int testSetsOutputted = 0;
     private final String nameSpace = "http://www.w3.org/2010/09/qt-fots-catalog";
     private int testCasesOutputted = 0;
     private String catalogContent;
-    private final String[] helperDirectories = new String[] {
-        "fn/json-doc",
-        "fn/json-to-xml"
-    };
 
-    void execute() throws SaxonApiException, IOException, InterruptedException {
+    void execute() throws Exception {
         getTestsRepository();
-        if (Constants.PRODUCE_OUTPUT) {
-            createOutputDirectory();
-            copyHelperDirectories();
-        }
+        createOutputDirectory();
+
         processCatalog(new File(testsRepositoryDirectoryPath.resolve(catalogFileName).toString()));
     }
 
@@ -51,23 +44,17 @@ public class TestConverter {
         BufferedReader stdout = new BufferedReader(new InputStreamReader(p.getInputStream()));
         BufferedReader stderr = new BufferedReader(new InputStreamReader(p.getErrorStream()));
         String line;
-        String testsDirectory = "";
 
         if (exitValue == 0) {
             while ((line = stdout.readLine()) != null) {
                 System.out.println(line);
-
-                // Name of the directory is parametrized in testsRepositoryScriptName
-                testsDirectory = line;
             }
         } else {
             while ((line = stderr.readLine()) != null) {
                 System.out.println(line);
             }
         }
-        testsRepositoryDirectoryPath = Constants.WORKING_DIRECTORY_PATH.resolve(testsDirectory);
-        System.out.println(testsRepositoryDirectoryPath);
-
+        testsRepositoryDirectoryPath = driver.Constants.WORKING_DIRECTORY_PATH.resolve("qt3tests");
         System.out.println("Tests repository obtained!");
     }
 
@@ -81,24 +68,9 @@ public class TestConverter {
             outputSubDirectory.mkdirs();
     }
 
-    private void copyHelperDirectories() throws IOException {
-        for (String directory : helperDirectories) {
-            Path source = testsRepositoryDirectoryPath.resolve(directory);
-            File srcDir = new File(source.toString());
 
-            Path destination = outputSubDirectoryPath.resolve(directory);
-            File destDir = new File(destination.toString());
-
-            FileUtils.copyDirectory(srcDir, destDir);
-
-        }
-    }
-
-    private void processCatalog(File catalogFile) throws SaxonApiException, IOException {
+    private void processCatalog(File catalogFile) throws Exception {
         Processor testDriverProcessor = new Processor(false);
-
-        // TODO check if it is okay to use the default Tiny tree or not
-        // catalogBuilder.setTreeModel(this.treeModel);
         DocumentBuilder catalogBuilder = testDriverProcessor.newDocumentBuilder();
         catalogBuilder.setLineNumbering(true);
         XdmNode catalogNode = catalogBuilder.build(catalogFile);
@@ -109,35 +81,31 @@ public class TestConverter {
         xpc.setCaching(true);
         // Yes we do need Namespace. It is required to run evaluateSingle and luckily it is hardcoded in QT3TestDriverHE
         xpc.declareNamespace("", nameSpace);
-
-        for (XdmNode testSet : catalogNode.select(Steps.descendant("test-set")).asList()) {
+        List<XdmNode> testSets = catalogNode.select(Steps.descendant("test-set")).asList();
+        for (XdmNode testSet : testSets) {
             this.processTestSet(catalogBuilder, xpc, testSet);
         }
-        System.out.println("Included Test Sets: " + testSetsOutputted);
+        System.out.println("Included Test Sets: " + testSets.size());
         System.out.println("Included Test Cases: " + testCasesOutputted);
 
-        if (Constants.PRODUCE_OUTPUT)
-            createOutputCatalog();
+        // CREATE OUTPUT CATALOG
+        Path testSetOutputFilePath = outputSubDirectoryPath.resolve(catalogFileName);
+        PrintWriter printWriter = new PrintWriter(testSetOutputFilePath.toString());
+        printWriter.write(catalogContent);
+        printWriter.close();
     }
 
     private void processTestSet(DocumentBuilder catalogBuilder, XPathCompiler xpc, XdmNode testSetNode)
-            throws SaxonApiException,
-                IOException {
-
-        // TODO skip creating an Environment - its mainly for HE, EE, PE I think
+            throws Exception {
 
         String testSetFileName = testSetNode.attribute("file");
         File testSetFile = new File(testsRepositoryDirectoryPath.resolve(testSetFileName).toString());
         XdmNode testSetDocNode = catalogBuilder.build(testSetFile);
 
-        testSetsOutputted++;
         StringBuffer testSetBody = new StringBuffer();
         Iterator<XdmNode> iterator = testSetDocNode.children().iterator();
         XdmNode root = iterator.next();
 
-        // name="app-spec-examples" is the only one failing with Regex. Quick fix so that we do not need
-        // testSetBody.append("<test-set xmlns=\"" + nameSpace + "\" name=\"" + testSetFileName.split("/")[1] +
-        // "\">\n");
         while (!root.children().iterator().hasNext())
             root = iterator.next();
 
@@ -146,40 +114,10 @@ public class TestConverter {
         if (testSetHeader.find())
             testSetBody.append("<test-set").append(testSetHeader.group(1)).append(">");
         else
-            System.exit(1);
-
-        // TODO This does not quite help us
-        // XdmNode description = (XdmNode) xpc.evaluateSingle("description", root);
-        // printWriter.write(description.toString());
-
-        // TODO we can separate them like this
-        // for (XdmNode environment : root.select(Steps.child("link")).asList()) {
-        // printWriter.write(environment.toString());
-        // }
-        // for (XdmNode environment : root.select(Steps.child("description")).asList()) {
-        // printWriter.write(environment.toString());
-        // }
-        // for (XdmNode environment : root.select(Steps.child("environment")).asList()) {
-        // printWriter.write(environment.toString());
-        // }
-
-        // TODO checkout if we can use this to better do toString()
-        // NodeInfo testDocNodeInfo = testSetDocNode.getUnderlyingNode();
-        // int testDocNode = testDocNodeInfo.getNodeKind();
-        // int rootNode = root.getUnderlyingNode().getNodeKind();
-        // int environment =
-        // root.select(Steps.child("environment")).asList().get(0).getUnderlyingNode().getNodeKind();
-        // int testcase =
-        // testSetDocNode.select(Steps.descendant("test-case")).asList().get(0).getUnderlyingNode().getNodeKind();
-
-
-        // TODO can't make a new Node
-        // QName bla = root.getNodeName();
-        // XdmNode a = new XdmNode()
+            throw new Exception("find didnt work");
 
         for (XdmNode child : root.children()) {
             if (child.getUnderlyingNode().getDisplayName().equals("test-case"))
-                // if (child.getNodeName().getLocalName().equals("test-case"))
                 testSetBody.append(this.processTestCase(child, xpc));
             else {
                 String otherNode = child.toString();
@@ -187,63 +125,24 @@ public class TestConverter {
                 testSetBody.append(otherNode);
             }
         }
-
-        if (Constants.PRODUCE_OUTPUT)
-            createOutputXMLFile(testSetFileName, testSetBody);
+        createOutputXMLFile(testSetFileName, testSetBody);
     }
 
     private String processTestCase(XdmNode testCase, XPathCompiler xpc) throws SaxonApiException {
         testCasesOutputted++;
         String testCaseBody = testCase.toString();
-        // XdmNode testNode = testCase.select(Steps.child("test")).asNode();
-        // String convertedTestString = this.Convert(testNode.getStringValue());
-        // XdmNode assertion = (XdmNode) xpc.evaluateSingle("result/*[1]", testCase);
-        // //String expectedResult = Convert(assertion.getStringValue());
-        // String expectedResult = Convert(assertion.toString());
-        // TODO try to perform these regex operations with xpc.evaluate()
 
-        // if (convertedTestString.contains("<![CDATA["))
-        // System.out.println("CDATA FOUND");
-
-        // if (testCaseName.equals("fn-codepoint-equal-22")) {
-        // System.out.println("& FOUND");
-        // String check = testCase.getUnderlyingNode().getStringValue();
-        // Charset iso = Charset.forName("ISO-8859-1");
-        // //testCaseBody = testCaseBody.replace("&", "\\&");
-        // XdmNode testNode = testCase.select(Steps.child("test")).asNode();
-        // String convertedTestString = this.Convert(testNode.getStringValue());
-        // String escapedHTML = StringEscapeUtils.escapeHtml4(convertedTestString);
-        // //String escaped = new String(convertedTestString, Charset.forName(new String("ISO-8859-1")));
-        // try {
-        // StringBuilder sb = HtmlEncoder.escapeNonLatin(convertedTestString, new StringBuilder());
-        // String Jean = net.sf.saxon.query.QueryResult.serialize(testCase.getUnderlyingNode());
-        // String escaped = sb.toString();
-        //
-        // //byte[] latin1 = new String(convertedTestString.getBytes(StandardCharsets.UTF_8),
-        // "UTF-8").getBytes("ISO-8859-1");
-        // //String latin1 = new String(convertedTestString.getBytes(StandardCharsets.UTF_8), "ISO-8859-1");
-        // String latin2 = new String(convertedTestString.getBytes(StandardCharsets.ISO_8859_1), "UTF-8");
-        // String test = latin2.toString();
-        //
-        // System.out.println("& FOUND");
-        // } catch (IOException | XPathException e) {
-        // e.printStackTrace();
-        // }
-        // System.out.println("& FOUND");
-        // }
-        // TODO maybe same issue like with header
         Pattern testRegex = Pattern.compile("<test>(.*)</test>", Pattern.DOTALL);
         Matcher testMatcher = testRegex.matcher(testCaseBody);
-        // TODO figure out files <test file="normalize-unicode/fn-normalize-unicode-11.xq"/>
         if (!testMatcher.find())
             return "";
-        String convertedTestString = this.Convert(testMatcher.group(1));
+        String convertedTestString = testMatcher.group(1);
         testCaseBody = testMatcher.replaceAll(Matcher.quoteReplacement("<test>" + convertedTestString + "</test>"));
         Pattern resultRegex = Pattern.compile("<result>(.*)</result>", Pattern.DOTALL);
         Matcher resultMatcher = resultRegex.matcher(testCaseBody);
         if (!resultMatcher.find())
             System.exit(1);
-        String expectedResult = this.Convert(resultMatcher.group(1));
+        String expectedResult = resultMatcher.group(1);
         testCaseBody = resultMatcher.replaceAll(
             Matcher.quoteReplacement("<result>" + expectedResult + "</result>")
         );
@@ -251,12 +150,7 @@ public class TestConverter {
         return testCaseBody;
     }
 
-    private String Convert(String testString) {
-        return testString;
-    }
-
     private void createOutputXMLFile(String testSetFileName, StringBuffer testSetBody) throws IOException {
-        // It uses / in the filename found in catalog.xml file. It is independent of platform
         String[] directoryAndFile = testSetFileName.split("/");
         Path testSetOutputDirectoryPath = outputSubDirectoryPath.resolve(directoryAndFile[0]);
         File prefixSubDirectory = new File(testSetOutputDirectoryPath.toString());
@@ -266,23 +160,14 @@ public class TestConverter {
         Path testSetOutputFilePath = testSetOutputDirectoryPath.resolve(directoryAndFile[1]);
         PrintWriter printWriter = new PrintWriter(testSetOutputFilePath.toString());
 
-        // TODO check if I can extract it from some property as it is sometimes UTF-8 encoding
-        String header = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
-        printWriter.write(header);
+        printWriter.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
         printWriter.close();
         Files.write(
-            Paths.get(testSetOutputFilePath.toString()),
+            testSetOutputFilePath,
             testSetBody.toString().getBytes(),
             StandardOpenOption.APPEND
         );
         String endRootTag = "</test-set>";
-        Files.write(Paths.get(testSetOutputFilePath.toString()), endRootTag.getBytes(), StandardOpenOption.APPEND);
-    }
-
-    private void createOutputCatalog() throws FileNotFoundException {
-        Path testSetOutputFilePath = outputSubDirectoryPath.resolve(catalogFileName);
-        PrintWriter printWriter = new PrintWriter(testSetOutputFilePath.toString());
-        printWriter.write(catalogContent);
-        printWriter.close();
+        Files.write(testSetOutputFilePath, endRootTag.getBytes(), StandardOpenOption.APPEND);
     }
 }
