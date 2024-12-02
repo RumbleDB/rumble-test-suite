@@ -1,4 +1,4 @@
-package jq;
+package iq;
 
 import converter.TestConverter;
 import driver.TestDriver;
