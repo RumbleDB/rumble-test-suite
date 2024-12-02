@@ -6,7 +6,7 @@ stages:
 build-job:
   stage: test
   script:
-    - git clone --single-branch --branch "mschoeb-bug-fixing" "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.inf.ethz.ch/gfourny/rumble.git" 
+    - git clone --single-branch --branch "mschoeb-tests-bugfixing" "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.inf.ethz.ch/gfourny/rumble.git" 
     - cd rumble
     - mvn clean compile assembly:single -quiet
     - cd ..
