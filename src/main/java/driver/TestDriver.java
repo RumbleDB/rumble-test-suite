@@ -34,6 +34,11 @@ public class TestDriver {
     private int numberOfProcessedTestCases;
     private int numberOfManaged;
 
+    public static String currentTestCase;
+    public static String currentTestSet;
+    public static List<Object[]> allTests = new ArrayList<>();
+
+
     public final StringBuffer TEST_CASE_SB = new StringBuffer();
     public final StringBuffer UNSUPPORTED_TYPE_SB = new StringBuffer();
     public final StringBuffer CRASHED_TESTS_SB = new StringBuffer();
@@ -48,7 +53,7 @@ public class TestDriver {
     // For JSON-doc
     private final Map<String, String> URItoPathLookupTable = new HashMap<>();
 
-    void execute() throws IOException, SaxonApiException {
+    public void execute() throws IOException, SaxonApiException {
         getTestsRepository();
         initializeSparkAndRumble();
 
@@ -112,6 +117,7 @@ public class TestDriver {
         );
 
         String testSetFileName = testSetNode.attribute("file");
+        currentTestSet = testSetFileName;
         File testSetFile = new File(testsRepositoryDirectoryPath.resolve(testSetFileName).toString());
         XdmNode testSetDocNode = catalogBuilder.build(testSetFile);
 
@@ -208,7 +214,7 @@ public class TestDriver {
 
     private void processTestCase(XdmNode testCase, XPathCompiler xpc) throws SaxonApiException, IOException {
         String testCaseName = testCase.attribute("name");
-
+        currentTestCase = testCaseName;
         // check if testcase is skipped
         List<String> testCasesToSkip = Files.readAllLines(
             Constants.WORKING_DIRECTORY_PATH.resolve("TestCasesToSkip.txt"),
@@ -291,7 +297,7 @@ public class TestDriver {
             LogUnsupportedType(testCaseName);
         } catch (RumbleException re) {
             CheckForErrorCode(re, assertion, testCaseName);
-        } catch (Exception e) {
+        } catch (Exception | Error e) {
             LogCrash(testCaseName);
         }
     }
@@ -666,7 +672,9 @@ public class TestDriver {
         return CustomAssertTrue(nestedResult);
     }
 
+
     private boolean CustomAssertTrue(List<Item> resultAsList) {
+        allTests.add(new Object[] { resultAsList, currentTestSet, currentTestCase });
         if (resultAsList.size() != 1)
             return false;
         if (!resultAsList.get(0).isBoolean())
