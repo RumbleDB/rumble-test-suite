@@ -1,4 +1,4 @@
-image: marioarduini/rumble-source:2020-11-23
+image: adoptopenjdk/openjdk11
 
 stages:
   - test
