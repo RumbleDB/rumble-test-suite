@@ -10,7 +10,7 @@ build-job:
     - cd rumble
     - mvn clean compile assembly:single -quiet
     - cd ..
-    - mvn -Dtest=TestcaseTest test
+    - mvn -Dtest=TestcaseTest test -quiet
   artifacts:
     when: always
     paths:
