@@ -1,4 +1,4 @@
-image: adoptopenjdk/openjdk11
+image: eclipse-temurin:11
 
 stages:
   - test
