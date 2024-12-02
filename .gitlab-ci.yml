@@ -6,6 +6,8 @@ stages:
 build-job:
   stage: test
   script:
+    - apk add maven
+    - apk add git
     - git clone --single-branch --branch "master3.5-mschoeb" "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.inf.ethz.ch/gfourny/rumble.git" 
     - cd rumble
     - mvn clean compile assembly:single
