@@ -23,7 +23,7 @@ public class TestConverter {
     private int testCasesOutputted = 0;
     private String catalogContent;
 
-    void execute() throws Exception {
+    public void execute() throws Exception {
         getTestsRepository();
         createOutputDirectory();
 

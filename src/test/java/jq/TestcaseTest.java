@@ -1,12 +1,11 @@
 package jq;
 
+import converter.TestConverter;
 import driver.TestDriver;
-import net.sf.saxon.s9api.SaxonApiException;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.rumbledb.api.Item;
 
-import java.io.IOException;
 import java.util.List;
 import org.junit.Test;
 
@@ -18,7 +17,9 @@ public class TestcaseTest {
     private final List<Item> resultAsList;
 
     @Parameterized.Parameters(name = "{1}_{2}: {0}")
-    public static Iterable<Object[]> data() throws IOException, SaxonApiException {
+    public static Iterable<Object[]> data() throws Exception {
+        TestConverter testConverter = new TestConverter();
+        testConverter.execute();
         TestDriver testDriver = new TestDriver();
         testDriver.execute();
         return testDriver.allTests;
