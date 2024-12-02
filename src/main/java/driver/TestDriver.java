@@ -256,10 +256,19 @@ public class TestDriver {
         // TODO figure out alternative results afterwards - this is if then else or...
         // Place above try catch block to have assertion available in the catch!
         XdmNode assertion = (XdmNode) xpc.evaluateSingle("result/*[1]", testCase);
-        try {
-            // Hard Coded converter
-            String convertedTestString = Convert(testString.toString());
 
+        // check types and convert
+        String convertedTestString;
+        try {
+            convertedTestString = Convert(testString.toString());
+        } catch (UnsupportedTypeException e) {
+            // unsupported type encountered, testcase is skipped
+            LogUnsupportedType(testCaseName);
+            return;
+        }
+
+        // run test case
+        try {
             // JsonDoc converter
             if (testCaseName.startsWith("json-doc")) {
                 String uri = StringUtils.substringBetween(convertedTestString, "(\"", "\")");
@@ -278,6 +287,7 @@ public class TestDriver {
                 convertedTestString.contentEquals(testString)
             );
         } catch (UnsupportedTypeException ute) {
+            // unsupported type encountered in assertion
             LogUnsupportedType(testCaseName);
         } catch (RumbleException re) {
             CheckForErrorCode(re, assertion, testCaseName);
@@ -468,7 +478,7 @@ public class TestDriver {
         String tag = assertion.getNodeName().getLocalName();
         // Logic for even though we only support SENR0001
         if (tag.equals("error") || tag.equals("assert-serialization-error")) {
-            AssertError(assertion, testCaseName, e.getErrorCode());
+            CustomAssertError(assertion, testCaseName, e.getErrorCode());
             return;
         } else if (tag.equals("any-of")) {
             Iterator<XdmNode> childIterator = assertion.children("*").iterator();
@@ -505,7 +515,7 @@ public class TestDriver {
         LogCrash(testCaseName);
     }
 
-    private void AssertError(XdmNode assertion, String testCaseName, String errorCode) {
+    private void CustomAssertError(XdmNode assertion, String testCaseName, String errorCode) {
         String expectedError = assertion.attribute("code");
         if (!Arrays.asList(Constants.supportedErrorCodes).contains(expectedError)) {
             LogUnsupportedErrorCode(testCaseName);
@@ -521,31 +531,31 @@ public class TestDriver {
         // Whenever we get error, we will end up in the exception block. No point in having case "error" here
         switch (tag) {
             case "assert-empty":
-                return AssertEmpty(resultAsList);
+                return CustomAssertEmpty(resultAsList);
             case "assert":
-                return Assert(resultAsList, assertion);
+                return CustomAssert(resultAsList, assertion);
             case "assert-eq":
-                return AssertEq(resultAsList, assertion);
+                return CustomAssertEq(resultAsList, assertion);
             case "assert-deep-eq":
-                return AssertDeepEq(resultAsList, assertion);
+                return CustomAssertDeepEq(resultAsList, assertion);
             case "assert-true":
-                return AssertTrue(resultAsList);
+                return CustomAssertTrue(resultAsList);
             case "assert-false":
-                return !AssertTrue(resultAsList);
+                return !CustomAssertTrue(resultAsList);
             case "assert-string-value":
-                return AssertStringValue(resultAsList, assertion);
+                return CustomAssertStringValue(resultAsList, assertion);
             case "all-of":
-                return AssertAllOf(resultAsList, assertion);
+                return CustomAssertAllOf(resultAsList, assertion);
             case "any-of":
-                return AssertAnyOf(resultAsList, assertion);
+                return CustomAssertAnyOf(resultAsList, assertion);
             case "assert-type":
-                return AssertType(resultAsList, assertion);
+                return CustomAssertType(resultAsList, assertion);
             case "assert-count":
-                return AssertCount(resultAsList, assertion);
+                return CustomAssertCount(resultAsList, assertion);
             case "not":
-                return AssertNot(resultAsList, assertion);
+                return CustomAssertNot(resultAsList, assertion);
             case "assert-permutation":
-                return AssertPermutation(resultAsList, assertion);
+                return CustomAssertPermutation(resultAsList, assertion);
             // error codes are not handled here as they always cause exceptions
             // "assert-message", "assert-warning", "assert-result-document", "assert-serialization" do not exist
             // "assert-xml", "serialization-matches" missing
@@ -554,7 +564,8 @@ public class TestDriver {
         }
     }
 
-    private boolean AssertPermutation(List<Item> resultAsList, XdmNode assertion) throws UnsupportedTypeException {
+    private boolean CustomAssertPermutation(List<Item> resultAsList, XdmNode assertion)
+            throws UnsupportedTypeException {
         String assertExpression =
             "declare function allpermutations($sequence as item*) as array* {\n"
                 +
@@ -596,24 +607,24 @@ public class TestDriver {
         return runNestedQuery(resultAsList, assertExpression);
     }
 
-    private boolean AssertNot(List<Item> resultAsList, XdmNode assertion) throws UnsupportedTypeException {
+    private boolean CustomAssertNot(List<Item> resultAsList, XdmNode assertion) throws UnsupportedTypeException {
         // According to analysis and way QT3 Test Suite was implemented, it is always one!
         XdmNode childUnderNot = assertion.select(Steps.child("*")).asList().get(0);
         return !checkAssertion(resultAsList, childUnderNot);
     }
 
-    private boolean AssertCount(List<Item> resultAsList, XdmNode assertion) {
+    private boolean CustomAssertCount(List<Item> resultAsList, XdmNode assertion) {
         // I do not know how to create nested query here
         int assertExpression = Integer.parseInt(assertion.getStringValue());
         return resultAsList.size() == assertExpression;
     }
 
-    private boolean AssertDeepEq(List<Item> resultAsList, XdmNode assertion) throws UnsupportedTypeException {
+    private boolean CustomAssertDeepEq(List<Item> resultAsList, XdmNode assertion) throws UnsupportedTypeException {
         String assertExpression = "deep-equal((" + Convert(assertion.getStringValue()) + "),$result)";
         return runNestedQuery(resultAsList, assertExpression);
     }
 
-    private boolean AssertAnyOf(List<Item> resultAsList, XdmNode assertion) throws UnsupportedTypeException {
+    private boolean CustomAssertAnyOf(List<Item> resultAsList, XdmNode assertion) throws UnsupportedTypeException {
 
         for (XdmNode xdmItems : assertion.children("*")) {
             if (checkAssertion(resultAsList, xdmItems))
@@ -622,12 +633,12 @@ public class TestDriver {
         return false;
     }
 
-    private boolean AssertEq(List<Item> resultAsList, XdmNode assertion) throws UnsupportedTypeException {
+    private boolean CustomAssertEq(List<Item> resultAsList, XdmNode assertion) throws UnsupportedTypeException {
         String expectedResult = "$result eq " + Convert(assertion.getStringValue());
         return runNestedQuery(resultAsList, expectedResult);
     }
 
-    private boolean Assert(List<Item> resultAsList, XdmNode assertion) throws UnsupportedTypeException {
+    private boolean CustomAssert(List<Item> resultAsList, XdmNode assertion) throws UnsupportedTypeException {
         String expectedResult = Convert(assertion.getStringValue());
         return runNestedQuery(resultAsList, expectedResult);
     }
@@ -652,10 +663,10 @@ public class TestDriver {
 
         List<Item> nestedResult = runQuery(assertExpression, rumbleInstance);
 
-        return AssertTrue(nestedResult);
+        return CustomAssertTrue(nestedResult);
     }
 
-    private boolean AssertTrue(List<Item> resultAsList) {
+    private boolean CustomAssertTrue(List<Item> resultAsList) {
         if (resultAsList.size() != 1)
             return false;
         if (!resultAsList.get(0).isBoolean())
@@ -664,11 +675,12 @@ public class TestDriver {
         return resultAsList.get(0).getBooleanValue();
     }
 
-    private boolean AssertEmpty(List<Item> resultAsList) {
+    private boolean CustomAssertEmpty(List<Item> resultAsList) {
         return resultAsList.isEmpty();
     }
 
-    private boolean AssertStringValue(List<Item> resultAsList, XdmNode assertion) throws UnsupportedTypeException {
+    private boolean CustomAssertStringValue(List<Item> resultAsList, XdmNode assertion)
+            throws UnsupportedTypeException {
         String expectedResult = "string-join($result ! string($$), \" \") eq "
             + "\""
             + Convert(assertion.getStringValue() + "\"");
@@ -676,8 +688,6 @@ public class TestDriver {
     }
 
     private String Convert(String testString) throws UnsupportedTypeException {
-        // Converting assertion is done in all respective assert methods
-        // What was found in fn/abs.xml and math/math-acos.xml is now replaced with convert types
         testString = ConvertAtomicTypes(testString);
         testString = ConvertNonAtomicTypes(testString);
 
@@ -690,14 +700,6 @@ public class TestDriver {
         testString = testString.replace("map:", "");
         testString = testString.replace("array:", "");
         testString = testString.replace("xs:", ""); // This should be handled with all the types before
-        // testString = testString.replace("op:",""); // doesn't exist
-        // testString = testString.replace("prod:",""); // doesn't exist
-
-        // Found in math acos, asin, atan, cos, exp, exp10, log, log10, pow, sin, sqrt, tan (tests 7, 8, 9 usually)
-        // testString = testString.replace("double('NaN')", "double(\"NaN\")");
-        // testString = testString.replace("double('INF')", "double(\"Infinity\")");
-        // testString = testString.replace("double('-INF')", "double(\"-Infinity\")");
-        // testString = testString.replace("INF", "Infinity");
 
         // XML notation
         testString = testString.replace(". ", "$$ ");
@@ -705,7 +707,7 @@ public class TestDriver {
         return testString;
     }
 
-    private boolean AssertAllOf(List<Item> resultAsList, XdmNode assertion) throws UnsupportedTypeException {
+    private boolean CustomAssertAllOf(List<Item> resultAsList, XdmNode assertion) throws UnsupportedTypeException {
 
         for (XdmNode xdmItems : assertion.children("*")) {
             if (!checkAssertion(resultAsList, xdmItems))
@@ -714,15 +716,12 @@ public class TestDriver {
         return true;
     }
 
-    private boolean AssertType(List<Item> resultAsList, XdmNode assertion) throws UnsupportedTypeException {
-        // Convert will already take care of not allowed conversions and throw Unsupported Type error Exception
-        // We do not need the same Switch case here as if no Exception is thrown, we can simply run the query
+    private boolean CustomAssertType(List<Item> resultAsList, XdmNode assertion) throws UnsupportedTypeException {
         String expectedResult = "$result instance of " + Convert(assertion.getStringValue());
         return runNestedQuery(resultAsList, expectedResult);
     }
 
     private List<Item> runQuery(String query, Rumble rumbleInstance) {
-        // Coppied from JsoniqQueryExecutor.java - 150th line of code
         SequenceOfItems queryResult = rumbleInstance.runQuery(query);
         List<Item> resultAsList = new ArrayList<>();
         queryResult.populateListWithWarningOnlyIfCapReached(resultAsList);
@@ -730,170 +729,20 @@ public class TestDriver {
     }
 
     private String ConvertAtomicTypes(String testString) throws UnsupportedTypeException {
-        // List complies with Supported Types list available at https://rumble.readthedocs.io/en/latest/JSONiq/
-        testString = testString.replace("xs:atomic", "atomic");
-        testString = testString.replace("xs:anyURI", "anyURI");
-        testString = testString.replace("xs:base64Binary", "base64Binary");
-        testString = testString.replace("xs:boolean", "boolean");
-        if (testString.contains("xs:byte"))
-            throw new UnsupportedTypeException();
-        testString = testString.replace("xs:date", "date");
-        testString = testString.replace("xs:dateTime", "dateTime");
-        if (testString.contains("xs:dateTimeStamp"))
-            throw new UnsupportedTypeException();
-        testString = testString.replace("xs:dayTimeDuration", "dayTimeDuration");
-        testString = testString.replace("xs:decimal", "decimal");
-        testString = testString.replace("xs:double", "double");
-        testString = testString.replace("xs:duration", "duration");
-        if (testString.contains("xs:float"))
-            throw new UnsupportedTypeException();
-        if (testString.contains("xs:gDay"))
-            throw new UnsupportedTypeException();
-        if (testString.contains("xs:gMonth"))
-            throw new UnsupportedTypeException();
-        if (testString.contains("xs:gYear"))
-            throw new UnsupportedTypeException();
-        if (testString.contains("xs:gYearMonth"))
-            throw new UnsupportedTypeException();
-        testString = testString.replace("xs:hexBinary", "hexBinary");
-        // If we put replace for xs:int before xs:integer. In case that we have xs:integer we would get integereger
-        testString = testString.replace("xs:integer", "integer");
-        // int is 32bits, integer is infinite. It is okay to do this conversion now
-        testString = testString.replace("xs:int", "integer");
-        if (testString.contains("xs:long"))
-            throw new UnsupportedTypeException();
-        if (testString.contains("xs:negativeInteger"))
-            throw new UnsupportedTypeException();
-        if (testString.contains("xs:nonPositiveInteger"))
-            throw new UnsupportedTypeException();
-        if (testString.contains("xs:nonNegativeInteger"))
-            throw new UnsupportedTypeException();
-        if (testString.contains("xs:positiveInteger"))
-            throw new UnsupportedTypeException();
-        if (testString.contains("xs:short"))
-            throw new UnsupportedTypeException();
-        testString = testString.replace("xs:string", "string");
-        testString = testString.replace("xs:time", "time");
-        if (testString.contains("xs:unsignedByte"))
-            throw new UnsupportedTypeException();
-        if (testString.contains("xs:unsignedInt"))
-            throw new UnsupportedTypeException();
-        if (testString.contains("xs:unsignedLong"))
-            throw new UnsupportedTypeException();
-        if (testString.contains("xs:unsignedShort"))
-            throw new UnsupportedTypeException();
-        testString = testString.replace("xs:yearMonthDuration", "yearMonthDuration");
-
-        // Not mentioned in the list but existing in the tests. Not sure whether these are atomic types
-        if (testString.contains("xs:untypedAtomic"))
-            throw new UnsupportedTypeException();
-        if (testString.contains("xs:dateTimeStamp"))
-            throw new UnsupportedTypeException();
-        if (testString.contains("xs:anyAtomicType"))
-            throw new UnsupportedTypeException();
-        if (testString.contains("xs:error"))
-            throw new UnsupportedTypeException();
-        if (testString.contains("xs:normalizedString"))
-            throw new UnsupportedTypeException();
-        if (testString.contains("xs:numeric"))
-            throw new UnsupportedTypeException();
-        if (testString.contains("xs:token"))
-            throw new UnsupportedTypeException();
-        if (testString.contains("xs:NMTOKEN"))
-            throw new UnsupportedTypeException();
-        if (testString.contains("xs:NCName"))
-            throw new UnsupportedTypeException();
-        if (testString.contains("xs:Name"))
-            throw new UnsupportedTypeException();
-        if (testString.contains("xs:language"))
-            throw new UnsupportedTypeException();
-        if (testString.contains("xs:ENTITY"))
-            throw new UnsupportedTypeException();
-        if (testString.contains("xs:ID"))
-            throw new UnsupportedTypeException();
-        if (testString.contains("xs:IDREF"))
-            throw new UnsupportedTypeException();
-        if (testString.contains("xs:anyType"))
-            throw new UnsupportedTypeException();
-        if (testString.contains("xs:anySimpleType"))
-            throw new UnsupportedTypeException();
-        if (testString.contains("xs:untyped"))
-            throw new UnsupportedTypeException();
-        if (testString.contains("xs:doesNotExist"))
-            throw new UnsupportedTypeException();
-        if (testString.contains("xs:NOTEXIST"))
-            throw new UnsupportedTypeException();
-        if (testString.contains("xs:doesNotExistExampleCom"))
-            throw new UnsupportedTypeException();
-        if (testString.contains("xs:name"))
-            throw new UnsupportedTypeException();
-        if (testString.contains("xs:untypedAny"))
-            throw new UnsupportedTypeException();
-        if (testString.contains("xs:undefinedType"))
-            throw new UnsupportedTypeException();
-        if (testString.contains("xs:unknownType"))
-            throw new UnsupportedTypeException();
-        if (testString.contains("xs:qname"))
-            throw new UnsupportedTypeException();
-
+        for (Map.Entry<String, String> entry : Constants.atomicTypeConversions.entrySet()) {
+            testString = testString.replace(entry.getKey(), entry.getValue());
+        }
+        for (String target : Constants.unsupportedTypes) {
+            if (testString.contains(target))
+                throw new UnsupportedTypeException();
+        }
         return testString;
     }
 
-    private String ConvertNonAtomicTypes(String testString) throws UnsupportedTypeException {
-        // testString = testString.replace("array()","array"); // TODO check single file ArrowPostfix-022
-        // Also array(+), array(?), array()*, array()+, array()? do not exist
-        testString = testString.replace("array(*)", "array*");
-
-        // Will cover all the subclasses - item()+, item()* and item()+. item(anything here) does not exist
-        testString = testString.replace("item()", "item");
-
-        // These are not types but instantiations of boolean handled differently
-        testString = testString.replace("true()", "true");
-        testString = testString.replace("false()", "false");
-
-
-        // 7 kinds of XML nodes // TODO how to do regex check because in between can be something different than *
-        if (testString.contains("document()"))
-            throw new UnsupportedTypeException();
-        if (testString.contains("document(*)"))
-            throw new UnsupportedTypeException();
-        if (testString.contains("element()"))
-            throw new UnsupportedTypeException();
-        if (testString.contains("element(*)"))
-            throw new UnsupportedTypeException();
-        if (testString.contains("attribute()"))
-            throw new UnsupportedTypeException();
-        if (testString.contains("attribute(*)"))
-            throw new UnsupportedTypeException();
-        if (testString.contains("text()"))
-            throw new UnsupportedTypeException();
-        if (testString.contains("text(*)"))
-            throw new UnsupportedTypeException(); // '*' is not allowed inside text()
-        if (testString.contains("comment()"))
-            throw new UnsupportedTypeException();
-        if (testString.contains("comment(*)"))
-            throw new UnsupportedTypeException(); // '*' is not allowed inside text()
-        if (testString.contains("processing-instruction()"))
-            throw new UnsupportedTypeException();
-        if (testString.contains("processing-instruction(*)"))
-            throw new UnsupportedTypeException(); // '*' is not allowed inside text()
-        if (testString.contains("QName"))
-            throw new UnsupportedTypeException(); // The xs:QName constructor function must be passed exactly one
-                                                  // argument, not zero.
-
-        // TODO some more that I found out
-        if (testString.contains("map(*)"))
-            throw new UnsupportedTypeException();
-        testString = testString.replace("map(", "object(");
-        testString = testString.replace("map{", "{");
-        testString = testString.replace("map {", " {");
-        if (testString.contains("node()"))
-            throw new UnsupportedTypeException();
-        if (testString.contains("empty-sequence()"))
-            throw new UnsupportedTypeException();
-        if (testString.contains("xs:NOTATION"))
-            throw new UnsupportedTypeException();
-
+    private String ConvertNonAtomicTypes(String testString) {
+        for (Map.Entry<String, String> entry : Constants.nonAtomicTypeConversions.entrySet()) {
+            testString = testString.replace(entry.getKey(), entry.getValue());
+        }
         return testString;
     }
 
@@ -921,7 +770,7 @@ public class TestDriver {
             // First time it will fail and we will check for null
         }
         // Instantiate with new ArrayList, otherwise you cannot do addAll since asList returns non-resizable
-        List<String> allCurrentPassedTests = new ArrayList<String>(
+        List<String> allCurrentPassedTests = new ArrayList<>(
                 Arrays.asList(SUCCESS_TESTS_SB.toString().split("\n"))
         );
         allCurrentPassedTests.addAll(Arrays.asList(MANAGED_TESTS_SB.toString().split("\n")));
@@ -938,7 +787,7 @@ public class TestDriver {
         }
 
         // Slightly repetitive, might be refactored
-        List<String> allCurrentCrashedTests = new ArrayList<String>(
+        List<String> allCurrentCrashedTests = new ArrayList<>(
                 Arrays.asList(CRASHED_TESTS_SB.toString().split("\n"))
         );
         if (allPreviousCrashedTests != null) {
