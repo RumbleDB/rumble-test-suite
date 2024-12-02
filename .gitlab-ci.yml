@@ -1,0 +1,22 @@
+image: marioarduini/rumble-source:2020-11-23
+
+stages:
+  - test
+
+build-job:
+  stage: test
+  script:
+    - git clone --single-branch --branch "Spark3.5-Scala2.12" "https://github.com/RumbleDB/rumble.git" 
+    - cd rumble
+    - mvn clean compile assembly:single
+    - cd ..
+    - mvn -Dtest=TestcaseTest test
+  artifacts:
+    when: always
+    paths:
+      - target/surefire-reports/TEST-iq.TestcaseTest.xml
+    reports:
+      junit: target/surefire-reports/TEST-iq.TestcaseTest.xml
+
+
+
