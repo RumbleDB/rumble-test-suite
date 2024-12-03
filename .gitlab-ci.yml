@@ -16,6 +16,8 @@ build-job:
     paths:
       - target/
       - rumble/target
+      - Output_Test_Suite
+      - qt3tests
 
 test-prod:
   stage: test
