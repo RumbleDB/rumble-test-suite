@@ -12,7 +12,6 @@ build-job:
     - mvn clean compile assembly:single -quiet
     - cd ..
     - mvn compile exec:java
-    - mvn test -quiet
 
 test-prod:
   stage: test
