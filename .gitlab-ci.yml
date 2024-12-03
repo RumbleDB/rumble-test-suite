@@ -12,6 +12,10 @@ build-job:
     - mvn clean compile assembly:single -quiet
     - cd ..
     - mvn compile exec:java
+  artifacts:
+    paths:
+      - target/
+      - rumble/target
 
 test-prod:
   stage: test
