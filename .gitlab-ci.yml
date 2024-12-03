@@ -19,6 +19,8 @@ build-job:
 
 test-prod:
   stage: test
+  dependencies:
+    - build-job
   script:
     - mvn -Dtest=ProdTest test -quiet
   artifacts:
@@ -31,6 +33,8 @@ test-prod:
 
 test-op:
   stage: test
+  dependencies:
+    - build-job
   script:
     - mvn -Dtest=OpTest test -quiet
   artifacts:
