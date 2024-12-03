@@ -34,13 +34,13 @@ public class TestDriver {
     private int numberOfProcessedTestCases;
     private int numberOfManaged;
 
-    public String currentTestCase;
-    public String currentTestSet;
-    public List<Object[]> allTests = new ArrayList<>();
+    private String currentTestCase;
+    private String currentTestSet;
+    private final List<Object[]> allTests = new ArrayList<>();
 
 
-    public final StringBuffer TEST_CASE_SB = new StringBuffer();
-    public final StringBuffer UNSUPPORTED_TYPE_SB = new StringBuffer();
+    private final StringBuffer TEST_CASE_SB = new StringBuffer();
+    private final StringBuffer UNSUPPORTED_TYPE_SB = new StringBuffer();
     public final StringBuffer CRASHED_TESTS_SB = new StringBuffer();
     public final StringBuffer FAILED_TESTS_SB = new StringBuffer();
     public final StringBuffer DEPENDENCY_TESTS_SB = new StringBuffer();
@@ -60,6 +60,10 @@ public class TestDriver {
         processCatalog(new File(testsRepositoryDirectoryPath.resolve("catalog.xml").toString()), testFolder);
 
         logResults();
+    }
+
+    public List<Object[]> getAllTests() {
+        return this.allTests;
     }
 
     private void getTestsRepository() {
@@ -214,17 +218,18 @@ public class TestDriver {
     }
 
     private void processTestCase(XdmNode testCase, XPathCompiler xpc) throws SaxonApiException, IOException {
-        String testCaseName = testCase.attribute("name");
-        currentTestCase = testCaseName;
+        this.currentTestCase  = testCase.attribute("name");
+
         // check if testcase is skipped
         List<String> testCasesToSkip = Files.readAllLines(
             Constants.WORKING_DIRECTORY_PATH.resolve("TestCasesToSkip.txt"),
             Charset.defaultCharset()
         );
-        if (testCasesToSkip.contains(testCaseName)) {
-            LogSkipped(testCaseName);
+        if (testCasesToSkip.contains(currentTestCase)) {
+            LogSkipped(currentTestCase);
             return;
         }
+
         XdmNode testNode = testCase.select(Steps.child("test")).asNode();
 
         // check for dependencies and stop if we dont support it
@@ -270,14 +275,14 @@ public class TestDriver {
             convertedTestString = Convert(testString.toString());
         } catch (UnsupportedTypeException e) {
             // unsupported type encountered, testcase is skipped
-            LogUnsupportedType(testCaseName);
+            LogUnsupportedType(currentTestCase);
             return;
         }
 
         // run test case
         try {
             // JsonDoc converter
-            if (testCaseName.startsWith("json-doc")) {
+            if (currentTestCase.startsWith("json-doc")) {
                 String uri = StringUtils.substringBetween(convertedTestString, "(\"", "\")");
                 String jsonDocFilename = URItoPathLookupTable.get(uri);
                 String fullAbsoluteJsonDocPath = testsRepositoryDirectoryPath.resolve("fn/" + jsonDocFilename)
@@ -290,16 +295,16 @@ public class TestDriver {
 
             TestPassOrFail(
                 checkAssertion(resultAsList, assertion),
-                testCaseName,
+                currentTestCase,
                 convertedTestString.contentEquals(testString)
             );
         } catch (UnsupportedTypeException ute) {
             // unsupported type encountered in assertion
-            LogUnsupportedType(testCaseName);
+            LogUnsupportedType(currentTestCase);
         } catch (RumbleException re) {
-            CheckForErrorCode(re, assertion, testCaseName);
-        } catch (Exception | Error e) {
-            LogCrash(testCaseName);
+            CheckForErrorCode(re, assertion, currentTestCase);
+        } catch (Exception e) {
+            LogCrash(currentTestCase);
         }
     }
 

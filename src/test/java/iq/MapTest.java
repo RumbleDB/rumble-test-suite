@@ -15,9 +15,7 @@ public class MapTest extends TestBase {
 
     @Parameterized.Parameters(name = "{1} -> {2}")
     public static Iterable<Object[]> data() throws Exception {
-        TestDriver testDriver = new TestDriver();
-        testDriver.execute("map");
-        return testDriver.allTests;
+        return getData("map");
     }
 
     @Test(timeout = 1000000)

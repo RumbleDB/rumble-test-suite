@@ -15,9 +15,7 @@ public class ArrayTest extends TestBase {
 
     @Parameterized.Parameters(name = "{1} -> {2}")
     public static Iterable<Object[]> data() throws Exception {
-        TestDriver testDriver = new TestDriver();
-        testDriver.execute("array");
-        return testDriver.allTests;
+        return getData("array");
     }
 
     @Test(timeout = 1000000)

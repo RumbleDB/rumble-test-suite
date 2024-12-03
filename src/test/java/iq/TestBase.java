@@ -1,5 +1,6 @@
 package iq;
 
+import driver.TestDriver;
 import org.rumbledb.api.Item;
 import java.util.List;
 
@@ -12,6 +13,12 @@ public class TestBase {
         this.resultAsList = resultAsList;
         this.testSet = testSet;
         this.testCase = testCase;
+    }
+
+    public static Iterable<Object[]> getData(String testSuite) throws Exception {
+        TestDriver testDriver = new TestDriver();
+        testDriver.execute(testSuite);
+        return testDriver.getAllTests();
     }
 
     public void testCase(List<Item> resultAsList) {

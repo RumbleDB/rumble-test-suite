@@ -15,9 +15,7 @@ public class AppTest extends TestBase {
 
     @Parameterized.Parameters(name = "{1} -> {2}")
     public static Iterable<Object[]> data() throws Exception {
-        TestDriver testDriver = new TestDriver();
-        testDriver.execute("app");
-        return testDriver.allTests;
+        return getData("app");
     }
 
     @Test(timeout = 1000000)
