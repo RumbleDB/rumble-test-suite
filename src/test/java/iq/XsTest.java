@@ -8,15 +8,15 @@ import org.rumbledb.api.Item;
 import java.util.List;
 
 @RunWith(Parameterized.class)
-public class OpTest extends TestBase {
-    public OpTest(List<Item> resultAsList, String testSet, String testCase) {
+public class XsTest extends TestBase {
+    public XsTest(List<Item> resultAsList, String testSet, String testCase) {
         super(resultAsList, testSet, testCase);
     }
 
     @Parameterized.Parameters(name = "{1} -> {2}")
     public static Iterable<Object[]> data() throws Exception {
         TestDriver testDriver = new TestDriver();
-        testDriver.execute("op");
+        testDriver.execute("xs");
         return testDriver.allTests;
     }
 

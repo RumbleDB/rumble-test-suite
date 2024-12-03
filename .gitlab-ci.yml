@@ -16,8 +16,106 @@ build-job:
     paths:
       - target/
       - rumble/target
-      - Output_Test_Suite
-      - qt3tests
+      - Output_Test_Suite/
+      - qt3tests/
+
+test-app:
+  stage: test
+  dependencies:
+    - build-job
+  script:
+    - mvn -Dtest=AppTest test -quiet
+  artifacts:
+    when: always
+    paths:
+      - target/surefire-reports
+      - results
+    reports:
+      junit: target/surefire-reports/*.xml
+
+test-array:
+  stage: test
+  dependencies:
+    - build-job
+  script:
+    - mvn -Dtest=ArrayTest test -quiet
+  artifacts:
+    when: always
+    paths:
+      - target/surefire-reports
+      - results
+    reports:
+      junit: target/surefire-reports/*.xml
+
+test-fn:
+  stage: test
+  dependencies:
+    - build-job
+  script:
+    - mvn -Dtest=FnTest test -quiet
+  artifacts:
+    when: always
+    paths:
+      - target/surefire-reports
+      - results
+    reports:
+      junit: target/surefire-reports/*.xml
+
+test-map:
+  stage: test
+  dependencies:
+    - build-job
+  script:
+    - mvn -Dtest=MapTest test -quiet
+  artifacts:
+    when: always
+    paths:
+      - target/surefire-reports
+      - results
+    reports:
+      junit: target/surefire-reports/*.xml
+
+test-math:
+  stage: test
+  dependencies:
+    - build-job
+  script:
+    - mvn -Dtest=MathTest test -quiet
+  artifacts:
+    when: always
+    paths:
+      - target/surefire-reports
+      - results
+    reports:
+      junit: target/surefire-reports/*.xml
+
+test-misc:
+  stage: test
+  dependencies:
+    - build-job
+  script:
+    - mvn -Dtest=MiscTest test -quiet
+  artifacts:
+    when: always
+    paths:
+      - target/surefire-reports
+      - results
+    reports:
+      junit: target/surefire-reports/*.xml
+
+test-op:
+  stage: test
+  dependencies:
+    - build-job
+  script:
+    - mvn -Dtest=OpTest test -quiet
+  artifacts:
+    when: always
+    paths:
+      - target/surefire-reports
+      - results
+    reports:
+      junit: target/surefire-reports/*.xml
 
 test-prod:
   stage: test
@@ -33,12 +131,26 @@ test-prod:
     reports:
       junit: target/surefire-reports/*.xml
 
-test-op:
+test-ser:
   stage: test
   dependencies:
     - build-job
   script:
-    - mvn -Dtest=OpTest test -quiet
+    - mvn -Dtest=SerTest test -quiet
+  artifacts:
+    when: always
+    paths:
+      - target/surefire-reports
+      - results
+    reports:
+      junit: target/surefire-reports/*.xml
+
+test-xs:
+  stage: test
+  dependencies:
+    - build-job
+  script:
+    - mvn -Dtest=XsTest test -quiet
   artifacts:
     when: always
     paths:
