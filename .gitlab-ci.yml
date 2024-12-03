@@ -10,13 +10,15 @@ build-job:
     - cd rumble
     - mvn clean compile assembly:single -quiet
     - cd ..
-    - mvn -Dtest=TestcaseTest test -quiet
+    - mvn compile exec:java
+    - mvn test -quiet
   artifacts:
     when: always
     paths:
-      - target/surefire-reports/TEST-iq.TestcaseTest.xml
+      - target/surefire-reports
+      - results
     reports:
-      junit: target/surefire-reports/TEST-iq.TestcaseTest.xml
+      junit: target/surefire-reports
 
 
 

@@ -34,9 +34,9 @@ public class TestDriver {
     private int numberOfProcessedTestCases;
     private int numberOfManaged;
 
-    public static String currentTestCase;
-    public static String currentTestSet;
-    public static List<Object[]> allTests = new ArrayList<>();
+    public String currentTestCase;
+    public String currentTestSet;
+    public List<Object[]> allTests = new ArrayList<>();
 
 
     public final StringBuffer TEST_CASE_SB = new StringBuffer();
@@ -53,11 +53,11 @@ public class TestDriver {
     // For JSON-doc
     private final Map<String, String> URItoPathLookupTable = new HashMap<>();
 
-    public void execute() throws IOException, SaxonApiException {
+    public void execute(String testFolder) throws IOException, SaxonApiException {
         getTestsRepository();
         initializeSparkAndRumble();
 
-        processCatalog(new File(testsRepositoryDirectoryPath.resolve("catalog.xml").toString()));
+        processCatalog(new File(testsRepositoryDirectoryPath.resolve("catalog.xml").toString()), testFolder);
 
         logResults();
     }
@@ -90,7 +90,7 @@ public class TestDriver {
         );
     }
 
-    private void processCatalog(File catalogFile) throws SaxonApiException, IOException {
+    private void processCatalog(File catalogFile, String testFolder) throws SaxonApiException, IOException {
         Processor testDriverProcessor = new Processor(false);
         DocumentBuilder catalogBuilder = testDriverProcessor.newDocumentBuilder();
         catalogBuilder.setLineNumbering(true);
@@ -103,7 +103,8 @@ public class TestDriver {
         xpc.declareNamespace("", "http://www.w3.org/2010/09/qt-fots-catalog");
 
         for (XdmNode testSet : catalogNode.select(Steps.descendant("test-set")).asList()) {
-            this.processTestSet(catalogBuilder, xpc, testSet);
+            if (testSet.attribute("file").startsWith(testFolder))
+                this.processTestSet(catalogBuilder, xpc, testSet);
         }
     }
 
