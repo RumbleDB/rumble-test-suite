@@ -14,7 +14,7 @@ public class OpTest extends TestBase {
         super(resultAsList, testSet, testCase);
     }
 
-    @Parameterized.Parameters(name = "{1}_{2}: {0}")
+    @Parameterized.Parameters(name = "{1} -> {2}")
     public static Iterable<Object[]> data() throws Exception {
         TestDriver testDriver = new TestDriver();
         testDriver.execute("prod");

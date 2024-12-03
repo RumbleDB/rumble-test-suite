@@ -1,10 +1,11 @@
 image: maven:3.9.9-eclipse-temurin-11
 
 stages:
+  - build
   - test
 
 build-job:
-  stage: test
+  stage: build
   script:
     - git clone --single-branch --branch "mschoeb-tests-bugfixing" "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.inf.ethz.ch/gfourny/rumble.git" 
     - cd rumble
@@ -12,6 +13,11 @@ build-job:
     - cd ..
     - mvn compile exec:java
     - mvn test -quiet
+
+test-prod:
+  stage: test
+  script:
+    - mvn -Dtest=ProdTest test -quiet
   artifacts:
     when: always
     paths:
@@ -20,5 +26,14 @@ build-job:
     reports:
       junit: target/surefire-reports/*.xml
 
-
-
+test-op:
+  stage: test
+  script:
+    - mvn -Dtest=OpTest test -quiet
+  artifacts:
+    when: always
+    paths:
+      - target/surefire-reports
+      - results
+    reports:
+      junit: target/surefire-reports/*.xml
