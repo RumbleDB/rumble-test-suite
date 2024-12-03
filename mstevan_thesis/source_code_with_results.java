@@ -5,10 +5,10 @@ private boolean Assert(List<Item> resultAsList,
 }
 
 private boolean runNestedQuery(List<Item> resultAsList, String expectedResult){
-    RumbleRuntimeConfiguration configuration = new RumbleRuntimeConfiguration();
+    RumbleRuntimeConfiguration configuration =
+        new RumbleRuntimeConfiguration();
     configuration.setExternalVariableValue(
-    Name.createVariableInNoNamespace("result"),
-        resultAsList);
+    Name.createVariableInNoNamespace("result"), resultAsList);
     String assertExpression = "declare variable $result external;" + expectedResult;
     Rumble rumbleInstance = new Rumble(configuration);
     List<Item> nestedResult = runQuery(assertExpression, rumbleInstance);

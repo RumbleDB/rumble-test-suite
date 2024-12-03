@@ -1,4 +1,13 @@
 \begin{abstract}
-	\todo{Insert some short text here}
-	
+%Problem
+The increasing amount of data available to process in today's world led to the emergence of engines for large-scale data processing such as Spark. In order to make querying more efficient, Rumble is an engine that automatically runs queries on top of Spark, using JSONiq as declarative querying language instead of Spark API. 
+%Background
+Rumble is still in its beta version and requires a testing mechanism that would verify the behavior of its implementation. 
+JSONiq inherits 95\% of its features from XQuery, its XML counterpart. QT3TS is Test Suite with over 30000 test cases designed for testing XQuery.
+%Objective
+This work aims to create a Test Suite based on QT3TS to verify Rumble's implementation.
+%Methods
+As the first step, we have implemented a Test Driver capable of executing QT3TS on top of Rumble. The work was carried out gradually through several phases. In each phase, we were improving the implementation of both Test Driver and Rumble. Secondly, we have implemented a Test Converter for the XQuery to JSONiq conversion. 
+%Results
+As the final outcome of the work, we have managed to produce a JSONiq Test Suite that can be used to verify any JSONiq implementation, not just Rumble. We have made a significant impact on improving the implementation of the Rumble engine.
 \end{abstract}
