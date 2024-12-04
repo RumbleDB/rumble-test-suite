@@ -12,43 +12,19 @@ import org.rumbledb.exceptions.RumbleException;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
-import java.text.SimpleDateFormat;
 import java.util.*;
 
 public class TestDriver {
     private Path testsRepositoryDirectoryPath;
     public static Rumble rumbleInstance;
-    private int numberOfFails;
-    private int numberOfSuccess;
-    private int numberOfSkipped;
-    private int numberOfCrashes;
-    private int numberOfDependencies;
-    private int numberOfUnsupportedTypes;
-    private int numberOfUnsupportedErrorCodes;
-    private int numberOfProcessedTestCases;
-    private int numberOfManaged;
-
+    public Logger logger = new Logger();
     private String currentTestCase;
     private String currentTestSet;
     private final List<Object[]> allTests = new ArrayList<>();
 
-
-    private final StringBuffer TEST_CASE_SB = new StringBuffer();
-    private final StringBuffer UNSUPPORTED_TYPE_SB = new StringBuffer();
-    public final StringBuffer CRASHED_TESTS_SB = new StringBuffer();
-    public final StringBuffer FAILED_TESTS_SB = new StringBuffer();
-    public final StringBuffer DEPENDENCY_TESTS_SB = new StringBuffer();
-    public final StringBuffer UNSUPPORTED_ERRORS_SB = new StringBuffer();
-    public final StringBuffer SKIPPED_TESTS_SB = new StringBuffer();
-    public final StringBuffer SUCCESS_TESTS_SB = new StringBuffer();
-    public final StringBuffer MANAGED_TESTS_SB = new StringBuffer();
-    public final StringBuffer BROKEN_TESTS_SB = new StringBuffer();
 
     // For JSON-doc
     private final Map<String, String> URItoPathLookupTable = new HashMap<>();
@@ -56,10 +32,8 @@ public class TestDriver {
     public void execute(String testFolder) throws IOException, SaxonApiException {
         getTestsRepository();
         initializeSparkAndRumble();
-
         processCatalog(new File(testsRepositoryDirectoryPath.resolve("catalog.xml").toString()), testFolder);
-
-        logResults();
+        logger.logResults();
     }
 
     public List<Object[]> getAllTests() {
@@ -117,7 +91,7 @@ public class TestDriver {
                 IOException {
 
         String testSetFileName = testSetNode.attribute("file");
-        currentTestSet = testSetFileName;
+        this.currentTestSet = testSetFileName;
         File testSetFile = new File(testsRepositoryDirectoryPath.resolve(testSetFileName).toString());
         XdmNode testSetDocNode = catalogBuilder.build(testSetFile);
 
@@ -125,59 +99,12 @@ public class TestDriver {
         if (testSetFileName.contains(jsonDocName))
             prepareJsonDocEnvironment(testSetDocNode);
 
-        resetCounters();
+        logger.resetCounters();
         for (XdmNode testCase : testSetDocNode.select(Steps.descendant("test-case")).asList()) {
             this.processTestCase(testCase, xpc);
-            numberOfProcessedTestCases++;
+            logger.numberOfProcessedTestCases++;
         }
-        System.out.println(
-            testSetFileName
-                + " Success: "
-                + numberOfSuccess
-                + " Managed: "
-                + numberOfManaged
-                + " Fails: "
-                + numberOfFails
-                +
-                " Skipped: "
-                + numberOfSkipped
-                + " Dependencies: "
-                + numberOfDependencies
-                +
-                " Crashes: "
-                + numberOfCrashes
-                + " UnsupportedTypes: "
-                + numberOfUnsupportedTypes
-                +
-                " UnsupportedErrors: "
-                + numberOfUnsupportedErrorCodes
-        );
-        int sum = (numberOfSuccess
-            + numberOfManaged
-            + numberOfFails
-            + numberOfSkipped
-            + numberOfDependencies
-            + numberOfCrashes
-            + numberOfUnsupportedTypes
-            + numberOfUnsupportedErrorCodes);
-        String checkMatching = sum == numberOfProcessedTestCases ? "OK" : "NOT";
-        TEST_CASE_SB.append(
-            String.format(
-                "%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%s\n",
-                testSetFileName,
-                numberOfSuccess,
-                numberOfManaged,
-                numberOfFails,
-                numberOfSkipped,
-                numberOfDependencies,
-                numberOfCrashes,
-                numberOfUnsupportedTypes,
-                numberOfUnsupportedErrorCodes,
-                sum,
-                numberOfProcessedTestCases,
-                checkMatching
-            )
-        );
+        logger.finishTestSetResults(testSetFileName);
     }
 
     private void prepareJsonDocEnvironment(XdmNode testSetDocNode) {
@@ -197,17 +124,6 @@ public class TestDriver {
         }
     }
 
-    private void resetCounters() {
-        numberOfSuccess = 0;
-        numberOfFails = 0;
-        numberOfSkipped = 0;
-        numberOfDependencies = 0;
-        numberOfCrashes = 0;
-        numberOfUnsupportedTypes = 0;
-        numberOfUnsupportedErrorCodes = 0;
-        numberOfProcessedTestCases = 0;
-        numberOfManaged = 0;
-    }
 
     private void processTestCase(XdmNode testCase, XPathCompiler xpc) throws SaxonApiException, IOException {
         this.currentTestCase = testCase.attribute("name");
@@ -229,13 +145,11 @@ public class TestDriver {
                     currentTestSet,
                     currentTestCase }
             );
-            LogSkipped(currentTestCase);
+            logger.LogSkipped(currentTestCase);
             return;
         }
 
         XdmNode testNode = testCase.select(Steps.child("test")).asNode();
-
-
         StringBuilder testString = new StringBuilder();
 
         // setup environments
@@ -261,9 +175,6 @@ public class TestDriver {
         }
 
         testString.append(testNode.getStringValue());
-
-        // TODO figure out alternative results afterwards - this is if then else or...
-        // Place above try catch block to have assertion available in the catch!
         XdmNode assertion = (XdmNode) xpc.evaluateSingle("result/*[1]", testCase);
 
         // check types and convert
@@ -272,7 +183,7 @@ public class TestDriver {
             convertedTestString = Convert(testString.toString());
         } catch (UnsupportedTypeException e) {
             // unsupported type encountered, testcase is skipped
-            LogUnsupportedType(currentTestCase);
+            logger.LogUnsupportedType(currentTestCase);
             allTests.add(
                 new Object[] {
                     new TestCase(testString.toString(), assertion, "UNSUPPORTED TYPE: " + e.getMessage()),
@@ -304,7 +215,7 @@ public class TestDriver {
             );
 
             if (caseDependency != null) {
-                LogDependency(caseDependency);
+                logger.LogDependency(caseDependency);
                 return;
             }
 
@@ -318,11 +229,11 @@ public class TestDriver {
             );
         } catch (UnsupportedTypeException ute) {
             // unsupported type encountered in assertion
-            LogUnsupportedType(currentTestCase);
+            logger.LogUnsupportedType(currentTestCase);
         } catch (RumbleException re) {
             CheckForErrorCode(re, assertion, currentTestCase);
         } catch (Exception e) {
-            LogCrash(currentTestCase);
+            logger.LogCrash(currentTestCase);
         }
     }
 
@@ -455,53 +366,13 @@ public class TestDriver {
         // Was merged into single code for both AssertError and also the part in processTestCase.
         if (conditionToEvaluate) {
             if (isQueryUnchanged) {
-                LogSuccess(testCaseName);
+                logger.LogSuccess(testCaseName);
             } else {
-                LogManaged(testCaseName);
+                logger.LogManaged(testCaseName);
             }
         } else {
-            LogFail(testCaseName);
+            logger.LogFail(testCaseName);
         }
-    }
-
-    private void LogSuccess(String lineText) {
-        numberOfSuccess++;
-        SUCCESS_TESTS_SB.append(lineText + "\n");
-    }
-
-    private void LogManaged(String lineText) {
-        numberOfManaged++;
-        MANAGED_TESTS_SB.append(lineText + "\n");
-    }
-
-    private void LogFail(String lineText) {
-        numberOfFails++;
-        FAILED_TESTS_SB.append(lineText + "\n");
-    }
-
-    private void LogSkipped(String lineText) {
-        numberOfSkipped++;
-        SKIPPED_TESTS_SB.append(lineText + "\n");
-    }
-
-    private void LogDependency(String lineText) {
-        numberOfDependencies++;
-        DEPENDENCY_TESTS_SB.append(lineText + "\n");
-    }
-
-    private void LogCrash(String lineText) {
-        numberOfCrashes++;
-        CRASHED_TESTS_SB.append(lineText + "\n");
-    }
-
-    private void LogUnsupportedType(String lineText) {
-        numberOfUnsupportedTypes++;
-        UNSUPPORTED_TYPE_SB.append(lineText + "\n");
-    }
-
-    private void LogUnsupportedErrorCode(String lineText) {
-        numberOfUnsupportedErrorCodes++;
-        UNSUPPORTED_ERRORS_SB.append(lineText + "\n");
     }
 
     private void CheckForErrorCode(RumbleException e, XdmNode assertion, String testCaseName) {
@@ -530,25 +401,25 @@ public class TestDriver {
                 }
             }
             if (foundSingleMatch) {
-                LogSuccess(testCaseName);
+                logger.LogSuccess(testCaseName);
                 return;
             } else if (seenUnsupportedCode) {
-                LogUnsupportedErrorCode(testCaseName);
+                logger.LogUnsupportedErrorCode(testCaseName);
                 return;
             } else if (seenSingleErrorInAny) {
-                LogFail(testCaseName);
+                logger.LogFail(testCaseName);
                 return;
             }
 
             // If it has any but we are not supposed to compare Error codes (did not see single one), then it is a Crash
         }
-        LogCrash(testCaseName);
+        logger.LogCrash(testCaseName);
     }
 
     private void CustomAssertError(XdmNode assertion, String testCaseName, String errorCode) {
         String expectedError = assertion.attribute("code");
         if (!Arrays.asList(Constants.supportedErrorCodes).contains(expectedError)) {
-            LogUnsupportedErrorCode(testCaseName);
+            logger.LogUnsupportedErrorCode(testCaseName);
         } else {
             TestPassOrFail(errorCode.equals(expectedError), testCaseName, true);
         }
@@ -774,126 +645,5 @@ public class TestDriver {
     }
 
     private static class UnsupportedTypeException extends Throwable {
-    }
-
-
-    private void logResults() throws IOException {
-        Path logDirectoryPath = Constants.WORKING_DIRECTORY_PATH.resolve("results");
-
-        // For comparing with the previous statistics
-        File[] allLogDirectories = new File(logDirectoryPath.toString()).listFiles();
-        Arrays.sort(allLogDirectories, Comparator.reverseOrder());
-        Path lastSuccessPath = allLogDirectories[0].toPath().resolve("Success.txt");
-        Path lastManagedPath = allLogDirectories[0].toPath().resolve("Managed.txt");
-        Path lastCrashesPath = allLogDirectories[0].toPath().resolve("Crashes.txt");
-        Charset charset = Charset.defaultCharset();
-        List<String> allPreviousPassedTests = null;
-        List<String> allPreviousCrashedTests = null;
-        try {
-            allPreviousPassedTests = Files.readAllLines(lastSuccessPath, charset);
-            allPreviousPassedTests.addAll(Files.readAllLines(lastManagedPath, charset));
-            allPreviousCrashedTests = Files.readAllLines(lastCrashesPath, charset);
-        } catch (IOException e) {
-            // First time it will fail and we will check for null
-        }
-        // Instantiate with new ArrayList, otherwise you cannot do addAll since asList returns non-resizable
-        List<String> allCurrentPassedTests = new ArrayList<>(
-                Arrays.asList(SUCCESS_TESTS_SB.toString().split("\n"))
-        );
-        allCurrentPassedTests.addAll(Arrays.asList(MANAGED_TESTS_SB.toString().split("\n")));
-
-        if (allPreviousPassedTests != null) {
-            for (String passedTest : allPreviousPassedTests) {
-                if (
-                    !allCurrentPassedTests.contains(passedTest)
-                        && !passedTest.contains("List of all test cases")
-                ) {
-                    BROKEN_TESTS_SB.append(passedTest + "\n");
-                }
-            }
-        }
-
-        // Slightly repetitive, might be refactored
-        List<String> allCurrentCrashedTests = new ArrayList<>(
-                Arrays.asList(CRASHED_TESTS_SB.toString().split("\n"))
-        );
-        if (allPreviousCrashedTests != null) {
-            BROKEN_TESTS_SB.append(
-                "\n" + "Tests that were not crashing before, but are now and not in list above:" + "\n"
-            );
-            for (String crashedTest : allCurrentCrashedTests)
-                if (
-                    !allPreviousCrashedTests.contains(crashedTest)
-                        && !crashedTest.contains("List of all test cases")
-                        && !allPreviousPassedTests.contains(crashedTest)
-                ) {
-                    BROKEN_TESTS_SB.append(crashedTest + "\n");
-                }
-        }
-
-        // Create directory for new statistics
-        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(Calendar.getInstance().getTime());
-        Path logSubDirectoryPath = logDirectoryPath.resolve(timeStamp);
-        File logSubDirectory = new File(logSubDirectoryPath.toString());
-        if (!logSubDirectory.exists())
-            logSubDirectory.mkdirs();
-
-        Log(
-            logSubDirectoryPath.resolve("Statistics.csv").toString(),
-            "TestSetFileName,Success,Managed,Fails,Skipped,Dependencies,Crashes,UnsupportedTypes,UnsupportedErrorCodes,Sum,Processed,Matches\n",
-            TEST_CASE_SB
-        );
-        Log(
-            logSubDirectoryPath.resolve("UnsupportedTypes.txt").toString(),
-            "List of all test cases:\n",
-            UNSUPPORTED_TYPE_SB
-        );
-        Log(
-            logSubDirectoryPath.resolve("Crashes.txt").toString(),
-            "List of all test cases:\n",
-            CRASHED_TESTS_SB
-        );
-        Log(
-            logSubDirectoryPath.resolve("Fails.txt").toString(),
-            "List of all test cases:\n",
-            FAILED_TESTS_SB
-        );
-        Log(
-            logSubDirectoryPath.resolve("Dependencies.txt").toString(),
-            "List of all test cases:\n",
-            DEPENDENCY_TESTS_SB
-        );
-        Log(
-            logSubDirectoryPath.resolve("UnsupportedErrorCodes.txt").toString(),
-            "List of all test cases:\n",
-            UNSUPPORTED_ERRORS_SB
-        );
-        Log(
-            logSubDirectoryPath.resolve("Skipped.txt").toString(),
-            "List of all test cases:\n",
-            SKIPPED_TESTS_SB
-        );
-        Log(
-            logSubDirectoryPath.resolve("Success.txt").toString(),
-            "List of all test cases:\n",
-            SUCCESS_TESTS_SB
-        );
-        Log(
-            logSubDirectoryPath.resolve("Managed.txt").toString(),
-            "List of all test cases:\n",
-            MANAGED_TESTS_SB
-        );
-        Log(
-            logSubDirectoryPath.resolve("BrokenWithLatestImplementation.txt").toString(),
-            "List of test cases that were passing before but not anymore:\n",
-            BROKEN_TESTS_SB
-        );
-    }
-
-    private static void Log(String testCaseFilePath, String header, StringBuffer stringBuffer) throws IOException {
-        PrintWriter summedWorkerThreads = new PrintWriter(testCaseFilePath);
-        summedWorkerThreads.write(header);
-        summedWorkerThreads.close();
-        Files.write(Paths.get(testCaseFilePath), stringBuffer.toString().getBytes(), StandardOpenOption.APPEND);
     }
 }

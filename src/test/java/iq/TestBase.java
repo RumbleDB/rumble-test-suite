@@ -61,6 +61,7 @@ public class TestBase {
             case "assert-empty":
                 results = runQuery(convertedTestString, rumble);
                 assertTrue(results.isEmpty());
+                break;
             case "assert":
                 secondQuery = "declare variable $result := ("
                     + convertedTestString
