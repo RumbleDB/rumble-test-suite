@@ -270,6 +270,12 @@ public class TestDriver {
         } catch (UnsupportedTypeException e) {
             // unsupported type encountered, testcase is skipped
             LogUnsupportedType(currentTestCase);
+            allTests.add(
+                new Object[] {
+                    new TestCase(testString.toString(), assertion, "UNSUPPORTED TYPE: " + e.getMessage()),
+                    currentTestSet,
+                    currentTestCase }
+            );
             return;
         }
 

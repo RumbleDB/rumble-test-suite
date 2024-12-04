@@ -32,7 +32,7 @@ public class TestBase {
     }
 
     public void testCase() {
-        org.junit.Assume.assumeTrue("case has dependency", this.testCase.caseDependency == null);
+        org.junit.Assume.assumeTrue(this.testCase.skipReason, this.testCase.skipReason == null);
         String convertedTestString = this.testCase.convertedTestString;
         XdmNode assertion = this.testCase.assertion;
         Rumble rumble = new Rumble(
