@@ -35,12 +35,6 @@ public class TestBase {
     public void testCase() {
         String convertedTestString = this.testCase.convertedTestString;
         XdmNode assertion = this.testCase.assertion;
-
-        List<Item> resultAsList = runQuery(convertedTestString);
-        checkAssertion(convertedTestString, assertion);
-    }
-
-    private List<Item> runQuery(String query) {
         Rumble rumble = new Rumble(
                 new RumbleRuntimeConfiguration(
                         new String[] {
@@ -49,7 +43,7 @@ public class TestBase {
                         }
                 )
         );
-        return runQuery(query, rumble);
+        checkAssertion(convertedTestString, assertion, rumble);
     }
 
     private List<Item> runQuery(String query, Rumble rumble) {
@@ -59,7 +53,7 @@ public class TestBase {
         return resultAsList;
     }
 
-    private List<Item> runNestedQuery(List<Item> resultAsList, String query) {
+    private List<Item> runNestedQuery(List<Item> resultAsList, String query, Rumble rumble) {
         RumbleRuntimeConfiguration configuration = new RumbleRuntimeConfiguration(
                 new String[] {
                     "--output-format",
@@ -75,71 +69,74 @@ public class TestBase {
         return runQuery(assertExpression, rumbleInstance);
     }
 
-    public void checkAssertion(String convertedTestString, XdmNode assertion) {
+    public void checkAssertion(String convertedTestString, XdmNode assertion, Rumble rumble) {
         String tag = assertion.getNodeName().getLocalName();
         String secondQuery;
         List<Item> results;
         switch (tag) {
             case "assert-empty":
-                results = runQuery(convertedTestString);
+                results = runQuery(convertedTestString, rumble);
                 assertTrue(results.isEmpty());
             case "assert":
-                fail("assert not yet implemented");
+                secondQuery = "declare variable $result := ("+convertedTestString+"); "+assertion.getStringValue();
+                assertTrueSingleElement(runQuery(secondQuery, rumble));
+                break;
+            case "not":
+                secondQuery = "declare variable $result := ("+convertedTestString+"); "+assertion.getStringValue();
+                assertFalseSingleElement(runQuery(secondQuery, rumble));
                 break;
             case "assert-eq":
-                results = runQuery(convertedTestString);
-                secondQuery = "$result eq " + assertion.getStringValue();
-                assertTrueSingleElement(runNestedQuery(results, secondQuery));
+                secondQuery = "(" + convertedTestString + ") eq (" + assertion.getStringValue() + ")";
+                assertTrueSingleElement(runQuery(secondQuery, rumble));
                 break;
             case "assert-deep-eq":
-                results = runQuery(convertedTestString);
-                secondQuery = "deep-equal((" + assertion.getStringValue() + "),$result)";
-                List<Item> newRes = runNestedQuery(results, secondQuery);
-                assertTrueSingleElement(newRes);
+                secondQuery = "deep-equal((" + convertedTestString + "), (" + assertion.getStringValue() + "))";
+                assertTrueSingleElement(runQuery(secondQuery, rumble));
                 break;
             case "assert-true":
-                results = runQuery(convertedTestString);
+                results = runQuery(convertedTestString, rumble);
                 assertTrueSingleElement(results);
                 break;
             case "assert-false":
-                results = runQuery(convertedTestString);
-                assertEquals("not exactly one result", 1, results.size());
-                assertTrue("result is not boolean", results.get(0).isBoolean());
-                assertFalse("result is not false", results.get(0).getBooleanValue());
+                results = runQuery(convertedTestString, rumble);
+                assertFalseSingleElement(results);
                 break;
             case "assert-string-value":
-                results = runQuery(convertedTestString);
+                results = runQuery(convertedTestString, rumble);
                 assertEquals("not exactly one result", 1, results.size());
                 assertEquals("wrong string value", assertion.getStringValue(), results.get(0).getStringValue());
                 break;
             case "all-of":
-                fail("all-of not yet implemented");
+                for (XdmNode individualAssertion : assertion.children("*")) {
+                    Rumble subRumble = new Rumble(
+                            new RumbleRuntimeConfiguration(
+                                    new String[] {
+                                        "--output-format",
+                                        "json"
+                                    }
+                            )
+                    );
+                    checkAssertion(convertedTestString, individualAssertion, subRumble);
+                }
                 break;
-            // return CustomAssertAllOf(resultAsList, assertion);
             case "any-of":
                 fail("any-of not yet implemented");
                 break;
-            // return CustomAssertAnyOf(resultAsList, assertion);
             case "assert-type":
-                fail("assert-type not yet implemented");
+                secondQuery = "(" + convertedTestString + ") instance of " + assertion.getStringValue();
+                assertTrueSingleElement(runQuery(secondQuery, rumble));
                 break;
-            // return CustomAssertType(resultAsList, assertion);
             case "assert-count":
-                results = runQuery(convertedTestString);
+                results = runQuery(convertedTestString, rumble);
                 int count = Integer.parseInt(assertion.getStringValue());
                 assertEquals("wrong count", results.size(), count);
                 break;
-            case "not":
-                fail("not not yet implemented");
-                break;
-            // break CustomAssertNot(resultAsList, assertion);
             case "assert-permutation":
-                fail("assert-permutation not yet implemented");
+                assertPermutation(convertedTestString, assertion, rumble);
                 break;
-            // break CustomAssertPermutation(resultAsList, assertion);
             case "error":
                 try {
-                    runQuery(convertedTestString);
+                    runQuery(convertedTestString, rumble);
                     fail("expected to throw error but ran without error");
                 } catch (RumbleException re) {
                     assertEquals(
@@ -151,9 +148,6 @@ public class TestBase {
                     fail("non-rumble exception encountered");
                 }
                 break;
-            case "assert-serialization-error":
-                // TODO
-                break;
             default:
                 fail("unhandled assertion case");
         }
@@ -163,5 +157,39 @@ public class TestBase {
         assertEquals("not exactly one result", 1, results.size());
         assertTrue("result is not boolean", results.get(0).isBoolean());
         assertTrue("result is false", results.get(0).getBooleanValue());
+    }
+
+    private void assertFalseSingleElement(List<Item> results) {
+        assertEquals("not exactly one result", 1, results.size());
+        assertTrue("result is not boolean", results.get(0).isBoolean());
+        assertFalse("result is true", results.get(0).getBooleanValue());
+    }
+
+    private void assertPermutation(String convertedTestString, XdmNode assertion, Rumble rumble) {
+        String assertExpression =
+            "declare function allpermutations($sequence as item*) as array* {\n"
+                + " if(count($sequence) le 1)\n"
+                + " then\n"
+                + "   [ $sequence ]\n"
+                + " else\n"
+                + "   for $i in 1 to count($sequence)\n"
+                + "   let $first := $sequence[$i]\n"
+                + "   let $others :=\n"
+                + "     for $s in $sequence\n"
+                + "     count $c\n"
+                + "     where $c ne $i\n"
+                + "     return $s\n"
+                + "   for $recursive in allpermutations($others)\n"
+                + "   return [ $first, $recursive[]]\n"
+                + "};\n"
+                + "\n"
+                + "some $a in allpermutations("
+                + convertedTestString
+                + ")"
+                + "satisfies deep-equal($a[], (("
+                + assertion.getStringValue()
+                + ")))";
+        List<Item> results = runQuery(assertExpression, rumble);
+        assertTrueSingleElement(results);
     }
 }
