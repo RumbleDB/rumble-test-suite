@@ -232,12 +232,6 @@ public class TestDriver {
 
         XdmNode testNode = testCase.select(Steps.child("test")).asNode();
 
-        // check for dependencies and stop if we dont support it
-        String caseDependency = checkDependencies(testCase);
-        if (caseDependency != null) {
-            LogDependency(caseDependency);
-            return;
-        }
 
         StringBuilder testString = new StringBuilder();
 
@@ -290,9 +284,20 @@ public class TestDriver {
                 convertedTestString = convertedTestString.replace(uri, "file:" + fullAbsoluteJsonDocPath);
             }
 
+            // check for dependencies and stop if we dont support it
+            String caseDependency = checkDependencies(testCase);
+
             allTests.add(
-                new Object[] { new TestCase(convertedTestString, assertion), currentTestSet, currentTestCase }
+                new Object[] {
+                    new TestCase(convertedTestString, assertion, caseDependency),
+                    currentTestSet,
+                    currentTestCase }
             );
+
+            if (caseDependency != null) {
+                LogDependency(caseDependency);
+                return;
+            }
 
             // Execute query
             List<Item> resultAsList = runQuery(convertedTestString, rumbleInstance);

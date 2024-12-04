@@ -7,7 +7,6 @@ import org.rumbledb.api.Item;
 import org.rumbledb.api.Rumble;
 import org.rumbledb.api.SequenceOfItems;
 import org.rumbledb.config.RumbleRuntimeConfiguration;
-import org.rumbledb.context.Name;
 import org.rumbledb.exceptions.RumbleException;
 
 import java.util.ArrayList;
@@ -33,6 +32,7 @@ public class TestBase {
     }
 
     public void testCase() {
+        org.junit.Assume.assumeTrue("case has dependency", this.testCase.caseDependency == null);
         String convertedTestString = this.testCase.convertedTestString;
         XdmNode assertion = this.testCase.assertion;
         Rumble rumble = new Rumble(
@@ -53,22 +53,6 @@ public class TestBase {
         return resultAsList;
     }
 
-    private List<Item> runNestedQuery(List<Item> resultAsList, String query, Rumble rumble) {
-        RumbleRuntimeConfiguration configuration = new RumbleRuntimeConfiguration(
-                new String[] {
-                    "--output-format",
-                    "json"
-                }
-        );
-        configuration.setExternalVariableValue(
-            Name.createVariableInNoNamespace("result"),
-            resultAsList
-        );
-        String assertExpression = "declare variable $result external;" + query;
-        Rumble rumbleInstance = new Rumble(configuration);
-        return runQuery(assertExpression, rumbleInstance);
-    }
-
     public void checkAssertion(String convertedTestString, XdmNode assertion, Rumble rumble) {
         String tag = assertion.getNodeName().getLocalName();
         String secondQuery;
@@ -78,11 +62,17 @@ public class TestBase {
                 results = runQuery(convertedTestString, rumble);
                 assertTrue(results.isEmpty());
             case "assert":
-                secondQuery = "declare variable $result := ("+convertedTestString+"); "+assertion.getStringValue();
+                secondQuery = "declare variable $result := ("
+                    + convertedTestString
+                    + "); "
+                    + assertion.getStringValue();
                 assertTrueSingleElement(runQuery(secondQuery, rumble));
                 break;
             case "not":
-                secondQuery = "declare variable $result := ("+convertedTestString+"); "+assertion.getStringValue();
+                secondQuery = "declare variable $result := ("
+                    + convertedTestString
+                    + "); "
+                    + assertion.getStringValue();
                 assertFalseSingleElement(runQuery(secondQuery, rumble));
                 break;
             case "assert-eq":
