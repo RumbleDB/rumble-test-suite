@@ -1,16 +1,14 @@
 package iq;
 
-import driver.TestDriver;
+import driver.TestCase;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
-import org.rumbledb.api.Item;
-import java.util.List;
 
 @RunWith(Parameterized.class)
 public class AppTest extends TestBase {
-    public AppTest(List<Item> resultAsList, String testSet, String testCase) {
-        super(resultAsList, testSet, testCase);
+    public AppTest(TestCase testCase, String testSetName, String testCaseName) {
+        super(testCase, testSetName, testCaseName);
     }
 
     @Parameterized.Parameters(name = "{1} -> {2}")
@@ -20,6 +18,6 @@ public class AppTest extends TestBase {
 
     @Test(timeout = 1000000)
     public void test() {
-        testCase(this.resultAsList);
+        testCase();
     }
 }

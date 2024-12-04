@@ -23,7 +23,7 @@ import java.util.*;
 
 public class TestDriver {
     private Path testsRepositoryDirectoryPath;
-    private Rumble rumbleInstance;
+    public static Rumble rumbleInstance;
     private int numberOfFails;
     private int numberOfSuccess;
     private int numberOfSkipped;
@@ -218,7 +218,7 @@ public class TestDriver {
     }
 
     private void processTestCase(XdmNode testCase, XPathCompiler xpc) throws SaxonApiException, IOException {
-        this.currentTestCase  = testCase.attribute("name");
+        this.currentTestCase = testCase.attribute("name");
 
         // check if testcase is skipped
         List<String> testCasesToSkip = Files.readAllLines(
@@ -289,6 +289,10 @@ public class TestDriver {
                     .toString();
                 convertedTestString = convertedTestString.replace(uri, "file:" + fullAbsoluteJsonDocPath);
             }
+
+            allTests.add(
+                new Object[] { new TestCase(convertedTestString, assertion), currentTestSet, currentTestCase }
+            );
 
             // Execute query
             List<Item> resultAsList = runQuery(convertedTestString, rumbleInstance);
@@ -662,25 +666,20 @@ public class TestDriver {
                     "json"
                 }
         );
-
         String resultVariableName = "result";
         configuration.setExternalVariableValue(
             Name.createVariableInNoNamespace(resultVariableName),
             resultAsList
         );
-
         String assertExpression = "declare variable $result external;" + expectedResult;
-
         Rumble rumbleInstance = new Rumble(configuration);
-
         List<Item> nestedResult = runQuery(assertExpression, rumbleInstance);
-
         return CustomAssertTrue(nestedResult);
     }
 
 
     private boolean CustomAssertTrue(List<Item> resultAsList) {
-        allTests.add(new Object[] { resultAsList, currentTestSet, currentTestCase });
+        // allTests.add(new Object[] { resultAsList, currentTestSet, currentTestCase });
         if (resultAsList.size() != 1)
             return false;
         if (!resultAsList.get(0).isBoolean())
