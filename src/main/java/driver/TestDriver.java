@@ -116,11 +116,6 @@ public class TestDriver {
             throws SaxonApiException,
                 IOException {
 
-        List<String> testSetsToSkip = Files.readAllLines(
-            Constants.WORKING_DIRECTORY_PATH.resolve("TestSetsToSkip.txt"),
-            Charset.defaultCharset()
-        );
-
         String testSetFileName = testSetNode.attribute("file");
         currentTestSet = testSetFileName;
         File testSetFile = new File(testsRepositoryDirectoryPath.resolve(testSetFileName).toString());
@@ -132,10 +127,7 @@ public class TestDriver {
 
         resetCounters();
         for (XdmNode testCase : testSetDocNode.select(Steps.descendant("test-case")).asList()) {
-            if (!testSetsToSkip.contains(testSetFileName))
-                this.processTestCase(testCase, xpc);
-            else
-                LogSkipped(testCase.attribute("name"));
+            this.processTestCase(testCase, xpc);
             numberOfProcessedTestCases++;
         }
         System.out.println(
@@ -225,7 +217,18 @@ public class TestDriver {
             Constants.WORKING_DIRECTORY_PATH.resolve("TestCasesToSkip.txt"),
             Charset.defaultCharset()
         );
-        if (testCasesToSkip.contains(currentTestCase)) {
+        List<String> testSetsToSkip = Files.readAllLines(
+            Constants.WORKING_DIRECTORY_PATH.resolve("TestSetsToSkip.txt"),
+            Charset.defaultCharset()
+        );
+
+        if (testSetsToSkip.contains(this.currentTestSet) || testCasesToSkip.contains(currentTestCase)) {
+            allTests.add(
+                new Object[] {
+                    new TestCase(null, null, "on skip-list"),
+                    currentTestSet,
+                    currentTestCase }
+            );
             LogSkipped(currentTestCase);
             return;
         }
