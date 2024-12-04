@@ -180,7 +180,7 @@ public class TestDriver {
         // check types and convert
         String convertedTestString;
         try {
-            convertedTestString = Convert(testString.toString());
+            convertedTestString = Converter.Convert(testString.toString());
         } catch (UnsupportedTypeException e) {
             // unsupported type encountered, testcase is skipped
             logger.LogUnsupportedType(currentTestCase);
@@ -503,7 +503,7 @@ public class TestDriver {
                 "some $a in allpermutations($result) "
                 +
                 "satisfies deep-equal($a[], (("
-                + Convert(assertion.getStringValue())
+                + Converter.Convert(assertion.getStringValue())
                 + ")))";
         return runNestedQuery(resultAsList, assertExpression);
     }
@@ -521,7 +521,7 @@ public class TestDriver {
     }
 
     private boolean CustomAssertDeepEq(List<Item> resultAsList, XdmNode assertion) throws UnsupportedTypeException {
-        String assertExpression = "deep-equal((" + Convert(assertion.getStringValue()) + "),$result)";
+        String assertExpression = "deep-equal((" + Converter.Convert(assertion.getStringValue()) + "),$result)";
         return runNestedQuery(resultAsList, assertExpression);
     }
 
@@ -535,12 +535,12 @@ public class TestDriver {
     }
 
     private boolean CustomAssertEq(List<Item> resultAsList, XdmNode assertion) throws UnsupportedTypeException {
-        String expectedResult = "$result eq " + Convert(assertion.getStringValue());
+        String expectedResult = "$result eq " + Converter.Convert(assertion.getStringValue());
         return runNestedQuery(resultAsList, expectedResult);
     }
 
     private boolean CustomAssert(List<Item> resultAsList, XdmNode assertion) throws UnsupportedTypeException {
-        String expectedResult = Convert(assertion.getStringValue());
+        String expectedResult = Converter.Convert(assertion.getStringValue());
         return runNestedQuery(resultAsList, expectedResult);
     }
 
@@ -581,28 +581,8 @@ public class TestDriver {
             throws UnsupportedTypeException {
         String expectedResult = "string-join($result ! string($$), \" \") eq "
             + "\""
-            + Convert(assertion.getStringValue() + "\"");
+            + Converter.Convert(assertion.getStringValue() + "\"");
         return runNestedQuery(resultAsList, expectedResult);
-    }
-
-    private String Convert(String testString) throws UnsupportedTypeException {
-        testString = ConvertAtomicTypes(testString);
-        testString = ConvertNonAtomicTypes(testString);
-
-        // TODO Verify this
-        testString = testString.replace("'", "\"");
-
-        // Replace with Regex Checks
-        testString = testString.replace("fn:", "");
-        testString = testString.replace("math:", "");
-        testString = testString.replace("map:", "");
-        testString = testString.replace("array:", "");
-        testString = testString.replace("xs:", ""); // This should be handled with all the types before
-
-        // XML notation
-        testString = testString.replace(". ", "$$ ");
-
-        return testString;
     }
 
     private boolean CustomAssertAllOf(List<Item> resultAsList, XdmNode assertion) throws UnsupportedTypeException {
@@ -615,7 +595,7 @@ public class TestDriver {
     }
 
     private boolean CustomAssertType(List<Item> resultAsList, XdmNode assertion) throws UnsupportedTypeException {
-        String expectedResult = "$result instance of " + Convert(assertion.getStringValue());
+        String expectedResult = "$result instance of " + Converter.Convert(assertion.getStringValue());
         return runNestedQuery(resultAsList, expectedResult);
     }
 
@@ -626,24 +606,5 @@ public class TestDriver {
         return resultAsList;
     }
 
-    private String ConvertAtomicTypes(String testString) throws UnsupportedTypeException {
-        for (Map.Entry<String, String> entry : Constants.atomicTypeConversions.entrySet()) {
-            testString = testString.replace(entry.getKey(), entry.getValue());
-        }
-        for (String target : Constants.unsupportedTypes) {
-            if (testString.contains(target))
-                throw new UnsupportedTypeException();
-        }
-        return testString;
-    }
 
-    private String ConvertNonAtomicTypes(String testString) {
-        for (Map.Entry<String, String> entry : Constants.nonAtomicTypeConversions.entrySet()) {
-            testString = testString.replace(entry.getKey(), entry.getValue());
-        }
-        return testString;
-    }
-
-    private static class UnsupportedTypeException extends Throwable {
-    }
 }
