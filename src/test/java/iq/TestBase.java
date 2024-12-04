@@ -1,7 +1,6 @@
 package iq;
 
-import driver.TestCase;
-import driver.TestDriver;
+import driver.*;
 import net.sf.saxon.s9api.XdmNode;
 import org.rumbledb.api.Item;
 import org.rumbledb.api.Rumble;
@@ -10,6 +9,7 @@ import org.rumbledb.config.RumbleRuntimeConfiguration;
 import org.rumbledb.exceptions.RumbleException;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.Assert.*;
@@ -32,8 +32,21 @@ public class TestBase {
     }
 
     public void testCase() {
-        org.junit.Assume.assumeTrue(this.testCase.skipReason, this.testCase.skipReason == null);
-        String convertedTestString = this.testCase.convertedTestString;
+        if (this.testCase.skipReason != null) {
+            System.out.println("[[property|" + this.testCase.skipReason.split(" ")[0] + "]]");
+            org.junit.Assume.assumeTrue(this.testCase.skipReason, false);
+            return;
+        }
+        String testString = this.testCase.testString;
+        String convertedTestString;
+        try {
+            convertedTestString = Converter.Convert(testString);
+            // TODO possibly convert stuff in assertion
+        } catch (UnsupportedTypeException e) {
+            System.out.println("[[property|UNSUPPORTED TYPE]]");
+            org.junit.Assume.assumeTrue("unsupported type", false);
+            return;
+        }
         XdmNode assertion = this.testCase.assertion;
         Rumble rumble = new Rumble(
                 new RumbleRuntimeConfiguration(
@@ -43,7 +56,14 @@ public class TestBase {
                         }
                 )
         );
-        checkAssertion(convertedTestString, assertion, rumble);
+        if (checkAssertion(convertedTestString, assertion, rumble)) {
+            if (convertedTestString.equals(testString))
+                System.out.println("[[property|PASS]]");
+            else
+                System.out.println("[[property|MANAGED]]");
+        } else {
+            System.out.println("VERYBAD");
+        }
     }
 
     private List<Item> runQuery(String query, Rumble rumble) {
@@ -53,7 +73,7 @@ public class TestBase {
         return resultAsList;
     }
 
-    public void checkAssertion(String convertedTestString, XdmNode assertion, Rumble rumble) {
+    public boolean checkAssertion(String convertedTestString, XdmNode assertion, Rumble rumble) {
         String tag = assertion.getNodeName().getLocalName();
         String secondQuery;
         List<Item> results;
@@ -130,6 +150,10 @@ public class TestBase {
                     runQuery(convertedTestString, rumble);
                     fail("expected to throw error but ran without error");
                 } catch (RumbleException re) {
+                    if (!Arrays.asList(Constants.supportedErrorCodes).contains(re.getErrorCode())) {
+                        System.out.println("[[property|UNSUPPORTED ERRORCODE]]");
+                        org.junit.Assume.assumeTrue("unsupported errorcode", false);
+                    }
                     assertEquals(
                         "correctly threw error but with wrong error code",
                         assertion.attribute("code"),
@@ -142,6 +166,7 @@ public class TestBase {
             default:
                 fail("unhandled assertion case");
         }
+        return true;
     }
 
     private void assertTrueSingleElement(List<Item> results) {

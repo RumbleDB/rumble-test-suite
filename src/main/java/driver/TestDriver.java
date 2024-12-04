@@ -3,12 +3,6 @@ package driver;
 import net.sf.saxon.s9api.*;
 import net.sf.saxon.s9api.streams.Steps;
 import org.apache.commons.lang.StringUtils;
-import org.rumbledb.api.Item;
-import org.rumbledb.api.Rumble;
-import org.rumbledb.api.SequenceOfItems;
-import org.rumbledb.config.RumbleRuntimeConfiguration;
-import org.rumbledb.context.Name;
-import org.rumbledb.exceptions.RumbleException;
 
 import java.io.File;
 import java.io.IOException;
@@ -19,8 +13,6 @@ import java.util.*;
 
 public class TestDriver {
     private Path testsRepositoryDirectoryPath;
-    public static Rumble rumbleInstance;
-    public Logger logger = new Logger();
     private String currentTestCase;
     private String currentTestSet;
     private final List<Object[]> allTests = new ArrayList<>();
@@ -31,9 +23,7 @@ public class TestDriver {
 
     public void execute(String testFolder) throws IOException, SaxonApiException {
         getTestsRepository();
-        initializeSparkAndRumble();
         processCatalog(new File(testsRepositoryDirectoryPath.resolve("catalog.xml").toString()), testFolder);
-        logger.logResults();
     }
 
     public List<Object[]> getAllTests() {
@@ -54,18 +44,6 @@ public class TestDriver {
             testsRepositoryDirectoryPath = Constants.WORKING_DIRECTORY_PATH.resolve("qt3tests");
             System.out.println("Tests repository obtained!");
         }
-    }
-
-    private void initializeSparkAndRumble() {
-        // Initialize configuration - the instance will be the same as in org.rumbledb.cli.Main.java (one for shell)
-        rumbleInstance = new Rumble(
-                new RumbleRuntimeConfiguration(
-                        new String[] {
-                            "--output-format",
-                            "json"
-                        }
-                )
-        );
     }
 
     private void processCatalog(File catalogFile, String testFolder) throws SaxonApiException, IOException {
@@ -99,12 +77,9 @@ public class TestDriver {
         if (testSetFileName.contains(jsonDocName))
             prepareJsonDocEnvironment(testSetDocNode);
 
-        logger.resetCounters();
         for (XdmNode testCase : testSetDocNode.select(Steps.descendant("test-case")).asList()) {
             this.processTestCase(testCase, xpc);
-            logger.numberOfProcessedTestCases++;
         }
-        logger.finishTestSetResults(testSetFileName);
     }
 
     private void prepareJsonDocEnvironment(XdmNode testSetDocNode) {
@@ -141,11 +116,10 @@ public class TestDriver {
         if (testSetsToSkip.contains(this.currentTestSet) || testCasesToSkip.contains(currentTestCase)) {
             allTests.add(
                 new Object[] {
-                    new TestCase(null, null, "on skip-list"),
+                    new TestCase(null, null, "SKIPPED"),
                     currentTestSet,
                     currentTestCase }
             );
-            logger.LogSkipped(currentTestCase);
             return;
         }
 
@@ -153,6 +127,7 @@ public class TestDriver {
         StringBuilder testString = new StringBuilder();
 
         // setup environments
+        // TODO check this
         List<XdmNode> environments = testCase.select(Steps.child("environment")).asList();
         if (environments != null && !environments.isEmpty()) {
             XdmNode environment = environments.get(0);
@@ -177,64 +152,29 @@ public class TestDriver {
         testString.append(testNode.getStringValue());
         XdmNode assertion = (XdmNode) xpc.evaluateSingle("result/*[1]", testCase);
 
-        // check types and convert
-        String convertedTestString;
-        try {
-            convertedTestString = Converter.Convert(testString.toString());
-        } catch (UnsupportedTypeException e) {
-            // unsupported type encountered, testcase is skipped
-            logger.LogUnsupportedType(currentTestCase);
-            allTests.add(
-                new Object[] {
-                    new TestCase(testString.toString(), assertion, "UNSUPPORTED TYPE: " + e.getMessage()),
-                    currentTestSet,
-                    currentTestCase }
-            );
-            return;
+        String finalTestString = testString.toString();
+
+        // JsonDoc converter
+        // TODO check this
+        if (currentTestCase.startsWith("json-doc")) {
+            String uri = StringUtils.substringBetween(finalTestString, "(\"", "\")");
+            String jsonDocFilename = URItoPathLookupTable.get(uri);
+            String fullAbsoluteJsonDocPath = testsRepositoryDirectoryPath.resolve("fn/" + jsonDocFilename)
+                .toString();
+            finalTestString = finalTestString.replace(uri, "file:" + fullAbsoluteJsonDocPath);
         }
 
-        // run test case
-        try {
-            // JsonDoc converter
-            if (currentTestCase.startsWith("json-doc")) {
-                String uri = StringUtils.substringBetween(convertedTestString, "(\"", "\")");
-                String jsonDocFilename = URItoPathLookupTable.get(uri);
-                String fullAbsoluteJsonDocPath = testsRepositoryDirectoryPath.resolve("fn/" + jsonDocFilename)
-                    .toString();
-                convertedTestString = convertedTestString.replace(uri, "file:" + fullAbsoluteJsonDocPath);
-            }
+        // check for dependencies and stop if we dont support it
+        String caseDependency = checkDependencies(testCase);
+        if (caseDependency != null)
+            caseDependency = "DEPENDENCY " + caseDependency;
 
-            // check for dependencies and stop if we dont support it
-            String caseDependency = checkDependencies(testCase);
-
-            allTests.add(
-                new Object[] {
-                    new TestCase(convertedTestString, assertion, caseDependency),
-                    currentTestSet,
-                    currentTestCase }
-            );
-
-            if (caseDependency != null) {
-                logger.LogDependency(caseDependency);
-                return;
-            }
-
-            // Execute query
-            List<Item> resultAsList = runQuery(convertedTestString, rumbleInstance);
-
-            TestPassOrFail(
-                checkAssertion(resultAsList, assertion),
-                currentTestCase,
-                convertedTestString.contentEquals(testString)
-            );
-        } catch (UnsupportedTypeException ute) {
-            // unsupported type encountered in assertion
-            logger.LogUnsupportedType(currentTestCase);
-        } catch (RumbleException re) {
-            CheckForErrorCode(re, assertion, currentTestCase);
-        } catch (Exception e) {
-            logger.LogCrash(currentTestCase);
-        }
+        allTests.add(
+            new Object[] {
+                new TestCase(finalTestString, assertion, caseDependency),
+                currentTestSet,
+                currentTestCase }
+        );
     }
 
     /**
@@ -361,250 +301,4 @@ public class TestDriver {
         // all dependencies are okay
         return null;
     }
-
-    private void TestPassOrFail(boolean conditionToEvaluate, String testCaseName, boolean isQueryUnchanged) {
-        // Was merged into single code for both AssertError and also the part in processTestCase.
-        if (conditionToEvaluate) {
-            if (isQueryUnchanged) {
-                logger.LogSuccess(testCaseName);
-            } else {
-                logger.LogManaged(testCaseName);
-            }
-        } else {
-            logger.LogFail(testCaseName);
-        }
-    }
-
-    private void CheckForErrorCode(RumbleException e, XdmNode assertion, String testCaseName) {
-        String tag = assertion.getNodeName().getLocalName();
-        // Logic for even though we only support SENR0001
-        if (tag.equals("error") || tag.equals("assert-serialization-error")) {
-            CustomAssertError(assertion, testCaseName, e.getErrorCode());
-            return;
-        } else if (tag.equals("any-of")) {
-            Iterator<XdmNode> childIterator = assertion.children("*").iterator();
-            boolean foundSingleMatch = false;
-            boolean seenUnsupportedCode = false;
-            boolean seenSingleErrorInAny = false;
-
-            while (childIterator.hasNext() && !foundSingleMatch) {
-                XdmNode childNode = childIterator.next();
-                String childTag = childNode.getNodeName().getLocalName();
-                if (childTag.equals("error") || childTag.equals("assert-serialization-error")) {
-                    seenSingleErrorInAny = true;
-                    // We cannot use AsserError as we can check for multiple error codes and then log for each of them
-                    String expectedError = assertion.attribute("code");
-                    if (!Arrays.asList(Constants.supportedErrorCodes).contains(expectedError))
-                        seenUnsupportedCode = true;
-                    else
-                        foundSingleMatch = e.getErrorCode().equals(expectedError);
-                }
-            }
-            if (foundSingleMatch) {
-                logger.LogSuccess(testCaseName);
-                return;
-            } else if (seenUnsupportedCode) {
-                logger.LogUnsupportedErrorCode(testCaseName);
-                return;
-            } else if (seenSingleErrorInAny) {
-                logger.LogFail(testCaseName);
-                return;
-            }
-
-            // If it has any but we are not supposed to compare Error codes (did not see single one), then it is a Crash
-        }
-        logger.LogCrash(testCaseName);
-    }
-
-    private void CustomAssertError(XdmNode assertion, String testCaseName, String errorCode) {
-        String expectedError = assertion.attribute("code");
-        if (!Arrays.asList(Constants.supportedErrorCodes).contains(expectedError)) {
-            logger.LogUnsupportedErrorCode(testCaseName);
-        } else {
-            TestPassOrFail(errorCode.equals(expectedError), testCaseName, true);
-        }
-    }
-
-    private boolean checkAssertion(List<Item> resultAsList, XdmNode assertion) throws UnsupportedTypeException {
-        String tag = assertion.getNodeName().getLocalName();
-        // It can fail same as in main one since nested queries can fail in the same way, same reason!
-        // However, these exceptions will be caught outside and we should not worry about them here
-        // Whenever we get error, we will end up in the exception block. No point in having case "error" here
-        switch (tag) {
-            case "assert-empty":
-                return CustomAssertEmpty(resultAsList);
-            case "assert":
-                return CustomAssert(resultAsList, assertion);
-            case "assert-eq":
-                return CustomAssertEq(resultAsList, assertion);
-            case "assert-deep-eq":
-                return CustomAssertDeepEq(resultAsList, assertion);
-            case "assert-true":
-                return CustomAssertTrue(resultAsList);
-            case "assert-false":
-                return !CustomAssertTrue(resultAsList);
-            case "assert-string-value":
-                return CustomAssertStringValue(resultAsList, assertion);
-            case "all-of":
-                return CustomAssertAllOf(resultAsList, assertion);
-            case "any-of":
-                return CustomAssertAnyOf(resultAsList, assertion);
-            case "assert-type":
-                return CustomAssertType(resultAsList, assertion);
-            case "assert-count":
-                return CustomAssertCount(resultAsList, assertion);
-            case "not":
-                return CustomAssertNot(resultAsList, assertion);
-            case "assert-permutation":
-                return CustomAssertPermutation(resultAsList, assertion);
-            // error codes are not handled here as they always cause exceptions
-            // "assert-message", "assert-warning", "assert-result-document", "assert-serialization" do not exist
-            // "assert-xml", "serialization-matches" missing
-            default:
-                return false;
-        }
-    }
-
-    private boolean CustomAssertPermutation(List<Item> resultAsList, XdmNode assertion)
-            throws UnsupportedTypeException {
-        String assertExpression =
-            "declare function allpermutations($sequence as item*) as array* {\n"
-                +
-                " if(count($sequence) le 1)\n"
-                +
-                " then\n"
-                +
-                "   [ $sequence ]\n"
-                +
-                " else\n"
-                +
-                "   for $i in 1 to count($sequence)\n"
-                +
-                "   let $first := $sequence[$i]\n"
-                +
-                "   let $others :=\n"
-                +
-                "     for $s in $sequence\n"
-                +
-                "     count $c\n"
-                +
-                "     where $c ne $i\n"
-                +
-                "     return $s\n"
-                +
-                "   for $recursive in allpermutations($others)\n"
-                +
-                "   return [ $first, $recursive[]]\n"
-                +
-                "};\n"
-                +
-                "\n"
-                +
-                "some $a in allpermutations($result) "
-                +
-                "satisfies deep-equal($a[], (("
-                + Converter.Convert(assertion.getStringValue())
-                + ")))";
-        return runNestedQuery(resultAsList, assertExpression);
-    }
-
-    private boolean CustomAssertNot(List<Item> resultAsList, XdmNode assertion) throws UnsupportedTypeException {
-        // According to analysis and way QT3 Test Suite was implemented, it is always one!
-        XdmNode childUnderNot = assertion.select(Steps.child("*")).asList().get(0);
-        return !checkAssertion(resultAsList, childUnderNot);
-    }
-
-    private boolean CustomAssertCount(List<Item> resultAsList, XdmNode assertion) {
-        // I do not know how to create nested query here
-        int assertExpression = Integer.parseInt(assertion.getStringValue());
-        return resultAsList.size() == assertExpression;
-    }
-
-    private boolean CustomAssertDeepEq(List<Item> resultAsList, XdmNode assertion) throws UnsupportedTypeException {
-        String assertExpression = "deep-equal((" + Converter.Convert(assertion.getStringValue()) + "),$result)";
-        return runNestedQuery(resultAsList, assertExpression);
-    }
-
-    private boolean CustomAssertAnyOf(List<Item> resultAsList, XdmNode assertion) throws UnsupportedTypeException {
-
-        for (XdmNode xdmItems : assertion.children("*")) {
-            if (checkAssertion(resultAsList, xdmItems))
-                return true;
-        }
-        return false;
-    }
-
-    private boolean CustomAssertEq(List<Item> resultAsList, XdmNode assertion) throws UnsupportedTypeException {
-        String expectedResult = "$result eq " + Converter.Convert(assertion.getStringValue());
-        return runNestedQuery(resultAsList, expectedResult);
-    }
-
-    private boolean CustomAssert(List<Item> resultAsList, XdmNode assertion) throws UnsupportedTypeException {
-        String expectedResult = Converter.Convert(assertion.getStringValue());
-        return runNestedQuery(resultAsList, expectedResult);
-    }
-
-    private boolean runNestedQuery(List<Item> resultAsList, String expectedResult) {
-        RumbleRuntimeConfiguration configuration = new RumbleRuntimeConfiguration(
-                new String[] {
-                    "--output-format",
-                    "json"
-                }
-        );
-        String resultVariableName = "result";
-        configuration.setExternalVariableValue(
-            Name.createVariableInNoNamespace(resultVariableName),
-            resultAsList
-        );
-        String assertExpression = "declare variable $result external;" + expectedResult;
-        Rumble rumbleInstance = new Rumble(configuration);
-        List<Item> nestedResult = runQuery(assertExpression, rumbleInstance);
-        return CustomAssertTrue(nestedResult);
-    }
-
-
-    private boolean CustomAssertTrue(List<Item> resultAsList) {
-        // allTests.add(new Object[] { resultAsList, currentTestSet, currentTestCase });
-        if (resultAsList.size() != 1)
-            return false;
-        if (!resultAsList.get(0).isBoolean())
-            return false;
-
-        return resultAsList.get(0).getBooleanValue();
-    }
-
-    private boolean CustomAssertEmpty(List<Item> resultAsList) {
-        return resultAsList.isEmpty();
-    }
-
-    private boolean CustomAssertStringValue(List<Item> resultAsList, XdmNode assertion)
-            throws UnsupportedTypeException {
-        String expectedResult = "string-join($result ! string($$), \" \") eq "
-            + "\""
-            + Converter.Convert(assertion.getStringValue() + "\"");
-        return runNestedQuery(resultAsList, expectedResult);
-    }
-
-    private boolean CustomAssertAllOf(List<Item> resultAsList, XdmNode assertion) throws UnsupportedTypeException {
-
-        for (XdmNode xdmItems : assertion.children("*")) {
-            if (!checkAssertion(resultAsList, xdmItems))
-                return false;
-        }
-        return true;
-    }
-
-    private boolean CustomAssertType(List<Item> resultAsList, XdmNode assertion) throws UnsupportedTypeException {
-        String expectedResult = "$result instance of " + Converter.Convert(assertion.getStringValue());
-        return runNestedQuery(resultAsList, expectedResult);
-    }
-
-    private List<Item> runQuery(String query, Rumble rumbleInstance) {
-        SequenceOfItems queryResult = rumbleInstance.runQuery(query);
-        List<Item> resultAsList = new ArrayList<>();
-        queryResult.populateListWithWarningOnlyIfCapReached(resultAsList);
-        return resultAsList;
-    }
-
-
 }
