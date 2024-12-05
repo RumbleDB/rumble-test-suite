@@ -9,17 +9,17 @@ public class Converter {
         testString = ConvertNonAtomicTypes(testString);
 
         // TODO Verify this
-        testString = testString.replace("'", "\"");
+        // testString = testString.replace("'", "\"");
 
         // Replace with Regex Checks
-        testString = testString.replace("fn:", "");
-        testString = testString.replace("math:", "");
-        testString = testString.replace("map:", "");
-        testString = testString.replace("array:", "");
-        testString = testString.replace("xs:", ""); // This should be handled with all the types before
+        // testString = testString.replace("fn:", "");
+        // testString = testString.replace("math:", "");
+        // testString = testString.replace("map:", "");
+        // testString = testString.replace("array:", "");
+        // testString = testString.replace("xs:", ""); // This should be handled with all the types before
 
         // XML notation
-        testString = testString.replace(". ", "$$ ");
+        // testString = testString.replace(". ", "$$ ");
 
         return testString;
     }

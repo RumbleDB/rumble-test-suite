@@ -11,7 +11,7 @@ public class MiscTest extends TestBase {
         super(testCase, testSetName, testCaseName);
     }
 
-    @Parameterized.Parameters(name = "{1} -> {2}")
+    @Parameterized.Parameters(name = "[{1}] {2}")
     public static Iterable<Object[]> data() throws Exception {
         return getData("misc");
     }

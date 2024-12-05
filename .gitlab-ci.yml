@@ -29,7 +29,6 @@ test-app:
     when: always
     paths:
       - target/surefire-reports
-      - results
     reports:
       junit: target/surefire-reports/*.xml
 
@@ -43,7 +42,6 @@ test-array:
     when: always
     paths:
       - target/surefire-reports
-      - results
     reports:
       junit: target/surefire-reports/*.xml
 
@@ -57,7 +55,6 @@ test-fn:
     when: always
     paths:
       - target/surefire-reports
-      - results
     reports:
       junit: target/surefire-reports/*.xml
 
@@ -71,7 +68,6 @@ test-map:
     when: always
     paths:
       - target/surefire-reports
-      - results
     reports:
       junit: target/surefire-reports/*.xml
 
@@ -85,7 +81,6 @@ test-math:
     when: always
     paths:
       - target/surefire-reports
-      - results
     reports:
       junit: target/surefire-reports/*.xml
 
@@ -99,7 +94,6 @@ test-misc:
     when: always
     paths:
       - target/surefire-reports
-      - results
     reports:
       junit: target/surefire-reports/*.xml
 
@@ -113,7 +107,6 @@ test-op:
     when: always
     paths:
       - target/surefire-reports
-      - results
     reports:
       junit: target/surefire-reports/*.xml
 
@@ -127,7 +120,6 @@ test-prod:
     when: always
     paths:
       - target/surefire-reports
-      - results
     reports:
       junit: target/surefire-reports/*.xml
 
@@ -141,7 +133,6 @@ test-ser:
     when: always
     paths:
       - target/surefire-reports
-      - results
     reports:
       junit: target/surefire-reports/*.xml
 
@@ -155,6 +146,12 @@ test-xs:
     when: always
     paths:
       - target/surefire-reports
-      - results
     reports:
       junit: target/surefire-reports/*.xml
+
+spotless-check:
+  stage: test
+  dependencies:
+    - build-job
+  script:
+    - mvn spotless:check
