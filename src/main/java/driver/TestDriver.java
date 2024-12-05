@@ -226,6 +226,9 @@ public class TestDriver {
                     // Rumble doesn't care about schema, its XML specific
                     // TODO maybe it influences Saxon environment processor (check 221 in
                     // QT3TestDriverHE)
+                    if (value.contains("1.0")) {
+                        return (testCaseName + dependencyNode);
+                    }
                     break;
                 }
                 case "feature": {
