@@ -67,6 +67,7 @@ public class TestBase {
     }
 
     private List<Item> runQuery(String query, Rumble rumble) {
+        System.out.println("[[query|"+query+"]]");
         SequenceOfItems queryResult = rumble.runQuery(query);
         List<Item> resultAsList = new ArrayList<>();
         queryResult.populateListWithWarningOnlyIfCapReached(resultAsList);
