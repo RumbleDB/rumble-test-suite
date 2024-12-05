@@ -33,17 +33,20 @@ public class TestBase {
 
     public void testCase() {
         if (this.testCase.skipReason != null) {
-            System.out.println("[[property|" + this.testCase.skipReason.split(" ")[0] + "]]");
+            System.out.println("[[category|" + this.testCase.skipReason.split(" ")[0] + "]]");
             org.junit.Assume.assumeTrue(this.testCase.skipReason, false);
             return;
         }
         String testString = this.testCase.testString;
         String convertedTestString;
+        System.out.println("[[unconvertedTest|" + testString + "]]");
         try {
             convertedTestString = Converter.Convert(testString);
+            if (!convertedTestString.equals(testString))
+                System.out.println("[[convertedTest|" + convertedTestString + "]]");
             // TODO possibly convert stuff in assertion
         } catch (UnsupportedTypeException e) {
-            System.out.println("[[property|UNSUPPORTED TYPE]]");
+            System.out.println("[[category|UNSUPPORTED TYPE]]");
             org.junit.Assume.assumeTrue("unsupported type", false);
             return;
         }
@@ -56,18 +59,19 @@ public class TestBase {
                         }
                 )
         );
+        System.out.println("[[assertion|" + assertion + "]]");
         if (checkAssertion(convertedTestString, assertion, rumble)) {
             if (convertedTestString.equals(testString))
-                System.out.println("[[property|PASS]]");
+                System.out.println("[[category|PASS]]");
             else
-                System.out.println("[[property|MANAGED]]");
+                System.out.println("[[category|MANAGED]]");
         } else {
             System.out.println("VERYBAD");
         }
     }
 
     private List<Item> runQuery(String query, Rumble rumble) {
-        System.out.println("[[query|"+query+"]]");
+        System.out.println("[[query|" + query + "]]");
         SequenceOfItems queryResult = rumble.runQuery(query);
         List<Item> resultAsList = new ArrayList<>();
         queryResult.populateListWithWarningOnlyIfCapReached(resultAsList);
@@ -152,7 +156,7 @@ public class TestBase {
                     fail("expected to throw error but ran without error");
                 } catch (RumbleException re) {
                     if (!Arrays.asList(Constants.supportedErrorCodes).contains(re.getErrorCode())) {
-                        System.out.println("[[property|UNSUPPORTED ERRORCODE]]");
+                        System.out.println("[[category|UNSUPPORTED ERRORCODE]]");
                         org.junit.Assume.assumeTrue("unsupported errorcode", false);
                     }
                     assertEquals(

@@ -23,11 +23,6 @@ public class Constants {
         Map.entry("xs:double", "double"),
         Map.entry("xs:duration", "duration"),
         Map.entry("xs:hexBinary", "hexBinary"),
-
-        Map.entry("xs:integer", "integer"), // If we put replace for xs:int before xs:integer. In case that we have
-                                            // xs:integer we would get integereger
-        Map.entry("xs:int", "integer"), // int is 32bits, integer is infinite. It is okay to do this conversion now
-        Map.entry("xs:string", "string"),
         Map.entry("xs:time", "time"),
         Map.entry("xs:yearMonthDuration", "yearMonthDuration")
     );
