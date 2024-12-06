@@ -4,12 +4,14 @@ import java.util.Map;
 
 public class Converter {
 
-    public static String Convert(String testString) throws UnsupportedTypeException {
-        testString = ConvertAtomicTypes(testString);
-        testString = ConvertNonAtomicTypes(testString);
+    public static String convert(String originalTestString) throws UnsupportedTypeException {
 
-        // TODO Verify this
-        // testString = testString.replace("'", "\"");
+        String convertedtestString = convertAtomicTypes(originalTestString);
+        convertedtestString = convertNonAtomicTypes(convertedtestString);
+
+        // TODO problem is we dont want to blindly replace everything
+        // maybe we can support ' in same places as " aswell?
+        convertedtestString = convertedtestString.replace("'", "\"");
 
         // Replace with Regex Checks
         // testString = testString.replace("fn:", "");
@@ -20,11 +22,12 @@ public class Converter {
 
         // XML notation
         // testString = testString.replace(". ", "$$ ");
-
-        return testString;
+        if (originalTestString.equals(convertedtestString))
+            System.out.println("[[info|converted string to " + convertedtestString + "]]");
+        return convertedtestString;
     }
 
-    private static String ConvertAtomicTypes(String testString) throws UnsupportedTypeException {
+    private static String convertAtomicTypes(String testString) throws UnsupportedTypeException {
         for (Map.Entry<String, String> entry : Constants.atomicTypeConversions.entrySet()) {
             testString = testString.replace(entry.getKey(), entry.getValue());
         }
@@ -35,7 +38,7 @@ public class Converter {
         return testString;
     }
 
-    private static String ConvertNonAtomicTypes(String testString) {
+    private static String convertNonAtomicTypes(String testString) {
         for (Map.Entry<String, String> entry : Constants.nonAtomicTypeConversions.entrySet()) {
             testString = testString.replace(entry.getKey(), entry.getValue());
         }

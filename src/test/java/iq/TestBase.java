@@ -11,6 +11,7 @@ import org.rumbledb.exceptions.RumbleException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static org.junit.Assert.*;
 
@@ -39,9 +40,9 @@ public class TestBase {
         }
         String testString = this.testCase.testString;
         String convertedTestString;
-        System.out.println("[[unconvertedTest|" + testString + "]]");
+        System.out.println("[[originalTest|" + testString + "]]");
         try {
-            convertedTestString = Converter.Convert(testString);
+            convertedTestString = Converter.convert(testString);
             if (!convertedTestString.equals(testString))
                 System.out.println("[[convertedTest|" + convertedTestString + "]]");
             // TODO possibly convert stuff in assertion
@@ -59,14 +60,21 @@ public class TestBase {
                         }
                 )
         );
-        System.out.println("[[assertion|" + assertion + "]]");
-        if (checkAssertion(convertedTestString, assertion, rumble)) {
-            if (convertedTestString.equals(testString))
-                System.out.println("[[category|PASS]]");
-            else
-                System.out.println("[[category|MANAGED]]");
-        } else {
-            System.out.println("VERYBAD");
+        System.out.println("[[originalAssertion|" + assertion + "]]");
+        try {
+            if (checkAssertion(convertedTestString, assertion, rumble)) {
+                // TODO we only check for conversion of test, if we convert only assertion then it is logged as PASS
+                // instead of MANAGED
+                if (convertedTestString.equals(testString))
+                    System.out.println("[[category|PASS]]");
+                else
+                    System.out.println("[[category|MANAGED]]");
+            } else {
+                System.out.println("VERYBAD");
+            }
+        } catch (UnsupportedTypeException e) {
+            System.out.println("[[category|UNSUPPORTED TYPE]]");
+            org.junit.Assume.assumeTrue("unsupported type", false);
         }
     }
 
@@ -78,7 +86,8 @@ public class TestBase {
         return resultAsList;
     }
 
-    public boolean checkAssertion(String convertedTestString, XdmNode assertion, Rumble rumble) {
+    public boolean checkAssertion(String convertedTestString, XdmNode assertion, Rumble rumble)
+            throws UnsupportedTypeException {
         String tag = assertion.getNodeName().getLocalName();
         String secondQuery;
         List<Item> results;
@@ -91,22 +100,30 @@ public class TestBase {
                 secondQuery = "declare variable $result := ("
                     + convertedTestString
                     + "); "
-                    + assertion.getStringValue();
+                    + Converter.convert(assertion.getStringValue());
                 assertTrueSingleElement(runQuery(secondQuery, rumble));
                 break;
             case "not":
                 secondQuery = "declare variable $result := ("
                     + convertedTestString
                     + "); "
-                    + assertion.getStringValue();
+                    + Converter.convert(assertion.getStringValue());
                 assertFalseSingleElement(runQuery(secondQuery, rumble));
                 break;
             case "assert-eq":
-                secondQuery = "(" + convertedTestString + ") eq (" + assertion.getStringValue() + ")";
+                secondQuery = "("
+                    + convertedTestString
+                    + ") eq ("
+                    + Converter.convert(assertion.getStringValue())
+                    + ")";
                 assertTrueSingleElement(runQuery(secondQuery, rumble));
                 break;
             case "assert-deep-eq":
-                secondQuery = "deep-equal((" + convertedTestString + "), (" + assertion.getStringValue() + "))";
+                secondQuery = "deep-equal(("
+                    + convertedTestString
+                    + "), ("
+                    + Converter.convert(assertion.getStringValue())
+                    + "))";
                 assertTrueSingleElement(runQuery(secondQuery, rumble));
                 break;
             case "assert-true":
@@ -119,8 +136,8 @@ public class TestBase {
                 break;
             case "assert-string-value":
                 results = runQuery(convertedTestString, rumble);
-                assertEquals("not exactly one result", 1, results.size());
-                assertEquals("wrong string value", assertion.getStringValue(), results.get(0).getStringValue());
+                String serialized = results.stream().map(Item::serialize).collect(Collectors.joining(" "));
+                assertEquals("wrong string value", assertion.getStringValue(), serialized);
                 break;
             case "all-of":
                 for (XdmNode individualAssertion : assertion.children("*")) {
@@ -186,7 +203,8 @@ public class TestBase {
         assertFalse("result is true", results.get(0).getBooleanValue());
     }
 
-    private void assertPermutation(String convertedTestString, XdmNode assertion, Rumble rumble) {
+    private void assertPermutation(String convertedTestString, XdmNode assertion, Rumble rumble)
+            throws UnsupportedTypeException {
         String assertExpression =
             "declare function allpermutations($sequence as item*) as array* {\n"
                 + " if(count($sequence) le 1)\n"
@@ -208,7 +226,7 @@ public class TestBase {
                 + convertedTestString
                 + ")"
                 + "satisfies deep-equal($a[], (("
-                + assertion.getStringValue()
+                + Converter.convert(assertion.getStringValue())
                 + ")))";
         List<Item> results = runQuery(assertExpression, rumble);
         assertTrueSingleElement(results);

@@ -31,6 +31,7 @@ public class Constants {
     );
 
     public static final String[] unsupportedTypes = new String[] {
+        "xs:numeric", // js:numeric exists but only internally, not user facing
         "xs:untypedAtomic",
         "xs:anyAtomicType",
         "xs:error",
