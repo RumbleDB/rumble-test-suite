@@ -2,6 +2,9 @@ image: maven:3.9.9-eclipse-temurin-11
 variables:
   TESTED_BRANCH: mschoeb-tests-bugfixing
 
+workflow:
+  name: 'TESTING OF ${TESTED_BRANCH}'
+
 stages:
   - build
   - test
@@ -9,6 +12,7 @@ stages:
 build-job:
   stage: build
   script:
+    - echo cloning ${TESTED_BRANCH}
     - git clone --single-branch --branch "${TESTED_BRANCH}" "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.inf.ethz.ch/gfourny/rumble.git" 
     - cd rumble
     - mvn clean compile assembly:single -quiet
