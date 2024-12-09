@@ -1,6 +1,7 @@
 package iq;
 
 import driver.TestCase;
+import iq.base.TestBase;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;

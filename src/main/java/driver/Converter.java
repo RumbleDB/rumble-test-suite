@@ -7,7 +7,7 @@ public class Converter {
     /**
      * method that converts a XQuery expression into a JSONiq++ expression
      * 
-     * @param originalString
+     * @param originalString string to be converted
      * @return convertedString that adheres to JSONiq++ grammar instead of XQuery
      * @throws UnsupportedTypeException if unsupported type is encountered
      */

@@ -64,7 +64,7 @@ public class TestDriver {
 
     }
 
-    private void processCatalog(String testFolder) throws SaxonApiException, IOException {
+    private void processCatalog(String testFolder) throws SaxonApiException {
         File catalogFile = new File(testsRepositoryDirectoryPath.resolve("catalog.xml").toString());
         Processor testDriverProcessor = new Processor(false);
         DocumentBuilder catalogBuilder = testDriverProcessor.newDocumentBuilder();
@@ -88,8 +88,7 @@ public class TestDriver {
     }
 
     private void processTestSet(DocumentBuilder catalogBuilder, XPathCompiler xpc, XdmNode testSetNode)
-            throws SaxonApiException,
-                IOException {
+            throws SaxonApiException {
 
         String testSetFileName = testSetNode.attribute("file");
         this.currentTestSet = testSetFileName;
@@ -126,7 +125,7 @@ public class TestDriver {
     }
 
 
-    private void processTestCase(XdmNode testCase, XPathCompiler xpc) throws SaxonApiException, IOException {
+    private void processTestCase(XdmNode testCase, XPathCompiler xpc) throws SaxonApiException {
         String currentTestCase = testCase.attribute("name");
 
         // check if testcase is skipped
@@ -177,7 +176,7 @@ public class TestDriver {
         // converts json-doc testcases from URI to local path
         // TODO possibly do this also for other testcases with URI paths?
         if (currentTestCase.startsWith("json-doc")) {
-            Pattern pattern = Pattern.compile("((\"|')http:\\/\\/www.w3.org\\/qt3\\/json\\/.*json(\"|'))");
+            Pattern pattern = Pattern.compile("(([\"'])http://www.w3.org/qt3/json/.*json([\"']))");
             Matcher matcher = pattern.matcher(finalTestString);
             if (matcher.find()) {
                 String uri = matcher.group(0);

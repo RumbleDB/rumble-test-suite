@@ -1,4 +1,4 @@
-package iq;
+package iq.base;
 
 import driver.*;
 import net.sf.saxon.s9api.XdmNode;
@@ -45,7 +45,6 @@ public class TestBase {
             convertedTestString = Converter.convert(testString);
             if (!convertedTestString.equals(testString))
                 System.out.println("[[convertedTest|" + convertedTestString + "]]");
-            // TODO possibly convert stuff in assertion
         } catch (UnsupportedTypeException e) {
             System.out.println("[[category|UNSUPPORTED TYPE]]");
             org.junit.Assume.assumeTrue("unsupported type", false);
@@ -177,10 +176,13 @@ public class TestBase {
                         assErrors.add(e);
                     }
                 }
-                assertTrue("all assertions in any-of failed: " + assErrors.toString(), success);
+                assertTrue("all assertions in any-of failed: " + assErrors, success);
                 break;
             case "assert-type":
-                secondQuery = "(" + convertedTestString + ") instance of " + assertion.getStringValue();
+                secondQuery = "("
+                    + convertedTestString
+                    + ") instance of "
+                    + Converter.convert(assertion.getStringValue());
                 assertTrueSingleElement(runQuery(secondQuery, rumble));
                 break;
             case "assert-count":
@@ -205,8 +207,6 @@ public class TestBase {
                         assertion.attribute("code"),
                         re.getErrorCode()
                     );
-                } catch (Exception e) {
-                    fail("non-rumble exception encountered");
                 }
                 break;
             default:
