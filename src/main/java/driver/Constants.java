@@ -2,10 +2,25 @@ package driver;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
 import java.util.Map;
 
+/**
+ * contains constants used throughout the code like
+ * Test cases to skip, Test sets to skip,
+ * Type conversions, Unsupported Types
+ * Supported error codes
+ */
 public class Constants {
     public static final Path WORKING_DIRECTORY_PATH = Paths.get("").toAbsolutePath();
+
+    public static final List<String> skippedTestSets = List.of(
+        "fn/subsequence.xml" // contains large testcases that take forever to run
+    );
+
+    public static final List<String> skippedTestCases = List.of(
+        "fn-distinct-values-2" // does not terminate
+    );
 
     public static final Map<String, String> atomicTypeConversions = Map.ofEntries(
         Map.entry("xs:atomic", "atomic")

@@ -7,8 +7,6 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.nio.charset.Charset;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -19,19 +17,27 @@ public class TestDriver {
     private String currentTestSet;
     private final List<Object[]> allTests = new ArrayList<>();
 
-
     // For JSON-doc
     private final Map<String, String> URItoPathLookupTable = new HashMap<>();
 
+    /**
+     * method that collects all the testcases into a local variable allowing getAllTests() to be called later
+     */
     public void execute(String testFolder) throws IOException, SaxonApiException, InterruptedException {
         getTestsRepository();
         processCatalog(testFolder);
     }
 
+    /**
+     * method that returns all collected testcases. execute() needs to be called beforehand
+     */
     public List<Object[]> getAllTests() {
         return this.allTests;
     }
 
+    /**
+     * method that clones the git repository containing the tests and assigns testsRepositoryScriptFileName
+     */
     public void getTestsRepository() throws IOException, InterruptedException {
         System.out.println("Running sh script to obtain the required tests repository!");
 
@@ -99,6 +105,9 @@ public class TestDriver {
         }
     }
 
+    /**
+     * method that prepares the mapping of URIs to local files for testcases with json-doc
+     */
     private void prepareJsonDocEnvironment(XdmNode testSetDocNode) {
         // For some reason we have to access the first one, and then we will see the environments
         List<XdmNode> environments = testSetDocNode.children()
@@ -121,16 +130,10 @@ public class TestDriver {
         String currentTestCase = testCase.attribute("name");
 
         // check if testcase is skipped
-        List<String> testCasesToSkip = Files.readAllLines(
-            Constants.WORKING_DIRECTORY_PATH.resolve("TestCasesToSkip.txt"),
-            Charset.defaultCharset()
-        );
-        List<String> testSetsToSkip = Files.readAllLines(
-            Constants.WORKING_DIRECTORY_PATH.resolve("TestSetsToSkip.txt"),
-            Charset.defaultCharset()
-        );
-
-        if (testSetsToSkip.contains(this.currentTestSet) || testCasesToSkip.contains(currentTestCase)) {
+        if (
+            Constants.skippedTestSets.contains(this.currentTestSet)
+                || Constants.skippedTestCases.contains(currentTestCase)
+        ) {
             allTests.add(
                 new Object[] {
                     new TestCase(null, null, "SKIPPED"),

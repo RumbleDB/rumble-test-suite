@@ -2,11 +2,18 @@ package driver;
 
 import java.util.Map;
 
+
 public class Converter {
+    /**
+     * method that converts a XQuery expression into a JSONiq++ expression
+     * 
+     * @param originalString
+     * @return convertedString that adheres to JSONiq++ grammar instead of XQuery
+     * @throws UnsupportedTypeException if unsupported type is encountered
+     */
+    public static String convert(String originalString) throws UnsupportedTypeException {
 
-    public static String convert(String originalTestString) throws UnsupportedTypeException {
-
-        String convertedtestString = convertAtomicTypes(originalTestString);
+        String convertedtestString = convertAtomicTypes(originalString);
         convertedtestString = convertNonAtomicTypes(convertedtestString);
 
         // TODO problem is we dont want to blindly replace everything
@@ -22,7 +29,7 @@ public class Converter {
 
         // XML notation
         // testString = testString.replace(". ", "$$ ");
-        if (originalTestString.equals(convertedtestString))
+        if (originalString.equals(convertedtestString))
             System.out.println("[[info|converted string to " + convertedtestString + "]]");
         return convertedtestString;
     }

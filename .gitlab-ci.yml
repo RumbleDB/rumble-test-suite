@@ -3,7 +3,7 @@ variables:
   TESTED_BRANCH: mschoeb-tests-bugfixing
 
 workflow:
-  name: 'TESTING OF ${TESTED_BRANCH}'
+  name: 'testing ${TESTED_BRANCH}'
 
 stages:
   - build
