@@ -11,7 +11,6 @@ build-job:
     - cd rumble
     - mvn clean compile assembly:single -quiet
     - cd ..
-    - mvn compile exec:java
   artifacts:
     paths:
       - target/
