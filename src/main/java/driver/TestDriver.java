@@ -68,12 +68,16 @@ public class TestDriver {
         XPathCompiler xpc = testDriverProcessor.newXPathCompiler();
         xpc.setLanguageVersion("3.1");
         xpc.setCaching(true);
-        // Yes we do need Namespace. It is required to run evaluateSingle and luckily it is hardcoded in QT3TestDriverHE
         xpc.declareNamespace("", "http://www.w3.org/2010/09/qt-fots-catalog");
 
+        // testsets are defined with regex, allowing for example the split of fn into two
+        // most are just substring matching
+        Pattern pattern = Pattern.compile("^" + testFolder);
         for (XdmNode testSet : catalogNode.select(Steps.descendant("test-set")).asList()) {
-            if (testSet.attribute("file").startsWith(testFolder))
+            Matcher matcher = pattern.matcher(testSet.attribute("file"));
+            if (matcher.find()) {
                 this.processTestSet(catalogBuilder, xpc, testSet);
+            }
         }
     }
 

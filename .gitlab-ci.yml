@@ -43,12 +43,25 @@ test-array:
     reports:
       junit: target/surefire-reports/*.xml
 
-test-fn:
+test-fn1:
   stage: test
   dependencies:
     - build-job
   script:
-    - mvn -Dtest=FnTest test -quiet
+    - mvn -Dtest=Fn1Test test -quiet
+  artifacts:
+    when: always
+    paths:
+      - target/surefire-reports
+    reports:
+      junit: target/surefire-reports/*.xml
+
+test-fn2:
+  stage: test
+  dependencies:
+    - build-job
+  script:
+    - mvn -Dtest=Fn2Test test -quiet
   artifacts:
     when: always
     paths:
@@ -108,12 +121,25 @@ test-op:
     reports:
       junit: target/surefire-reports/*.xml
 
-test-prod:
+test-prod1:
   stage: test
   dependencies:
     - build-job
   script:
-    - mvn -Dtest=ProdTest test -quiet
+    - mvn -Dtest=Prod1Test test -quiet
+  artifacts:
+    when: always
+    paths:
+      - target/surefire-reports
+    reports:
+      junit: target/surefire-reports/*.xml
+
+test-prod2:
+  stage: test
+  dependencies:
+    - build-job
+  script:
+    - mvn -Dtest=Prod2Test test -quiet
   artifacts:
     when: always
     paths:

@@ -75,6 +75,12 @@ public class TestBase {
         } catch (UnsupportedTypeException e) {
             System.out.println("[[category|UNSUPPORTED TYPE]]");
             org.junit.Assume.assumeTrue("unsupported type", false);
+        } catch (AssertionError e) {
+            System.out.println("[[category|FAIL]]");
+            throw e;
+        } catch (Exception e) {
+            System.out.println("[[category|ERROR]]");
+            throw e;
         }
     }
 
@@ -167,8 +173,8 @@ public class TestBase {
                     try {
                         checkAssertion(convertedTestString, individualAssertion, subRumble);
                         success = true;
-                    } catch (AssertionError assE) {
-                        assErrors.add(assE);
+                    } catch (AssertionError e) {
+                        assErrors.add(e);
                     }
                 }
                 assertTrue("all assertions in any-of failed: " + assErrors.toString(), success);

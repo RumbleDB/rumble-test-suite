@@ -6,14 +6,14 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 @RunWith(Parameterized.class)
-public class FnTest extends TestBase {
-    public FnTest(TestCase testCase, String testSetName, String testCaseName) {
+public class Prod2Test extends TestBase {
+    public Prod2Test(TestCase testCase, String testSetName, String testCaseName) {
         super(testCase, testSetName, testCaseName);
     }
 
     @Parameterized.Parameters(name = "[{1}] {2}")
     public static Iterable<Object[]> data() throws Exception {
-        return getData("fn");
+        return getData("prod/[k-zK-Z]");
     }
 
     @Test(timeout = 1000000)
