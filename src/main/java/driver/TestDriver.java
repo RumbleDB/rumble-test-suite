@@ -169,7 +169,7 @@ public class TestDriver {
 
         // JsonDoc converter
         // TODO check this
-        if (currentTestCase.startsWith("json-doc")) {
+        if (currentTestCase.startsWith("json-doc") && false) {
             String uri = StringUtils.substringBetween(finalTestString, "(\"", "\")");
             String jsonDocFilename = URItoPathLookupTable.get(uri);
             String fullAbsoluteJsonDocPath = testsRepositoryDirectoryPath.resolve("fn/" + jsonDocFilename)
