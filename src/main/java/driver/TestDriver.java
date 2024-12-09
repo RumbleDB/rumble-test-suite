@@ -2,7 +2,6 @@ package driver;
 
 import net.sf.saxon.s9api.*;
 import net.sf.saxon.s9api.streams.Steps;
-import org.apache.commons.lang.StringUtils;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -12,6 +11,8 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class TestDriver {
     private Path testsRepositoryDirectoryPath;
@@ -24,7 +25,7 @@ public class TestDriver {
 
     public void execute(String testFolder) throws IOException, SaxonApiException, InterruptedException {
         getTestsRepository();
-        processCatalog(new File(testsRepositoryDirectoryPath.resolve("catalog.xml").toString()), testFolder);
+        processCatalog(testFolder);
     }
 
     public List<Object[]> getAllTests() {
@@ -42,24 +43,23 @@ public class TestDriver {
         Process p = pb.start();
         final int exitValue = p.waitFor();
 
-        BufferedReader stdout = new BufferedReader(new InputStreamReader(p.getInputStream()));
-        BufferedReader stderr = new BufferedReader(new InputStreamReader(p.getErrorStream()));
-        String line;
-
         if (exitValue == 0) {
-            while ((line = stdout.readLine()) != null) {
-                System.out.println(line);
-            }
+            testsRepositoryDirectoryPath = Constants.WORKING_DIRECTORY_PATH.resolve("qt3tests");
+            System.out.println("Tests repository obtained!");
         } else {
+            BufferedReader stderr = new BufferedReader(new InputStreamReader(p.getErrorStream()));
+            String line;
+            StringBuilder result = new StringBuilder();
             while ((line = stderr.readLine()) != null) {
-                System.out.println(line);
+                result.append(line);
             }
+            throw new IOException("Error with get-tests-repository.sh script" + result);
         }
-        testsRepositoryDirectoryPath = Constants.WORKING_DIRECTORY_PATH.resolve("qt3tests");
-        System.out.println("Tests repository obtained!");
+
     }
 
-    private void processCatalog(File catalogFile, String testFolder) throws SaxonApiException, IOException {
+    private void processCatalog(String testFolder) throws SaxonApiException, IOException {
+        File catalogFile = new File(testsRepositoryDirectoryPath.resolve("catalog.xml").toString());
         Processor testDriverProcessor = new Processor(false);
         DocumentBuilder catalogBuilder = testDriverProcessor.newDocumentBuilder();
         catalogBuilder.setLineNumbering(true);
@@ -131,7 +131,7 @@ public class TestDriver {
                 new Object[] {
                     new TestCase(null, null, "SKIPPED"),
                     currentTestSet,
-                        currentTestCase}
+                    currentTestCase }
             );
             return;
         }
@@ -167,14 +167,18 @@ public class TestDriver {
 
         String finalTestString = testString.toString();
 
-        // JsonDoc converter
-        // TODO check this
+        // converts json-doc testcases from URI to local path
+        // TODO possibly do this also for other testcases with URI paths?
         if (currentTestCase.startsWith("json-doc")) {
-            String uri = StringUtils.substringBetween(finalTestString, "(\"", "\")");
-            String jsonDocFilename = URItoPathLookupTable.get(uri);
-            String fullAbsoluteJsonDocPath = testsRepositoryDirectoryPath.resolve("fn/" + jsonDocFilename)
-                .toString();
-            finalTestString = finalTestString.replace(uri, "file:" + fullAbsoluteJsonDocPath);
+            Pattern pattern = Pattern.compile("((\"|')http:\\/\\/www.w3.org\\/qt3\\/json\\/.*json(\"|'))");
+            Matcher matcher = pattern.matcher(finalTestString);
+            if (matcher.find()) {
+                String uri = matcher.group(0);
+                String jsonDocFilename = URItoPathLookupTable.get(uri.substring(1, uri.length() - 1));
+                String fullAbsoluteJsonDocPath = testsRepositoryDirectoryPath.resolve("fn/" + jsonDocFilename)
+                    .toString();
+                finalTestString = finalTestString.replace(uri, "\"file:" + fullAbsoluteJsonDocPath + "\"");
+            }
         }
 
         // check for dependencies and stop if we dont support it
@@ -186,7 +190,7 @@ public class TestDriver {
             new Object[] {
                 new TestCase(finalTestString, assertion, caseDependency),
                 currentTestSet,
-                    currentTestCase}
+                currentTestCase }
         );
     }
 
