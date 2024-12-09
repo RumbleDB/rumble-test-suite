@@ -153,7 +153,25 @@ public class TestBase {
                 }
                 break;
             case "any-of":
-                fail("any-of not yet implemented");
+                boolean success = false;
+                List<AssertionError> assErrors = new ArrayList<>();
+                for (XdmNode individualAssertion : assertion.children("*")) {
+                    Rumble subRumble = new Rumble(
+                            new RumbleRuntimeConfiguration(
+                                    new String[] {
+                                        "--output-format",
+                                        "json"
+                                    }
+                            )
+                    );
+                    try {
+                        checkAssertion(convertedTestString, individualAssertion, subRumble);
+                        success = true;
+                    } catch (AssertionError assE) {
+                        assErrors.add(assE);
+                    }
+                }
+                assertTrue("all assertions in any-of failed: " + assErrors.toString(), success);
                 break;
             case "assert-type":
                 secondQuery = "(" + convertedTestString + ") instance of " + assertion.getStringValue();
