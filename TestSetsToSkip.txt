@@ -70,6 +70,7 @@ fn/resolve-uri.xml
 fn/root.xml
 fn/sort.xml
 fn/static-base-uri.xml
+fn/subsequence.xml
 fn/unparsed-text-available.xml
 fn/unparsed-text-lines.xml
 fn/unparsed-text.xml

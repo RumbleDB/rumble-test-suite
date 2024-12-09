@@ -15,10 +15,7 @@ build-job:
     - cd ..
   artifacts:
     paths:
-      - target/
       - rumble/target
-      - Output_Test_Suite/
-      - qt3tests/
 
 test-app:
   stage: test
