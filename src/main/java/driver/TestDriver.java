@@ -4,8 +4,10 @@ import net.sf.saxon.s9api.*;
 import net.sf.saxon.s9api.streams.Steps;
 import org.apache.commons.lang.StringUtils;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -13,7 +15,6 @@ import java.util.*;
 
 public class TestDriver {
     private Path testsRepositoryDirectoryPath;
-    private String currentTestCase;
     private String currentTestSet;
     private final List<Object[]> allTests = new ArrayList<>();
 
@@ -21,7 +22,7 @@ public class TestDriver {
     // For JSON-doc
     private final Map<String, String> URItoPathLookupTable = new HashMap<>();
 
-    public void execute(String testFolder) throws IOException, SaxonApiException {
+    public void execute(String testFolder) throws IOException, SaxonApiException, InterruptedException {
         getTestsRepository();
         processCatalog(new File(testsRepositoryDirectoryPath.resolve("catalog.xml").toString()), testFolder);
     }
@@ -30,20 +31,32 @@ public class TestDriver {
         return this.allTests;
     }
 
-    private void getTestsRepository() {
-        if (Constants.USE_CONVERTED_TEST_SUITE) {
-            // use converted test suite from converter
-            Path convertedTestSuitesDirectory = Constants.WORKING_DIRECTORY_PATH.resolve(
-                Constants.OUTPUT_TEST_SUITE_DIRECTORY
-            );
-            File[] allConvertedTestSuiteDirectories = new File(convertedTestSuitesDirectory.toString()).listFiles();
-            Arrays.sort(allConvertedTestSuiteDirectories, Comparator.reverseOrder());
-            testsRepositoryDirectoryPath = allConvertedTestSuiteDirectories[0].toPath();
+    public void getTestsRepository() throws IOException, InterruptedException {
+        System.out.println("Running sh script to obtain the required tests repository!");
+
+        String testsRepositoryScriptFileName = "get-tests-repository.sh";
+        ProcessBuilder pb = new ProcessBuilder(
+                Constants.WORKING_DIRECTORY_PATH.resolve(testsRepositoryScriptFileName).toString()
+        );
+
+        Process p = pb.start();
+        final int exitValue = p.waitFor();
+
+        BufferedReader stdout = new BufferedReader(new InputStreamReader(p.getInputStream()));
+        BufferedReader stderr = new BufferedReader(new InputStreamReader(p.getErrorStream()));
+        String line;
+
+        if (exitValue == 0) {
+            while ((line = stdout.readLine()) != null) {
+                System.out.println(line);
+            }
         } else {
-            // use pure test suite, still needs converter to run before
-            testsRepositoryDirectoryPath = Constants.WORKING_DIRECTORY_PATH.resolve("qt3tests");
-            System.out.println("Tests repository obtained!");
+            while ((line = stderr.readLine()) != null) {
+                System.out.println(line);
+            }
         }
+        testsRepositoryDirectoryPath = Constants.WORKING_DIRECTORY_PATH.resolve("qt3tests");
+        System.out.println("Tests repository obtained!");
     }
 
     private void processCatalog(File catalogFile, String testFolder) throws SaxonApiException, IOException {
@@ -101,7 +114,7 @@ public class TestDriver {
 
 
     private void processTestCase(XdmNode testCase, XPathCompiler xpc) throws SaxonApiException, IOException {
-        this.currentTestCase = testCase.attribute("name");
+        String currentTestCase = testCase.attribute("name");
 
         // check if testcase is skipped
         List<String> testCasesToSkip = Files.readAllLines(
@@ -118,7 +131,7 @@ public class TestDriver {
                 new Object[] {
                     new TestCase(null, null, "SKIPPED"),
                     currentTestSet,
-                    currentTestCase }
+                        currentTestCase}
             );
             return;
         }
@@ -173,7 +186,7 @@ public class TestDriver {
             new Object[] {
                 new TestCase(finalTestString, assertion, caseDependency),
                 currentTestSet,
-                currentTestCase }
+                    currentTestCase}
         );
     }
 
