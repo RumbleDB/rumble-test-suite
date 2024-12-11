@@ -1,0 +1,185 @@
+image: maven:3.9.9-eclipse-temurin-11
+variables:
+  TESTED_BRANCH: mschoeb-tests-bugfixing
+
+workflow:
+  name: 'testing ${TESTED_BRANCH}'
+
+stages:
+  - build
+  - test
+
+build-job:
+  stage: build
+  script:
+    - echo cloning ${TESTED_BRANCH}
+    - git clone --single-branch --branch "${TESTED_BRANCH}" "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.inf.ethz.ch/gfourny/rumble.git" 
+    - cd rumble
+    - mvn clean compile assembly:single -quiet
+    - cd ..
+  artifacts:
+    paths:
+      - rumble/target
+
+test-app:
+  stage: test
+  dependencies:
+    - build-job
+  script:
+    - mvn -Dtest=AppTest test -quiet
+  artifacts:
+    when: always
+    paths:
+      - target/surefire-reports
+    reports:
+      junit: target/surefire-reports/*.xml
+
+test-array:
+  stage: test
+  dependencies:
+    - build-job
+  script:
+    - mvn -Dtest=ArrayTest test -quiet
+  artifacts:
+    when: always
+    paths:
+      - target/surefire-reports
+    reports:
+      junit: target/surefire-reports/*.xml
+
+test-fn1:
+  stage: test
+  dependencies:
+    - build-job
+  script:
+    - mvn -Dtest=Fn1Test test -quiet
+  artifacts:
+    when: always
+    paths:
+      - target/surefire-reports
+    reports:
+      junit: target/surefire-reports/*.xml
+
+test-fn2:
+  stage: test
+  dependencies:
+    - build-job
+  script:
+    - mvn -Dtest=Fn2Test test -quiet
+  artifacts:
+    when: always
+    paths:
+      - target/surefire-reports
+    reports:
+      junit: target/surefire-reports/*.xml
+
+test-map:
+  stage: test
+  dependencies:
+    - build-job
+  script:
+    - mvn -Dtest=MapTest test -quiet
+  artifacts:
+    when: always
+    paths:
+      - target/surefire-reports
+    reports:
+      junit: target/surefire-reports/*.xml
+
+test-math:
+  stage: test
+  dependencies:
+    - build-job
+  script:
+    - mvn -Dtest=MathTest test -quiet
+  artifacts:
+    when: always
+    paths:
+      - target/surefire-reports
+    reports:
+      junit: target/surefire-reports/*.xml
+
+test-misc:
+  stage: test
+  dependencies:
+    - build-job
+  script:
+    - mvn -Dtest=MiscTest test -quiet
+  artifacts:
+    when: always
+    paths:
+      - target/surefire-reports
+    reports:
+      junit: target/surefire-reports/*.xml
+
+test-op:
+  stage: test
+  dependencies:
+    - build-job
+  script:
+    - mvn -Dtest=OpTest test -quiet
+  artifacts:
+    when: always
+    paths:
+      - target/surefire-reports
+    reports:
+      junit: target/surefire-reports/*.xml
+
+test-prod1:
+  stage: test
+  dependencies:
+    - build-job
+  script:
+    - mvn -Dtest=Prod1Test test -quiet
+  artifacts:
+    when: always
+    paths:
+      - target/surefire-reports
+    reports:
+      junit: target/surefire-reports/*.xml
+
+test-prod2:
+  stage: test
+  dependencies:
+    - build-job
+  script:
+    - mvn -Dtest=Prod2Test test -quiet
+  artifacts:
+    when: always
+    paths:
+      - target/surefire-reports
+    reports:
+      junit: target/surefire-reports/*.xml
+
+test-ser:
+  stage: test
+  dependencies:
+    - build-job
+  script:
+    - mvn -Dtest=SerTest test -quiet
+  artifacts:
+    when: always
+    paths:
+      - target/surefire-reports
+    reports:
+      junit: target/surefire-reports/*.xml
+
+test-xs:
+  stage: test
+  dependencies:
+    - build-job
+  script:
+    - mvn -Dtest=XsTest test -quiet
+  artifacts:
+    when: always
+    paths:
+      - target/surefire-reports
+    reports:
+      junit: target/surefire-reports/*.xml
+
+spotless-check:
+  stage: test
+  dependencies:
+    - build-job
+  script:
+    - mvn spotless:check

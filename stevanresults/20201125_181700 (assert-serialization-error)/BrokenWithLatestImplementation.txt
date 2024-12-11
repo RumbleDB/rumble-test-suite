@@ -1,4 +1,0 @@
-List of all test cases:
-cbcl-adjust-dateTime-to-timezone-004
-
-New crashed tests:

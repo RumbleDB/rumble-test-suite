@@ -1,4 +1,0 @@
-<test>math:cos(math:pi() div 2)</test>
-<result>
-   <assert>abs($result) lt 1e-15</assert>
-</result>

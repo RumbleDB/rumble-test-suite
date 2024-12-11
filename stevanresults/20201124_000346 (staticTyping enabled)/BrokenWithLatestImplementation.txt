@@ -1,4 +1,0 @@
-List of all test cases:
-
-New crashed tests:
-parse-xml-fragment-022
