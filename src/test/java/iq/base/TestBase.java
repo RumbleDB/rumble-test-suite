@@ -41,8 +41,6 @@ public class TestBase {
         String convertedTestString;
         System.out.println("[[originalTest|" + testString + "]]");
         convertedTestString = Converter.convert(testString);
-        if (!convertedTestString.equals(testString))
-            System.out.println("[[convertedTest|" + convertedTestString + "]]");
 
         XdmNode assertion = this.testCase.assertion;
         Rumble rumble = new Rumble(

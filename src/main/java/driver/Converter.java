@@ -29,7 +29,7 @@ public class Converter {
         // XML notation
         // testString = testString.replace(". ", "$$ ");
         if (!originalString.equals(convertedtestString))
-            System.out.println("[[info|converted string to " + convertedtestString + "]]");
+            System.out.println("[[convertedString|" + convertedtestString + "]]");
         return convertedtestString;
     }
 

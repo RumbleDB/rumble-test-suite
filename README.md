@@ -13,6 +13,30 @@ This will run the pipeline with all the tests. To view your results, go to build
 
 You can also access and download the test reports directly by clicking on a job in the pipeline and then clicking "downlaod" on the right under job artifacts. 
 
+# Reading the report
+If you run the pipeline all test results are shown in the tests tab on gitlab. Clicking on a testcase gives you more information. The same information can also be accessed in the xml reports directly. Most info like assertion, original testcase etc are logged in ``<system-out>`` using the following pattern:
+
+```[[key|value]]```
+
+The most important keys and the meaning of their values are:
+- ``originalTest`` contains the original text of the testcase
+- ``originalAssertion`` contains the original assertion of the testcase (before possible modification)
+- ``convertedString`` contains the converted assertion or testcase text
+- ``query`` a query that is evaluated by rumbleDB (can possibly be multiple per testcase incase there are multiple assertions)
+- ``category`` can be 
+  - ``PASS`` testcase passed
+  - ``MANAGED`` testcase passed with modification
+  - ``FAIL`` testcase ran but output didnt fullfill assertion
+  - ``ERROR`` testcase threw error that is not a part of the skip reasons
+  - ``SKIP`` testcase was skipped due to a skip reason
+
+The current skip reasons are:
+- Parser error XPST0003 (we assume that an unimplemented feature was encountered)
+- Method or type constructor not implemented error XPST0017
+- Type not implemented error XPST0051
+- Unsupported errorcode in assertion (based on hardcoded list in Constants.java)
+- Testcase or Testset is on list of Testcases/Testsets to skip (hardcoded list in Constants.java)
+
 # Local installation
 If you want to work on this repo, you can install it locally with the following steps. Note that you need to have maven installed so if that isn't the case, make sure to follow those steps in the installation guide for rumble.
 1. ``git clone https://gitlab.inf.ethz.ch/gfourny/rumble-test-suite.git``
