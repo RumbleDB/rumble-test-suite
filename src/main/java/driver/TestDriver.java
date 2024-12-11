@@ -135,7 +135,7 @@ public class TestDriver {
         ) {
             allTests.add(
                 new Object[] {
-                    new TestCase(null, null, "SKIPPED"),
+                    new TestCase(null, null, "testcase or testset on skiplist"),
                     currentTestSet,
                     currentTestCase }
             );

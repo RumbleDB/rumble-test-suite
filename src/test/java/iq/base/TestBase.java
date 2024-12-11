@@ -9,7 +9,6 @@ import org.rumbledb.config.RumbleRuntimeConfiguration;
 import org.rumbledb.exceptions.RumbleException;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -34,7 +33,7 @@ public class TestBase {
 
     public void testCase() {
         if (this.testCase.skipReason != null) {
-            System.out.println("[[category|" + this.testCase.skipReason.split(" ")[0] + "]]");
+            System.out.println("[[category|SKIP]]");
             org.junit.Assume.assumeTrue(this.testCase.skipReason, false);
             return;
         }
@@ -201,9 +200,9 @@ public class TestBase {
                     runQuery(convertedTestString, rumble);
                     fail("expected to throw error but ran without error");
                 } catch (RumbleException re) {
-                    if (!Arrays.asList(Constants.supportedErrorCodes).contains(re.getErrorCode())) {
-                        System.out.println("[[category|UNSUPPORTED ERRORCODE]]");
-                        org.junit.Assume.assumeTrue("unsupported errorcode", false);
+                    if (!Constants.supportedErrorCodes.contains(re.getErrorCode())) {
+                        System.out.println("[[category|SKIP]]");
+                        org.junit.Assume.assumeTrue("unsupported errorcode: " + re.getErrorCode(), false);
                     }
                     assertEquals(
                         "correctly threw error but with wrong error code",

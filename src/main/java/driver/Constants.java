@@ -25,7 +25,8 @@ public class Constants {
     );
 
     public static final Map<String, String> atomicTypeConversions = Map.ofEntries(
-        Map.entry("xs:atomic", "atomic")
+        Map.entry("xs:atomic", "atomic"),
+        Map.entry("xs:numeric", "numeric")
     );
 
     public static final Map<String, String> nonAtomicTypeConversions = Map.ofEntries(
@@ -44,7 +45,7 @@ public class Constants {
         Map.entry("map {", " {")
     );
 
-    public static final String[] supportedErrorCodes = new String[] {
+    public static final List<String> supportedErrorCodes = List.of(
         "FOAR0001",
         "FOCA0002",
         "FOCA0005",
@@ -140,5 +141,5 @@ public class Constants {
         "XQAN0001",
         "SCIN0001",
         "XPTY0019"
-    };
+    );
 }
