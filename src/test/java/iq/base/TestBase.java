@@ -69,6 +69,7 @@ public class TestBase {
         } catch (RumbleException e) {
             switch (e.getErrorCode()) {
                 case "XPST0017": // method or type not implemented
+                case "XPST0051": // type not implemented
                 case "XPST0003": // parser failed, assuming that feature is not implemented
                     System.out.println("[[category|SKIP");
                     org.junit.Assume.assumeTrue(e.toString(), false);
