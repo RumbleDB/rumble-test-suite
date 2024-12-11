@@ -37,22 +37,22 @@ public class Converter {
     }
 
     public static final Map<String, String> typeConversions = Map.ofEntries(
-            // non-atomic types
-            Map.entry("xs:atomic", "atomic"),
-            Map.entry("xs:numeric", "numeric"),
+        // non-atomic types
+        Map.entry("xs:atomic", "atomic"),
+        Map.entry("xs:numeric", "numeric"),
 
-            // Also array(+), array(?), array()*, array()+, array()? do not exist
-            Map.entry("array(*)", "array*"),
+        // Also array(+), array(?), array()*, array()+, array()? do not exist
+        Map.entry("array(*)", "array*"),
 
-            // Will cover all the subclasses - item()+, item()* and item()+. item(anything here) does not exist
-            Map.entry("item()", "item"),
+        // Will cover all the subclasses - item()+, item()* and item()+. item(anything here) does not exist
+        Map.entry("item()", "item"),
 
-            // These are not types but instantiations of boolean handled differently
-            Map.entry("true()", "true"),
-            Map.entry("false()", "false"),
+        // These are not types but instantiations of boolean handled differently
+        Map.entry("true()", "true"),
+        Map.entry("false()", "false"),
 
-            Map.entry("map(", "object("),
-            Map.entry("map{", "{"),
-            Map.entry("map {", " {")
+        Map.entry("map(", "object("),
+        Map.entry("map{", "{"),
+        Map.entry("map {", " {")
     );
 }
