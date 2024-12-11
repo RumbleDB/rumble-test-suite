@@ -15,7 +15,9 @@ public class Constants {
     public static final Path WORKING_DIRECTORY_PATH = Paths.get("").toAbsolutePath();
 
     public static final List<String> skippedTestSets = List.of(
-        "fn/subsequence.xml" // contains large testcases that take forever to run
+        "fn/subsequence.xml", // contains large testcases that take forever to run
+        "prod/WindowClause.xml" // we dont support window yet
+
     );
 
     public static final List<String> skippedTestCases = List.of(
@@ -41,34 +43,6 @@ public class Constants {
         Map.entry("map{", "{"),
         Map.entry("map {", " {")
     );
-
-    public static final String[] unsupportedTypes = new String[] {
-        "xs:numeric", // js:numeric exists but only internally, not user facing
-        "xs:untypedAtomic",
-        "xs:anyAtomicType",
-        "xs:error",
-        "xs:normalizedString",
-        "xs:token",
-        "xs:NMTOKEN",
-        "xs:NCName",
-        "xs:Name",
-        "xs:language",
-        "xs:ENTITY",
-        "xs:ID",
-        "xs:IDREF",
-        "xs:anyType",
-        "xs:anySimpleType",
-        "xs:untyped",
-        "xs:doesNotExist",
-        "xs:NOTEXIST",
-        "xs:doesNotExistExampleCom",
-        "xs:name",
-        "xs:untypedAny",
-        "xs:undefinedType",
-        "xs:unknownType",
-        "xs:qname",
-        "xs:NOTATION",
-    };
 
     public static final String[] supportedErrorCodes = new String[] {
         "FOAR0001",

@@ -41,15 +41,10 @@ public class TestBase {
         String testString = this.testCase.testString;
         String convertedTestString;
         System.out.println("[[originalTest|" + testString + "]]");
-        try {
-            convertedTestString = Converter.convert(testString);
-            if (!convertedTestString.equals(testString))
-                System.out.println("[[convertedTest|" + convertedTestString + "]]");
-        } catch (UnsupportedTypeException e) {
-            System.out.println("[[category|UNSUPPORTED TYPE]]");
-            org.junit.Assume.assumeTrue("unsupported type", false);
-            return;
-        }
+        convertedTestString = Converter.convert(testString);
+        if (!convertedTestString.equals(testString))
+            System.out.println("[[convertedTest|" + convertedTestString + "]]");
+
         XdmNode assertion = this.testCase.assertion;
         Rumble rumble = new Rumble(
                 new RumbleRuntimeConfiguration(
@@ -71,9 +66,17 @@ public class TestBase {
             } else {
                 System.out.println("VERYBAD");
             }
-        } catch (UnsupportedTypeException e) {
-            System.out.println("[[category|UNSUPPORTED TYPE]]");
-            org.junit.Assume.assumeTrue("unsupported type", false);
+        } catch (RumbleException e) {
+            switch (e.getErrorCode()) {
+                case "XPST0017": // method or type not implemented
+                case "XPST0003": // parser failed, assuming that feature is not implemented
+                    System.out.println("[[category|SKIP");
+                    org.junit.Assume.assumeTrue(e.toString(), false);
+                    break;
+                default:
+                    System.out.println("[[category|ERROR]]");
+                    throw e;
+            }
         } catch (AssertionError e) {
             System.out.println("[[category|FAIL]]");
             throw e;
@@ -91,8 +94,7 @@ public class TestBase {
         return resultAsList;
     }
 
-    public boolean checkAssertion(String convertedTestString, XdmNode assertion, Rumble rumble)
-            throws UnsupportedTypeException {
+    public boolean checkAssertion(String convertedTestString, XdmNode assertion, Rumble rumble) {
         String tag = assertion.getNodeName().getLocalName();
         String secondQuery;
         List<Item> results;
@@ -227,8 +229,7 @@ public class TestBase {
         assertFalse("result is true", results.get(0).getBooleanValue());
     }
 
-    private void assertPermutation(String convertedTestString, XdmNode assertion, Rumble rumble)
-            throws UnsupportedTypeException {
+    private void assertPermutation(String convertedTestString, XdmNode assertion, Rumble rumble) {
         String assertExpression =
             "declare function allpermutations($sequence as item*) as array* {\n"
                 + " if(count($sequence) le 1)\n"

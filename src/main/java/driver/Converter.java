@@ -9,9 +9,8 @@ public class Converter {
      * 
      * @param originalString string to be converted
      * @return convertedString that adheres to JSONiq++ grammar instead of XQuery
-     * @throws UnsupportedTypeException if unsupported type is encountered
      */
-    public static String convert(String originalString) throws UnsupportedTypeException {
+    public static String convert(String originalString) {
 
         String convertedtestString = convertAtomicTypes(originalString);
         convertedtestString = convertNonAtomicTypes(convertedtestString);
@@ -29,18 +28,14 @@ public class Converter {
 
         // XML notation
         // testString = testString.replace(". ", "$$ ");
-        if (originalString.equals(convertedtestString))
+        if (!originalString.equals(convertedtestString))
             System.out.println("[[info|converted string to " + convertedtestString + "]]");
         return convertedtestString;
     }
 
-    private static String convertAtomicTypes(String testString) throws UnsupportedTypeException {
+    private static String convertAtomicTypes(String testString) {
         for (Map.Entry<String, String> entry : Constants.atomicTypeConversions.entrySet()) {
             testString = testString.replace(entry.getKey(), entry.getValue());
-        }
-        for (String target : Constants.unsupportedTypes) {
-            if (testString.contains(target))
-                throw new UnsupportedTypeException();
         }
         return testString;
     }
