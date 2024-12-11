@@ -55,3 +55,7 @@ The output reports will be generated in rumble-test-suite/target/surefire-report
 # Authors
 - Stevan Mihajlovic
 - Marco Schöb
+
+
+# Notes
+This work was started as part of a master's thesis by Stevan Mihajlovic. To view the original state of that final work, check out the ``stevan-master`` branch.
