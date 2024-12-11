@@ -3,7 +3,6 @@ package driver;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
-import java.util.Map;
 
 /**
  * contains constants used throughout the code like
@@ -22,27 +21,6 @@ public class Constants {
 
     public static final List<String> skippedTestCases = List.of(
         "fn-distinct-values-2" // does not terminate
-    );
-
-    public static final Map<String, String> atomicTypeConversions = Map.ofEntries(
-        Map.entry("xs:atomic", "atomic"),
-        Map.entry("xs:numeric", "numeric")
-    );
-
-    public static final Map<String, String> nonAtomicTypeConversions = Map.ofEntries(
-        // Also array(+), array(?), array()*, array()+, array()? do not exist
-        Map.entry("array(*)", "array*"),
-
-        // Will cover all the subclasses - item()+, item()* and item()+. item(anything here) does not exist
-        Map.entry("item()", "item"),
-
-        // These are not types but instantiations of boolean handled differently
-        Map.entry("true()", "true"),
-        Map.entry("false()", "false"),
-
-        Map.entry("map(", "object("),
-        Map.entry("map{", "{"),
-        Map.entry("map {", " {")
     );
 
     public static final List<String> supportedErrorCodes = List.of(

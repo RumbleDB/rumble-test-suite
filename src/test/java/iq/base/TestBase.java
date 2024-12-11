@@ -35,11 +35,12 @@ public class TestBase {
         if (this.testCase.skipReason != null) {
             System.out.println("[[category|SKIP]]");
             org.junit.Assume.assumeTrue(this.testCase.skipReason, false);
-            return;
         }
+
         String testString = this.testCase.testString;
-        String convertedTestString;
         System.out.println("[[originalTest|" + testString + "]]");
+
+        String convertedTestString;
         convertedTestString = Converter.convert(testString);
 
         XdmNode assertion = this.testCase.assertion;

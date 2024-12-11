@@ -12,38 +12,47 @@ public class Converter {
      */
     public static String convert(String originalString) {
 
-        String convertedtestString = convertAtomicTypes(originalString);
-        convertedtestString = convertNonAtomicTypes(convertedtestString);
+        String convertedtestString = originalString;
+
+        // convert types
+        convertedtestString = convertTypes(convertedtestString);
 
         // TODO problem is we dont want to blindly replace everything
         // maybe we can support ' in same places as " aswell?
         convertedtestString = convertedtestString.replace("'", "\"");
 
-        // Replace with Regex Checks
-        // testString = testString.replace("fn:", "");
-        // testString = testString.replace("math:", "");
-        // testString = testString.replace("map:", "");
-        // testString = testString.replace("array:", "");
-        // testString = testString.replace("xs:", ""); // This should be handled with all the types before
-
-        // XML notation
         // testString = testString.replace(". ", "$$ ");
+
+
         if (!originalString.equals(convertedtestString))
             System.out.println("[[convertedString|" + convertedtestString + "]]");
         return convertedtestString;
     }
 
-    private static String convertAtomicTypes(String testString) {
-        for (Map.Entry<String, String> entry : Constants.atomicTypeConversions.entrySet()) {
+    private static String convertTypes(String testString) {
+        for (Map.Entry<String, String> entry : typeConversions.entrySet()) {
             testString = testString.replace(entry.getKey(), entry.getValue());
         }
         return testString;
     }
 
-    private static String convertNonAtomicTypes(String testString) {
-        for (Map.Entry<String, String> entry : Constants.nonAtomicTypeConversions.entrySet()) {
-            testString = testString.replace(entry.getKey(), entry.getValue());
-        }
-        return testString;
-    }
+    public static final Map<String, String> typeConversions = Map.ofEntries(
+            // non-atomic types
+            Map.entry("xs:atomic", "atomic"),
+            Map.entry("xs:numeric", "numeric"),
+
+            // Also array(+), array(?), array()*, array()+, array()? do not exist
+            Map.entry("array(*)", "array*"),
+
+            // Will cover all the subclasses - item()+, item()* and item()+. item(anything here) does not exist
+            Map.entry("item()", "item"),
+
+            // These are not types but instantiations of boolean handled differently
+            Map.entry("true()", "true"),
+            Map.entry("false()", "false"),
+
+            Map.entry("map(", "object("),
+            Map.entry("map{", "{"),
+            Map.entry("map {", " {")
+    );
 }

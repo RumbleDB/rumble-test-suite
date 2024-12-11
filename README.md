@@ -50,6 +50,10 @@ Then you can run a test folder like this (example for *prod*)
 ```
 mvn -Dtest=ProdTest test
 ```
+Or all the tests at once with
+```
+mvn test
+```
 The output reports will be generated in rumble-test-suite/target/surefire-reports/*
 
 # Authors
