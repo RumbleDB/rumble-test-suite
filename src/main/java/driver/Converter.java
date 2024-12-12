@@ -21,7 +21,7 @@ public class Converter {
         // maybe we can support ' in same places as " aswell?
         convertedtestString = convertedtestString.replace("'", "\"");
 
-        // testString = testString.replace(". ", "$$ ");
+        convertedtestString = convertedtestString.replace(". ", "$$ ");
 
 
         if (!originalString.equals(convertedtestString))
@@ -42,7 +42,7 @@ public class Converter {
         Map.entry("xs:numeric", "numeric"),
 
         // Also array(+), array(?), array()*, array()+, array()? do not exist
-        Map.entry("array(*)", "array*"),
+        Map.entry("array(*)", "array"),
 
         // Will cover all the subclasses - item()+, item()* and item()+. item(anything here) does not exist
         Map.entry("item()", "item"),
@@ -51,7 +51,7 @@ public class Converter {
         Map.entry("true()", "true"),
         Map.entry("false()", "false"),
 
-        Map.entry("map(", "object("),
+        Map.entry("map(*)", "object"),
         Map.entry("map{", "{"),
         Map.entry("map {", " {")
     );
