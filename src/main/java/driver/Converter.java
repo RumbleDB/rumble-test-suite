@@ -17,10 +17,6 @@ public class Converter {
         // convert types
         convertedtestString = convertTypes(convertedtestString);
 
-        // TODO problem is we dont want to blindly replace everything
-        // maybe we can support ' in same places as " aswell?
-        convertedtestString = convertedtestString.replace("'", "\"");
-
         convertedtestString = convertedtestString.replace(". ", "$$ ");
 
 
