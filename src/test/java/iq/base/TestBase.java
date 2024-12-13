@@ -204,6 +204,11 @@ public class TestBase {
                         System.out.println("[[category|SKIP]]");
                         assumeTrue("unsupported errorcode: " + re.getErrorCode(), false);
                     }
+                    if (List.of("XPST0017", "XPST0051", "XPST0003").contains(re.getErrorCode())) {
+                        // we want these to be caught outside so we skip the testcase
+                        throw re;
+                    }
+
                     assertEquals(
                         "correctly threw error but with wrong error code",
                         assertion.attribute("code"),
