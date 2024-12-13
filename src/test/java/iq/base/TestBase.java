@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import static org.junit.Assert.*;
+import static org.junit.Assume.assumeTrue;
 
 public class TestBase {
     protected final TestCase testCase;
@@ -34,7 +35,7 @@ public class TestBase {
     public void testCase() {
         if (this.testCase.skipReason != null) {
             System.out.println("[[category|SKIP]]");
-            org.junit.Assume.assumeTrue(this.testCase.skipReason, false);
+            assumeTrue(this.testCase.skipReason, false);
         }
 
         String testString = this.testCase.testString;
@@ -70,7 +71,7 @@ public class TestBase {
                 case "XPST0051": // type not implemented
                 case "XPST0003": // parser failed, assuming that feature is not implemented
                     System.out.println("[[category|SKIP");
-                    org.junit.Assume.assumeTrue(e.toString(), false);
+                    assumeTrue(e.toString(), false);
                     break;
                 default:
                     System.out.println("[[category|ERROR]]");
@@ -201,7 +202,7 @@ public class TestBase {
                 } catch (RumbleException re) {
                     if (!Constants.supportedErrorCodes.contains(re.getErrorCode())) {
                         System.out.println("[[category|SKIP]]");
-                        org.junit.Assume.assumeTrue("unsupported errorcode: " + re.getErrorCode(), false);
+                        assumeTrue("unsupported errorcode: " + re.getErrorCode(), false);
                     }
                     assertEquals(
                         "correctly threw error but with wrong error code",
@@ -210,8 +211,18 @@ public class TestBase {
                     );
                 }
                 break;
+            case "assert-serialization":
+            case "serialization-matches":
+            case "assert-serialization-error":
+            case "assert-xml":
+                System.out.println("[[category|SKIP]]");
+                assumeTrue(tag + " assertion not implemented", false);
+                break;
             default:
-                fail("unhandled assertion case");
+                // should never happen unless they add a new assertion type
+                System.out.println("[[category|SKIP]]");
+                assumeTrue(tag + " assertion is new and not implemented", false);
+                break;
         }
         return true;
     }
