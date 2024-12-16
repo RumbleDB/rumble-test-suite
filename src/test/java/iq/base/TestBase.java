@@ -161,7 +161,7 @@ public class TestBase {
                 break;
             case "any-of":
                 boolean success = false;
-                List<AssertionError> assErrors = new ArrayList<>();
+                List<Throwable> errors = new ArrayList<>();
                 for (XdmNode individualAssertion : assertion.children("*")) {
                     Rumble subRumble = new Rumble(
                             new RumbleRuntimeConfiguration(
@@ -174,11 +174,11 @@ public class TestBase {
                     try {
                         checkAssertion(convertedTestString, individualAssertion, subRumble);
                         success = true;
-                    } catch (AssertionError e) {
-                        assErrors.add(e);
+                    } catch (AssertionError | Exception e) {
+                        errors.add(e);
                     }
                 }
-                assertTrue("all assertions in any-of failed: " + assErrors, success);
+                assertTrue("all assertions in any-of failed: " + errors, success);
                 break;
             case "assert-type":
                 secondQuery = "("

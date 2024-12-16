@@ -315,6 +315,12 @@ public class TestDriver {
             }
         }
         // all dependencies are okay
+
+        // check if it uses module
+        if (testCase.select(Steps.child("module")).exists()) {
+            return "module requirement not implemented";
+        }
+
         return null;
     }
 }
