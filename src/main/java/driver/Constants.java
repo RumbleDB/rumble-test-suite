@@ -23,6 +23,14 @@ public class Constants {
         "fn-distinct-values-2" // does not terminate
     );
 
+    // Error codes that we assume indicate a skip reason. When such a exception is thrown we mark the testcase as
+    // skipped
+    public static final List<String> skipErrorCodes = List.of(
+        "XPST0017", // method or type not implemented
+        "XPST0051", // type not implemented
+        "XPST0003" // parser failed, assuming that feature is not implemented
+    );
+
     public static final List<String> supportedErrorCodes = List.of(
         "FOAR0001",
         "FOCA0002",

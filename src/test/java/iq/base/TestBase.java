@@ -66,16 +66,12 @@ public class TestBase {
                 System.out.println("VERYBAD");
             }
         } catch (RumbleException e) {
-            switch (e.getErrorCode()) {
-                case "XPST0017": // method or type not implemented
-                case "XPST0051": // type not implemented
-                case "XPST0003": // parser failed, assuming that feature is not implemented
-                    System.out.println("[[category|SKIP");
-                    assumeTrue(e.toString(), false);
-                    break;
-                default:
-                    System.out.println("[[category|ERROR]]");
-                    throw e;
+            if (Constants.skipErrorCodes.contains(e.getErrorCode())) {
+                System.out.println("[[category|SKIP");
+                assumeTrue(e.toString(), false);
+            } else {
+                System.out.println("[[category|ERROR]]");
+                throw e;
             }
         } catch (AssertionError e) {
             System.out.println("[[category|FAIL]]");
@@ -174,6 +170,13 @@ public class TestBase {
                     try {
                         checkAssertion(convertedTestString, individualAssertion, subRumble);
                         success = true;
+                    } catch (RumbleException e) {
+                        if (Constants.skipErrorCodes.contains(e.getErrorCode())) {
+                            // we want these to be caught outside so we skip the testcase
+                            throw e;
+                        } else {
+                            errors.add(e);
+                        }
                     } catch (AssertionError | Exception e) {
                         errors.add(e);
                     }
@@ -204,7 +207,7 @@ public class TestBase {
                         System.out.println("[[category|SKIP]]");
                         assumeTrue("unsupported errorcode: " + re.getErrorCode(), false);
                     }
-                    if (List.of("XPST0017", "XPST0051", "XPST0003").contains(re.getErrorCode())) {
+                    if (Constants.skipErrorCodes.contains(re.getErrorCode())) {
                         // we want these to be caught outside so we skip the testcase
                         throw re;
                     }
