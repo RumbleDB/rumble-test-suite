@@ -89,15 +89,14 @@ public class TestDriver {
 
     private void processTestSet(DocumentBuilder catalogBuilder, XPathCompiler xpc, XdmNode testSetNode)
             throws SaxonApiException {
+        URItoPathLookupTable.clear();
 
         String testSetFileName = testSetNode.attribute("file");
         this.currentTestSet = testSetFileName;
         File testSetFile = new File(testsRepositoryDirectoryPath.resolve(testSetFileName).toString());
         XdmNode testSetDocNode = catalogBuilder.build(testSetFile);
 
-        String jsonDocName = "fn/json-doc";
-        if (testSetFileName.contains(jsonDocName))
-            prepareJsonDocEnvironment(testSetDocNode);
+        prepareEnvironment(testSetDocNode, testSetFileName.split("/")[0]);
 
         for (XdmNode testCase : testSetDocNode.select(Steps.descendant("test-case")).asList()) {
             this.processTestCase(testCase, xpc);
@@ -107,7 +106,7 @@ public class TestDriver {
     /**
      * method that prepares the mapping of URIs to local files for testcases with json-doc
      */
-    private void prepareJsonDocEnvironment(XdmNode testSetDocNode) {
+    private void prepareEnvironment(XdmNode testSetDocNode, String bigTestSet) {
         // For some reason we have to access the first one, and then we will see the environments
         List<XdmNode> environments = testSetDocNode.children()
             .iterator()
@@ -117,7 +116,9 @@ public class TestDriver {
         for (XdmNode environment : environments) {
             List<XdmNode> resources = environment.select(Steps.descendant("resource")).asList();
             for (XdmNode resource : resources) {
-                String file = resource.attribute("file");
+                String file = testsRepositoryDirectoryPath.resolve(bigTestSet)
+                    .resolve(resource.attribute("file"))
+                    .toString();
                 String uri = resource.attribute("uri");
                 URItoPathLookupTable.put(uri, file);
             }
@@ -173,17 +174,10 @@ public class TestDriver {
 
         String finalTestString = testString.toString();
 
-        // converts json-doc testcases from URI to local path
-        // TODO possibly do this also for other testcases with URI paths?
-        if (currentTestCase.startsWith("json-doc")) {
-            Pattern pattern = Pattern.compile("(([\"'])http://www.w3.org/qt3/json/.*json([\"']))");
-            Matcher matcher = pattern.matcher(finalTestString);
-            if (matcher.find()) {
-                String uri = matcher.group(0);
-                String jsonDocFilename = URItoPathLookupTable.get(uri.substring(1, uri.length() - 1));
-                String fullAbsoluteJsonDocPath = testsRepositoryDirectoryPath.resolve("fn/" + jsonDocFilename)
-                    .toString();
-                finalTestString = finalTestString.replace(uri, "\"file:" + fullAbsoluteJsonDocPath + "\"");
+        // converts testcases from URI to local path
+        for (Map.Entry<String, String> fileLookup : URItoPathLookupTable.entrySet()) {
+            if (finalTestString.contains(fileLookup.getKey())) {
+                finalTestString = finalTestString.replace(fileLookup.getKey(), fileLookup.getValue());
             }
         }
 
