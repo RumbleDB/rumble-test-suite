@@ -96,7 +96,7 @@ public class TestDriver {
         File testSetFile = new File(testsRepositoryDirectoryPath.resolve(testSetFileName).toString());
         XdmNode testSetDocNode = catalogBuilder.build(testSetFile);
 
-        prepareEnvironment(testSetDocNode, testSetFileName.split("/")[0]);
+        prepareURIMapping(testSetDocNode, testSetFileName.split("/")[0]);
 
         for (XdmNode testCase : testSetDocNode.select(Steps.descendant("test-case")).asList()) {
             this.processTestCase(testCase, xpc);
@@ -104,13 +104,12 @@ public class TestDriver {
     }
 
     /**
-     * method that prepares the mapping of URIs to local files for testcases with json-doc
+     * method that prepares the mapping of URIs to local files for testcases
      */
-    private void prepareEnvironment(XdmNode testSetDocNode, String bigTestSet) {
-        // For some reason we have to access the first one, and then we will see the environments
-        List<XdmNode> environments = testSetDocNode.children()
-            .iterator()
-            .next()
+    private void prepareURIMapping(XdmNode testSetDocNode, String bigTestSet) {
+        // TODO right now this just creates one big mapping for all tests in set. It should be a mapping per environment
+        List<XdmNode> environments = testSetDocNode.select(Steps.child("test-set"))
+            .asNode()
             .select(Steps.child("environment"))
             .asList();
         for (XdmNode environment : environments) {
@@ -146,27 +145,24 @@ public class TestDriver {
         XdmNode testNode = testCase.select(Steps.child("test")).asNode();
         StringBuilder testString = new StringBuilder();
 
-        // setup environments
-        // TODO check this
+        // TODO: this is very incomplete. We only look for <param> and handle those, but the rest of the env is ignored
+        // for now
         List<XdmNode> environments = testCase.select(Steps.child("environment")).asList();
         if (environments != null && !environments.isEmpty()) {
             XdmNode environment = environments.get(0);
             Iterator<XdmNode> externalVariables = environment.children("param").iterator();
-            if (externalVariables.hasNext()) {
-                while (externalVariables.hasNext()) {
-                    XdmNode param = externalVariables.next();
-                    String name = param.attribute("name");
-                    String source = param.attribute("source");
-
-                    if (source == null) {
-                        String select = param.attribute("select");
-                        testString.append("let $").append(name).append(" := ").append(select).append(" ");
-                    } else {
-                        // TODO Check what source is for to handle in else
-                    }
+            boolean modified = false;
+            while (externalVariables.hasNext()) {
+                XdmNode param = externalVariables.next();
+                String name = param.attribute("name");
+                String select = param.attribute("select");
+                if (name != null && select != null) {
+                    testString.append("let $").append(name).append(" := ").append(select).append(" ");
+                    modified = true;
                 }
-                testString.append("return ");
             }
+            if (modified)
+                testString.append("return ");
         }
 
         testString.append(testNode.getStringValue());
