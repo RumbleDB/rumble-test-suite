@@ -1,6 +1,4 @@
 image: maven:3.9.9-eclipse-temurin-11
-variables:
-  TESTED_BRANCH: mschoeb-tests-bugfixing
 
 workflow:
   name: 'testing ${TESTED_BRANCH}'
