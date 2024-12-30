@@ -43,9 +43,9 @@ public class Converter {
         // Will cover all the subclasses - item()+, item()* and item()+. item(anything here) does not exist
         Map.entry("item()", "item"),
 
-        // These are not types but instantiations of boolean handled differently
-        Map.entry("true()", "true"),
-        Map.entry("false()", "false"),
+        // We need fn to specify we want the function
+        Map.entry("true()", "fn:true()"),
+        Map.entry("false()", "fn:false()"),
 
         Map.entry("map(*)", "object"),
         Map.entry("map{", "{"),
