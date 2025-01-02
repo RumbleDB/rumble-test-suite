@@ -300,6 +300,12 @@ public class TestDriver {
                     if (!(value.contains("XQ") || value.contains("XP"))) {
                         return (testCaseName + dependencyNode);
                     }
+
+                    // We can think about adding this because some tests have two versions and we generally only try to
+                    // support 3.1. But it removes a lot of tests so for now I think its overkill
+                    // if (value.equals("XQ10+")) {
+                    // return (testCaseName + dependencyNode);
+                    // }
                     break;
                 }
                 case "limit": {

@@ -20,7 +20,11 @@ public class Constants {
     );
 
     public static final List<String> skippedTestCases = List.of(
-        "fn-distinct-values-2" // does not terminate
+        "fn-distinct-values-2", // does not terminate
+        "cbcl-anyURI-004", // XQ10 version of a testcase that also has newer b version
+        "cbcl-anyURI-006", // XQ10 version of a testcase that also has newer b version
+        "cbcl-anyURI-009", // XQ10 version of a testcase that also has newer b version
+        "cbcl-anyURI-012" // XQ10 version of a testcase that also has newer b version
     );
 
     // Error codes that we assume indicate a skip reason. When such a exception is thrown we mark the testcase as
