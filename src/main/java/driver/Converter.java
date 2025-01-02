@@ -33,9 +33,7 @@ public class Converter {
     }
 
     public static final Map<String, String> typeConversions = Map.ofEntries(
-        // non-atomic types
         Map.entry("xs:atomic", "atomic"),
-        Map.entry("xs:numeric", "numeric"),
 
         // Also array(+), array(?), array()*, array()+, array()? do not exist
         Map.entry("array(*)", "array"),
