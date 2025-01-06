@@ -32,7 +32,8 @@ public class Constants {
     public static final List<String> skipErrorCodes = List.of(
         "XPST0017", // method or type not implemented
         "XPST0051", // type not implemented
-        "XPST0003" // parser failed, assuming that feature is not implemented
+        "XPST0003", // parser failed, assuming that feature is not implemented
+        "FOCH0002" // unsupported collation parameter, rumble doesnt support additional collations
     );
 
     public static final List<String> supportedErrorCodes = List.of(

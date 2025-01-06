@@ -67,7 +67,7 @@ public class TestBase {
             }
         } catch (RumbleException e) {
             if (Constants.skipErrorCodes.contains(e.getErrorCode())) {
-                System.out.println("[[category|SKIP");
+                System.out.println("[[category|SKIP]]");
                 assumeTrue(e.toString(), false);
             } else {
                 System.out.println("[[category|ERROR]]");
