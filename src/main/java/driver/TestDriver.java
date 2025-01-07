@@ -17,8 +17,11 @@ public class TestDriver {
     private String currentTestSet;
     private final List<Object[]> allTests = new ArrayList<>();
 
-    private final Map<String, Environment> setEnvLookup = new HashMap<>();
-    private final Map<String, Environment> catalogEnvLookup = new HashMap<>();
+    // environments in current testset
+    private final Map<String, Environment> testSetEnvironments = new HashMap<>();
+
+    // environments defined in catalog
+    private final Map<String, Environment> catalogEnvironments = new HashMap<>();
 
     /**
      * method that collects all the testcases into a local variable allowing getAllTests() to be called later
@@ -76,14 +79,12 @@ public class TestDriver {
         xpc.setCaching(true);
         xpc.declareNamespace("", "http://www.w3.org/2010/09/qt-fots-catalog");
 
-        // BEGIN ENV
         List<XdmNode> environments = catalogNode.select(Steps.descendant("environment")).asList();
         for (XdmNode environment : environments) {
             String envName = environment.attribute("name");
             Environment env = new Environment(environment);
-            catalogEnvLookup.put(envName, env);
+            catalogEnvironments.put(envName, env);
         }
-        // END ENV
 
         // testsets are defined with regex, allowing for example the split of fn into two
         // most are just substring matching
@@ -115,7 +116,7 @@ public class TestDriver {
      * method that prepares the mapping of URIs to local files for testcases
      */
     private void prepareURIMapping(XdmNode testSetDocNode, String bigTestSet) {
-        setEnvLookup.clear();
+        testSetEnvironments.clear();
         List<XdmNode> environments = testSetDocNode.select(Steps.child("test-set"))
             .asNode()
             .select(Steps.child("environment"))
@@ -123,21 +124,10 @@ public class TestDriver {
         for (XdmNode environment : environments) {
             Environment env = new Environment(environment, testsRepositoryDirectoryPath, bigTestSet);
             String envName = environment.attribute("name");
-            setEnvLookup.put(envName, env);
+            testSetEnvironments.put(envName, env);
         }
 
 
-    }
-
-    private Environment getEnv(String name) {
-        if (catalogEnvLookup.containsKey(name)) {
-            return catalogEnvLookup.get(name);
-        }
-        if (setEnvLookup.containsKey(name)) {
-            return setEnvLookup.get(name);
-        }
-        System.out.println("NO ENV FOUND WITH NAME: " + name);
-        return null;
     }
 
     private void processTestCase(XdmNode testCase, XPathCompiler xpc) throws SaxonApiException {
@@ -165,7 +155,14 @@ public class TestDriver {
         if (environments != null && !environments.isEmpty()) {
             if (environments.get(0).attribute("ref") != null) {
                 // predefined environment from testset or catalog
-                environment = getEnv(environments.get(0).attribute("ref"));
+                String envName = environments.get(0).attribute("ref");
+                if (catalogEnvironments.containsKey(envName)) {
+                    environment = catalogEnvironments.get(envName);
+                } else if (testSetEnvironments.containsKey(envName)) {
+                    environment = testSetEnvironments.get(envName);
+                } else {
+                    throw new RuntimeException("No environment found with name: " + envName);
+                }
             } else {
                 // environment defined in testcase
                 environment = new Environment(environments.get(0));

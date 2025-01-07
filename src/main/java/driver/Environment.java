@@ -10,7 +10,6 @@ import java.nio.file.Path;
 
 public class Environment {
     private final Map<String, String> resourceLookup = new HashMap<>();
-    private final Map<String, String> sourceLookup = new HashMap<>();
     private final Map<String, String> paramLookup = new HashMap<>();
 
     public Environment(XdmNode environmentNode) {
@@ -27,6 +26,8 @@ public class Environment {
         for (XdmNode param : environmentNode.children("param")) {
             String name = param.attribute("name");
             String select = param.attribute("select");
+            String type = param.attribute("as"); // TODO: implement if needed
+            String declared = param.attribute("declared"); // TODO: implement if needed
             paramLookup.put(name, select);
         }
     }
