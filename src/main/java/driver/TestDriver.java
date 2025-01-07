@@ -17,8 +17,8 @@ public class TestDriver {
     private String currentTestSet;
     private final List<Object[]> allTests = new ArrayList<>();
 
-    // For JSON-doc
-    private final Map<String, String> URItoPathLookupTable = new HashMap<>();
+    private final Map<String, Environment> setEnvLookup = new HashMap<>();
+    private final Map<String, Environment> catalogEnvLookup = new HashMap<>();
 
     /**
      * method that collects all the testcases into a local variable allowing getAllTests() to be called later
@@ -76,6 +76,15 @@ public class TestDriver {
         xpc.setCaching(true);
         xpc.declareNamespace("", "http://www.w3.org/2010/09/qt-fots-catalog");
 
+        // BEGIN ENV
+        List<XdmNode> environments = catalogNode.select(Steps.descendant("environment")).asList();
+        for (XdmNode environment : environments) {
+            String envName = environment.attribute("name");
+            Environment env = new Environment();
+            catalogEnvLookup.put(envName, env);
+        }
+        // END ENV
+
         // testsets are defined with regex, allowing for example the split of fn into two
         // most are just substring matching
         Pattern pattern = Pattern.compile("^" + testFolder);
@@ -89,7 +98,7 @@ public class TestDriver {
 
     private void processTestSet(DocumentBuilder catalogBuilder, XPathCompiler xpc, XdmNode testSetNode)
             throws SaxonApiException {
-        URItoPathLookupTable.clear();
+        setEnvLookup.clear();
 
         String testSetFileName = testSetNode.attribute("file");
         this.currentTestSet = testSetFileName;
@@ -113,17 +122,32 @@ public class TestDriver {
             .select(Steps.child("environment"))
             .asList();
         for (XdmNode environment : environments) {
+            String envName = environment.attribute("name");
+            Environment env = new Environment();
             List<XdmNode> resources = environment.select(Steps.descendant("resource")).asList();
             for (XdmNode resource : resources) {
                 String file = testsRepositoryDirectoryPath.resolve(bigTestSet)
                     .resolve(resource.attribute("file"))
                     .toString();
                 String uri = resource.attribute("uri");
-                URItoPathLookupTable.put(uri, file);
+                env.putResource(uri, file);
             }
+            setEnvLookup.put(envName, env);
         }
+
+
     }
 
+    private Environment getEnv(String name) {
+        if (catalogEnvLookup.containsKey(name)) {
+            return catalogEnvLookup.get(name);
+        }
+        if (setEnvLookup.containsKey(name)) {
+            return setEnvLookup.get(name);
+        }
+        System.out.println("NO ENV FOUND WITH NAME: " + name);
+        return null;
+    }
 
     private void processTestCase(XdmNode testCase, XPathCompiler xpc) throws SaxonApiException {
         String currentTestCase = testCase.attribute("name");
@@ -170,11 +194,18 @@ public class TestDriver {
 
         String finalTestString = testString.toString();
 
-        // converts testcases from URI to local path
-        for (Map.Entry<String, String> fileLookup : URItoPathLookupTable.entrySet()) {
-            if (finalTestString.contains(fileLookup.getKey())) {
-                finalTestString = finalTestString.replace(fileLookup.getKey(), fileLookup.getValue());
+        if (environments != null && !environments.isEmpty()) {
+            String envName = environments.get(0).attribute("ref");
+            // converts testcases from URI to local path
+            if (envName != null) {
+                Environment env = getEnv(envName);
+                for (Map.Entry<String, String> fileLookup : env.getResources().entrySet()) {
+                    if (finalTestString.contains(fileLookup.getKey())) {
+                        finalTestString = finalTestString.replace(fileLookup.getKey(), fileLookup.getValue());
+                    }
+                }
             }
+
         }
 
         // check for dependencies and stop if we dont support it
