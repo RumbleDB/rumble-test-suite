@@ -49,7 +49,9 @@ public class TestBase {
                 new RumbleRuntimeConfiguration(
                         new String[] {
                             "--output-format",
-                            "json"
+                            "json",
+                            "--materialization-cap",
+                            "1000000000"
                         }
                 )
         );
