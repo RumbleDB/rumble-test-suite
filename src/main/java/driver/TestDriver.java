@@ -80,7 +80,7 @@ public class TestDriver {
         List<XdmNode> environments = catalogNode.select(Steps.descendant("environment")).asList();
         for (XdmNode environment : environments) {
             String envName = environment.attribute("name");
-            Environment env = new Environment();
+            Environment env = new Environment(environment);
             catalogEnvLookup.put(envName, env);
         }
         // END ENV
@@ -98,7 +98,6 @@ public class TestDriver {
 
     private void processTestSet(DocumentBuilder catalogBuilder, XPathCompiler xpc, XdmNode testSetNode)
             throws SaxonApiException {
-        setEnvLookup.clear();
 
         String testSetFileName = testSetNode.attribute("file");
         this.currentTestSet = testSetFileName;
@@ -116,22 +115,14 @@ public class TestDriver {
      * method that prepares the mapping of URIs to local files for testcases
      */
     private void prepareURIMapping(XdmNode testSetDocNode, String bigTestSet) {
-        // TODO right now this just creates one big mapping for all tests in set. It should be a mapping per environment
+        setEnvLookup.clear();
         List<XdmNode> environments = testSetDocNode.select(Steps.child("test-set"))
             .asNode()
             .select(Steps.child("environment"))
             .asList();
         for (XdmNode environment : environments) {
+            Environment env = new Environment(environment, testsRepositoryDirectoryPath, bigTestSet);
             String envName = environment.attribute("name");
-            Environment env = new Environment();
-            List<XdmNode> resources = environment.select(Steps.descendant("resource")).asList();
-            for (XdmNode resource : resources) {
-                String file = testsRepositoryDirectoryPath.resolve(bigTestSet)
-                    .resolve(resource.attribute("file"))
-                    .toString();
-                String uri = resource.attribute("uri");
-                env.putResource(uri, file);
-            }
             setEnvLookup.put(envName, env);
         }
 
@@ -169,43 +160,39 @@ public class TestDriver {
         XdmNode testNode = testCase.select(Steps.child("test")).asNode();
         StringBuilder testString = new StringBuilder();
 
-        // TODO: this is very incomplete. We only look for <param> and handle those, but the rest of the env is ignored
-        // for now
+        Environment environment = null;
         List<XdmNode> environments = testCase.select(Steps.child("environment")).asList();
         if (environments != null && !environments.isEmpty()) {
-            XdmNode environment = environments.get(0);
-            Iterator<XdmNode> externalVariables = environment.children("param").iterator();
-            boolean modified = false;
-            while (externalVariables.hasNext()) {
-                XdmNode param = externalVariables.next();
-                String name = param.attribute("name");
-                String select = param.attribute("select");
-                if (name != null && select != null) {
-                    testString.append("let $").append(name).append(" := ").append(select).append(" ");
-                    modified = true;
-                }
+            if (environments.get(0).attribute("ref") != null) {
+                // predefined environment from testset or catalog
+                environment = getEnv(environments.get(0).attribute("ref"));
+            } else {
+                // environment defined in testcase
+                environment = new Environment(environments.get(0));
             }
-            if (modified)
+        }
+
+        if (environment != null) {
+            for (Map.Entry<String, String> param : environment.getParams().entrySet()) {
+                String name = param.getKey();
+                String select = param.getValue();
+                testString.append("let $").append(name).append(" := ").append(select).append(" ");
+            }
+            if (!environment.getParams().isEmpty()) {
                 testString.append("return ");
+            }
         }
 
         testString.append(testNode.getStringValue());
         XdmNode assertion = (XdmNode) xpc.evaluateSingle("result/*[1]", testCase);
 
         String finalTestString = testString.toString();
-
-        if (environments != null && !environments.isEmpty()) {
-            String envName = environments.get(0).attribute("ref");
-            // converts testcases from URI to local path
-            if (envName != null) {
-                Environment env = getEnv(envName);
-                for (Map.Entry<String, String> fileLookup : env.getResources().entrySet()) {
-                    if (finalTestString.contains(fileLookup.getKey())) {
-                        finalTestString = finalTestString.replace(fileLookup.getKey(), fileLookup.getValue());
-                    }
+        if (environment != null) {
+            for (Map.Entry<String, String> fileLookup : environment.getResources().entrySet()) {
+                if (finalTestString.contains(fileLookup.getKey())) {
+                    finalTestString = finalTestString.replace(fileLookup.getKey(), fileLookup.getValue());
                 }
             }
-
         }
 
         // check for dependencies and stop if we dont support it
