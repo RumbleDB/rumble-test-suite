@@ -8,6 +8,7 @@ workflow:
 stages:
   - build
   - test
+  - collect
 
 build-job:
   stage: build
@@ -185,7 +186,7 @@ spotless-check:
     - mvn spotless:check
 
 collect-artifacts:
-  stage: test
+  stage: collect
   dependencies:
     - test-app
     - test-array
