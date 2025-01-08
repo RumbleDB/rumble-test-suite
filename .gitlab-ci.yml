@@ -203,8 +203,7 @@ collect-artifacts:
   script:
     - mkdir -p collected-artifacts
     - cp -r target/surefire-reports collected-artifacts/
-    - zip -r collected-artifacts.zip collected-artifacts
   artifacts:
     when: always
     paths:
-      - collected-artifacts.zip
+      - collected-artifacts
