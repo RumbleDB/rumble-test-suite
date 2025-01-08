@@ -8,6 +8,7 @@ workflow:
 stages:
   - build
   - test
+  - collect
 
 build-job:
   stage: build
@@ -183,3 +184,26 @@ spotless-check:
     - build-job
   script:
     - mvn spotless:check
+
+collect-artifacts:
+  stage: collect
+  dependencies:
+    - test-app
+    - test-array
+    - test-fn1
+    - test-fn2
+    - test-map
+    - test-math
+    - test-misc
+    - test-op
+    - test-prod1
+    - test-prod2
+    - test-ser
+    - test-xs
+  script:
+    - mkdir -p collected-artifacts
+    - cp -r target/surefire-reports collected-artifacts/
+  artifacts:
+    when: always
+    paths:
+      - collected-artifacts

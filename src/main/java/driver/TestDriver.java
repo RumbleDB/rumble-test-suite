@@ -17,8 +17,11 @@ public class TestDriver {
     private String currentTestSet;
     private final List<Object[]> allTests = new ArrayList<>();
 
-    // For JSON-doc
-    private final Map<String, String> URItoPathLookupTable = new HashMap<>();
+    // environments in current testset
+    private final Map<String, Environment> testSetEnvironments = new HashMap<>();
+
+    // environments defined in catalog
+    private final Map<String, Environment> catalogEnvironments = new HashMap<>();
 
     /**
      * method that collects all the testcases into a local variable allowing getAllTests() to be called later
@@ -76,6 +79,13 @@ public class TestDriver {
         xpc.setCaching(true);
         xpc.declareNamespace("", "http://www.w3.org/2010/09/qt-fots-catalog");
 
+        List<XdmNode> environments = catalogNode.select(Steps.descendant("environment")).asList();
+        for (XdmNode environment : environments) {
+            String envName = environment.attribute("name");
+            Environment env = new Environment(environment);
+            catalogEnvironments.put(envName, env);
+        }
+
         // testsets are defined with regex, allowing for example the split of fn into two
         // most are just substring matching
         Pattern pattern = Pattern.compile("^" + testFolder);
@@ -89,7 +99,6 @@ public class TestDriver {
 
     private void processTestSet(DocumentBuilder catalogBuilder, XPathCompiler xpc, XdmNode testSetNode)
             throws SaxonApiException {
-        URItoPathLookupTable.clear();
 
         String testSetFileName = testSetNode.attribute("file");
         this.currentTestSet = testSetFileName;
@@ -107,23 +116,19 @@ public class TestDriver {
      * method that prepares the mapping of URIs to local files for testcases
      */
     private void prepareURIMapping(XdmNode testSetDocNode, String bigTestSet) {
-        // TODO right now this just creates one big mapping for all tests in set. It should be a mapping per environment
+        testSetEnvironments.clear();
         List<XdmNode> environments = testSetDocNode.select(Steps.child("test-set"))
             .asNode()
             .select(Steps.child("environment"))
             .asList();
         for (XdmNode environment : environments) {
-            List<XdmNode> resources = environment.select(Steps.descendant("resource")).asList();
-            for (XdmNode resource : resources) {
-                String file = testsRepositoryDirectoryPath.resolve(bigTestSet)
-                    .resolve(resource.attribute("file"))
-                    .toString();
-                String uri = resource.attribute("uri");
-                URItoPathLookupTable.put(uri, file);
-            }
+            Environment env = new Environment(environment, testsRepositoryDirectoryPath, bigTestSet);
+            String envName = environment.attribute("name");
+            testSetEnvironments.put(envName, env);
         }
-    }
 
+
+    }
 
     private void processTestCase(XdmNode testCase, XPathCompiler xpc) throws SaxonApiException {
         String currentTestCase = testCase.attribute("name");
@@ -145,35 +150,45 @@ public class TestDriver {
         XdmNode testNode = testCase.select(Steps.child("test")).asNode();
         StringBuilder testString = new StringBuilder();
 
-        // TODO: this is very incomplete. We only look for <param> and handle those, but the rest of the env is ignored
-        // for now
+        Environment environment = null;
         List<XdmNode> environments = testCase.select(Steps.child("environment")).asList();
         if (environments != null && !environments.isEmpty()) {
-            XdmNode environment = environments.get(0);
-            Iterator<XdmNode> externalVariables = environment.children("param").iterator();
-            boolean modified = false;
-            while (externalVariables.hasNext()) {
-                XdmNode param = externalVariables.next();
-                String name = param.attribute("name");
-                String select = param.attribute("select");
-                if (name != null && select != null) {
-                    testString.append("let $").append(name).append(" := ").append(select).append(" ");
-                    modified = true;
+            if (environments.get(0).attribute("ref") != null) {
+                // predefined environment from testset or catalog
+                String envName = environments.get(0).attribute("ref");
+                if (catalogEnvironments.containsKey(envName)) {
+                    environment = catalogEnvironments.get(envName);
+                } else if (testSetEnvironments.containsKey(envName)) {
+                    environment = testSetEnvironments.get(envName);
+                } else {
+                    throw new RuntimeException("No environment found with name: " + envName);
                 }
+            } else {
+                // environment defined in testcase
+                environment = new Environment(environments.get(0));
             }
-            if (modified)
+        }
+
+        if (environment != null) {
+            for (Map.Entry<String, String> param : environment.getParams().entrySet()) {
+                String name = param.getKey();
+                String select = param.getValue();
+                testString.append("let $").append(name).append(" := ").append(select).append(" ");
+            }
+            if (!environment.getParams().isEmpty()) {
                 testString.append("return ");
+            }
         }
 
         testString.append(testNode.getStringValue());
         XdmNode assertion = (XdmNode) xpc.evaluateSingle("result/*[1]", testCase);
 
         String finalTestString = testString.toString();
-
-        // converts testcases from URI to local path
-        for (Map.Entry<String, String> fileLookup : URItoPathLookupTable.entrySet()) {
-            if (finalTestString.contains(fileLookup.getKey())) {
-                finalTestString = finalTestString.replace(fileLookup.getKey(), fileLookup.getValue());
+        if (environment != null) {
+            for (Map.Entry<String, String> fileLookup : environment.getResources().entrySet()) {
+                if (finalTestString.contains(fileLookup.getKey())) {
+                    finalTestString = finalTestString.replace(fileLookup.getKey(), fileLookup.getValue());
+                }
             }
         }
 
