@@ -2,6 +2,7 @@ package iq.base;
 
 import driver.*;
 import net.sf.saxon.s9api.XdmNode;
+import org.junit.AssumptionViolatedException;
 import org.rumbledb.api.Item;
 import org.rumbledb.api.Rumble;
 import org.rumbledb.api.SequenceOfItems;
@@ -179,7 +180,11 @@ public class TestBase {
                         } else {
                             errors.add(e);
                         }
+                    } catch (AssumptionViolatedException e) {
+                        // specific assertion has skip reason, we want to pass that on and skip the whole test
+                        throw e;
                     } catch (AssertionError | Exception e) {
+                        // specific assertion has failed
                         errors.add(e);
                     }
                 }

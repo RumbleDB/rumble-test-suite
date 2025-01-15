@@ -38,6 +38,7 @@ public class Constants {
 
     public static final List<String> supportedErrorCodes = List.of(
         "FOAR0001",
+        "FOAR0002",
         "FOCA0002",
         "FOCA0005",
         "FOCH0001",
@@ -106,6 +107,7 @@ public class Constants {
         "XQST0094",
         "FOTY0012",
         "FOTY0015",
+        "FODT0001",
         "FODT0002",
         "FODT0003",
         "XUST0001",
