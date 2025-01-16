@@ -28,7 +28,11 @@ test-app:
   dependencies:
     - build-job
   script:
-    - mvn -Dtest=AppTest test -quiet || true
+    - if [ "$TESTED_PARSER" = "jsoniq" ]; then
+      mvn -Dtest=AppTest test -quiet || true;
+      else
+      mvn -Dtest=XQueryAppTest test -quiet || true;
+      fi
   artifacts:
     when: always
     paths:
@@ -41,7 +45,11 @@ test-array:
   dependencies:
     - build-job
   script:
-    - mvn -Dtest=ArrayTest test -quiet || true
+    - if [ "$TESTED_PARSER" = "jsoniq" ]; then
+          mvn -Dtest=ArrayTest test -quiet || true;
+      else
+          mvn -Dtest=XQueryArrayTest test -quiet || true;
+      fi
   artifacts:
     when: always
     paths:
@@ -54,7 +62,11 @@ test-fn1:
   dependencies:
     - build-job
   script:
-    - mvn -Dtest=Fn1Test test -quiet || true
+    - if [ "$TESTED_PARSER" = "jsoniq" ]; then
+          mvn -Dtest=Fn1Test test -quiet || true;
+      else
+          mvn -Dtest=XQueryFn1Test test -quiet || true;
+      fi
   artifacts:
     when: always
     paths:
@@ -67,7 +79,11 @@ test-fn2:
   dependencies:
     - build-job
   script:
-    - mvn -Dtest=Fn2Test test -quiet || true
+    - if [ "$TESTED_PARSER" = "jsoniq" ]; then
+          mvn -Dtest=Fn2Test test -quiet || true;
+      else
+          mvn -Dtest=XQueryFn2Test test -quiet || true;
+      fi
   artifacts:
     when: always
     paths:
@@ -80,7 +96,11 @@ test-map:
   dependencies:
     - build-job
   script:
-    - mvn -Dtest=MapTest test -quiet || true
+    - if [ "$TESTED_PARSER" = "jsoniq" ]; then
+          mvn -Dtest=MapTest test -quiet || true;
+      else
+          mvn -Dtest=XQueryMapTest test -quiet || true;
+      fi
   artifacts:
     when: always
     paths:
@@ -105,25 +125,16 @@ test-math:
     reports:
       junit: target/surefire-reports/*.xml
 
-test-xquery-math:
-  stage: test
-  dependencies:
-    - build-job
-  script:
-    - mvn -Dtest=XQueryMathTest test -quiet || true
-  artifacts:
-    when: always
-    paths:
-      - target/surefire-reports
-    reports:
-      junit: target/surefire-reports/*.xml
-
 test-misc:
   stage: test
   dependencies:
     - build-job
   script:
-    - mvn -Dtest=MiscTest test -quiet || true
+    - if [ "$TESTED_PARSER" = "jsoniq" ]; then
+          mvn -Dtest=MiscTest test -quiet || true;
+      else
+          mvn -Dtest=XQueryMiscTest test -quiet || true;
+      fi
   artifacts:
     when: always
     paths:
@@ -136,20 +147,11 @@ test-op:
   dependencies:
     - build-job
   script:
-    - mvn -Dtest=OpTest test -quiet || true
-  artifacts:
-    when: always
-    paths:
-      - target/surefire-reports
-    reports:
-      junit: target/surefire-reports/*.xml
-
-test-xquery-op:
-  stage: test
-  dependencies:
-    - build-job
-  script:
-    - mvn -Dtest=XQueryOpTest test -quiet || true
+    - if [ "$TESTED_PARSER" = "jsoniq" ]; then
+          mvn -Dtest=OpTest test -quiet || true;
+      else
+          mvn -Dtest=XQueryOpTest test -quiet || true;
+      fi
   artifacts:
     when: always
     paths:
@@ -162,7 +164,11 @@ test-prod1:
   dependencies:
     - build-job
   script:
-    - mvn -Dtest=Prod1Test test -quiet || true
+    - if [ "$TESTED_PARSER" = "jsoniq" ]; then
+      mvn -Dtest=Prod1Test test -quiet || true;
+      else
+      mvn -Dtest=XQueryProd1Test test -quiet || true;
+      fi
   artifacts:
     when: always
     paths:
@@ -175,7 +181,11 @@ test-prod2:
   dependencies:
     - build-job
   script:
-    - mvn -Dtest=Prod2Test test -quiet || true
+    - if [ "$TESTED_PARSER" = "jsoniq" ]; then
+          mvn -Dtest=Prod2Test test -quiet || true;
+      else
+          mvn -Dtest=XQueryProd2Test test -quiet || true;
+      fi
   artifacts:
     when: always
     paths:
@@ -188,7 +198,11 @@ test-ser:
   dependencies:
     - build-job
   script:
-    - mvn -Dtest=SerTest test -quiet || true
+    - if [ "$TESTED_PARSER" = "jsoniq" ]; then
+          mvn -Dtest=SerTest test -quiet || true;
+      else
+          mvn -Dtest=XQuerySerTest test -quiet || true;
+      fi
   artifacts:
     when: always
     paths:
@@ -201,20 +215,11 @@ test-xs:
   dependencies:
     - build-job
   script:
-    - mvn -Dtest=XsTest test -quiet || true
-  artifacts:
-    when: always
-    paths:
-      - target/surefire-reports
-    reports:
-      junit: target/surefire-reports/*.xml
-
-test-xquery-xs:
-  stage: test
-  dependencies:
-    - build-job
-  script:
-    - mvn -Dtest=XQueryXsTest test -quiet || true
+    - if [ "$TESTED_PARSER" = "jsoniq" ]; then
+          mvn -Dtest=XsTest test -quiet || true;
+      else
+          mvn -Dtest=XQueryXsTest test -quiet || true;
+      fi
   artifacts:
     when: always
     paths:
