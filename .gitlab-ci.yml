@@ -1,6 +1,7 @@
 image: maven:3.9.9-eclipse-temurin-11
 variables:
   TESTED_BRANCH: master
+  TESTED_PARSER: jsoniq
 
 workflow:
   name: 'testing ${TESTED_BRANCH}'
@@ -92,7 +93,11 @@ test-math:
   dependencies:
     - build-job
   script:
-    - mvn -Dtest=MathTest test -quiet || true
+    - if [ "$TESTED_PARSER" = "jsoniq" ]; then
+          mvn -Dtest=MathTest test -quiet || true;
+      else
+          mvn -Dtest=XQueryMathTest test -quiet || true;
+      fi
   artifacts:
     when: always
     paths:

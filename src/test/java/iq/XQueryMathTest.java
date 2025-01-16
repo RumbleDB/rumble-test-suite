@@ -9,7 +9,7 @@ import org.junit.runners.Parameterized;
 @RunWith(Parameterized.class)
 public class XQueryMathTest extends TestBase {
     public XQueryMathTest(TestCase testCase, String testSetName, String testCaseName) {
-        super(testCase, testSetName, testCaseName, false);
+        super(testCase, testSetName, testCaseName, true);
     }
 
     @Parameterized.Parameters(name = "[{1}] {2}")
