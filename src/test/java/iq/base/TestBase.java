@@ -69,7 +69,7 @@ public class TestBase {
                 System.out.println("VERYBAD");
             }
         } catch (RumbleException e) {
-            if (Constants.skipErrorCodes.contains(e.getErrorCode())) {
+            if (Constants.skipReasonErrorCodes.contains(e.getErrorCode())) {
                 System.out.println("[[category|SKIP]]");
                 assumeTrue(e.toString(), false);
             } else {
@@ -174,7 +174,7 @@ public class TestBase {
                         checkAssertion(convertedTestString, individualAssertion, subRumble);
                         success = true;
                     } catch (RumbleException e) {
-                        if (Constants.skipErrorCodes.contains(e.getErrorCode())) {
+                        if (Constants.skipReasonErrorCodes.contains(e.getErrorCode())) {
                             // we want these to be caught outside so we skip the testcase
                             throw e;
                         } else {
@@ -214,7 +214,7 @@ public class TestBase {
                         System.out.println("[[category|SKIP]]");
                         assumeTrue("unsupported errorcode: " + re.getErrorCode(), false);
                     }
-                    if (Constants.skipErrorCodes.contains(re.getErrorCode())) {
+                    if (Constants.skipReasonErrorCodes.contains(re.getErrorCode())) {
                         // we want these to be caught outside so we skip the testcase
                         throw re;
                     }

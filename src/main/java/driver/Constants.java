@@ -13,12 +13,18 @@ import java.util.List;
 public class Constants {
     public static final Path WORKING_DIRECTORY_PATH = Paths.get("").toAbsolutePath();
 
+    /**
+     * Testsets that we decide to skip fully
+     */
     public static final List<String> skippedTestSets = List.of(
         "fn/subsequence.xml", // contains large testcases that take forever to run
         "prod/WindowClause.xml" // we dont support window yet
 
     );
 
+    /**
+     * Individual testcases that we decide to skip
+     */
     public static final List<String> skippedTestCases = List.of(
         "fn-distinct-values-2", // does not terminate
         "cbcl-anyURI-004", // XQ10 version of a testcase that also has newer b version
@@ -27,15 +33,21 @@ public class Constants {
         "cbcl-anyURI-012" // XQ10 version of a testcase that also has newer b version
     );
 
-    // Error codes that we assume indicate a skip reason. When such a exception is thrown we mark the testcase as
-    // skipped
-    public static final List<String> skipErrorCodes = List.of(
+    /**
+     * Error codes that we assume indicate a skip reason. When such a exception is thrown we mark the testcase as
+     * skipped.
+     */
+    public static final List<String> skipReasonErrorCodes = List.of(
         "XPST0017", // method or type not implemented
         "XPST0051", // type not implemented
         "XPST0003", // parser failed, assuming that feature is not implemented
         "FOCH0002" // unsupported collation parameter, rumble doesnt support additional collations
     );
 
+    /**
+     * List of errorcodes that are implemented in Rumble. This needs to periodically be updated and can be removed in
+     * the future, when most are implemented.
+     */
     public static final List<String> supportedErrorCodes = List.of(
         "FOAR0001",
         "FOAR0002",

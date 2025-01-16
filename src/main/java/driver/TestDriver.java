@@ -105,7 +105,7 @@ public class TestDriver {
         File testSetFile = new File(testsRepositoryDirectoryPath.resolve(testSetFileName).toString());
         XdmNode testSetDocNode = catalogBuilder.build(testSetFile);
 
-        prepareURIMapping(testSetDocNode, testSetFileName.split("/")[0]);
+        prepareTestSetEnvironments(testSetDocNode, testSetFileName.split("/")[0]);
 
         for (XdmNode testCase : testSetDocNode.select(Steps.descendant("test-case")).asList()) {
             this.processTestCase(testCase, xpc);
@@ -113,9 +113,9 @@ public class TestDriver {
     }
 
     /**
-     * method that prepares the mapping of URIs to local files for testcases
+     * method that prepares the environments for the whole testset
      */
-    private void prepareURIMapping(XdmNode testSetDocNode, String bigTestSet) {
+    private void prepareTestSetEnvironments(XdmNode testSetDocNode, String bigTestSet) {
         testSetEnvironments.clear();
         List<XdmNode> environments = testSetDocNode.select(Steps.child("test-set"))
             .asNode()

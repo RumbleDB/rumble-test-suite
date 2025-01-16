@@ -4,7 +4,7 @@ import net.sf.saxon.s9api.XdmNode;
 
 /**
  * class that represents one testcase used to create a list of testcases in the driver that get evaluated in the
- * *Test.java classes
+ * ...Test.java classes
  */
 public class TestCase {
     public String testString;
