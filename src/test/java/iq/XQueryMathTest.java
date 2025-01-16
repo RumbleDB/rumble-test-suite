@@ -7,14 +7,14 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 @RunWith(Parameterized.class)
-public class XsTest extends TestBase {
-    public XsTest(TestCase testCase, String testSetName, String testCaseName) {
+public class XQueryMathTest extends TestBase {
+    public XQueryMathTest(TestCase testCase, String testSetName, String testCaseName) {
         super(testCase, testSetName, testCaseName, false);
     }
 
     @Parameterized.Parameters(name = "[{1}] {2}")
     public static Iterable<Object[]> data() throws Exception {
-        return getData("xs");
+        return getData("math");
     }
 
     @Test(timeout = 1000000)

@@ -100,6 +100,19 @@ test-math:
     reports:
       junit: target/surefire-reports/*.xml
 
+test-xquery-math:
+  stage: test
+  dependencies:
+    - build-job
+  script:
+    - mvn -Dtest=XQueryMathTest test -quiet || true
+  artifacts:
+    when: always
+    paths:
+      - target/surefire-reports
+    reports:
+      junit: target/surefire-reports/*.xml
+
 test-misc:
   stage: test
   dependencies:
@@ -119,6 +132,19 @@ test-op:
     - build-job
   script:
     - mvn -Dtest=OpTest test -quiet || true
+  artifacts:
+    when: always
+    paths:
+      - target/surefire-reports
+    reports:
+      junit: target/surefire-reports/*.xml
+
+test-xquery-op:
+  stage: test
+  dependencies:
+    - build-job
+  script:
+    - mvn -Dtest=XQueryOpTest test -quiet || true
   artifacts:
     when: always
     paths:
@@ -171,6 +197,19 @@ test-xs:
     - build-job
   script:
     - mvn -Dtest=XsTest test -quiet || true
+  artifacts:
+    when: always
+    paths:
+      - target/surefire-reports
+    reports:
+      junit: target/surefire-reports/*.xml
+
+test-xquery-xs:
+  stage: test
+  dependencies:
+    - build-job
+  script:
+    - mvn -Dtest=XQueryXsTest test -quiet || true
   artifacts:
     when: always
     paths:
