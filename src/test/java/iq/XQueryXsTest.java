@@ -7,9 +7,9 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 @RunWith(Parameterized.class)
-public class XsTest extends TestBase {
-    public XsTest(TestCase testCase, String testSetName, String testCaseName) {
-        super(testCase, testSetName, testCaseName, false);
+public class XQueryXsTest extends TestBase {
+    public XQueryXsTest(TestCase testCase, String testSetName, String testCaseName) {
+        super(testCase, testSetName, testCaseName, true);
     }
 
     @Parameterized.Parameters(name = "[{1}] {2}")

@@ -9,7 +9,7 @@ import org.junit.runners.Parameterized;
 @RunWith(Parameterized.class)
 public class MiscTest extends TestBase {
     public MiscTest(TestCase testCase, String testSetName, String testCaseName) {
-        super(testCase, testSetName, testCaseName);
+        super(testCase, testSetName, testCaseName, false);
     }
 
     @Parameterized.Parameters(name = "[{1}] {2}")

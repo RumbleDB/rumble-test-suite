@@ -20,11 +20,13 @@ public class TestBase {
     protected final TestCase testCase;
     protected final String testSetName;
     protected final String testCaseName;
+    private final boolean useXQueryParser;
 
-    public TestBase(TestCase testCase, String testSetName, String testCaseName) {
+    public TestBase(TestCase testCase, String testSetName, String testCaseName, boolean useXQueryParser) {
         this.testCase = testCase;
         this.testSetName = testSetName;
         this.testCaseName = testCaseName;
+        this.useXQueryParser = useXQueryParser;
     }
 
     public static Iterable<Object[]> getData(String testSuite) throws Exception {
@@ -43,7 +45,11 @@ public class TestBase {
         System.out.println("[[originalTest|" + testString + "]]");
 
         String convertedTestString;
-        convertedTestString = Converter.convert(testString);
+        if (!useXQueryParser) {
+            convertedTestString = Converter.convert(testString);
+        } else {
+            convertedTestString = testString;
+        }
 
         XdmNode assertion = this.testCase.assertion;
         Rumble rumble = new Rumble(
@@ -86,6 +92,11 @@ public class TestBase {
     }
 
     private List<Item> runQuery(String query, Rumble rumble) {
+        if (this.useXQueryParser) {
+            if (!query.startsWith("xquery version")) {
+                query = "xquery version \"3.1\"; " + query;
+            }
+        }
         System.out.println("[[query|" + query + "]]");
         SequenceOfItems queryResult = rumble.runQuery(query);
         List<Item> resultAsList = new ArrayList<>();

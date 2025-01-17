@@ -9,7 +9,7 @@ import org.junit.runners.Parameterized;
 @RunWith(Parameterized.class)
 public class Prod2Test extends TestBase {
     public Prod2Test(TestCase testCase, String testSetName, String testCaseName) {
-        super(testCase, testSetName, testCaseName);
+        super(testCase, testSetName, testCaseName, false);
     }
 
     @Parameterized.Parameters(name = "[{1}] {2}")
