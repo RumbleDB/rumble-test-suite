@@ -6,8 +6,9 @@ This project aims to run the entire W3C QT3 test suite for XQuery on RumbleDB. T
 # Usage
 There is a pipeline setup that allows you to run the testsuite against any branch in the gitlab rumble repo. To run the tests against your branch follow these steps:
 1. In the gitlab webinterface on the left, go to build -> pipelines and choose "new pipeline" in the top right
-2. Add a variable with the *input variable key* ``TESTED_BRANCH`` and the *input variable value* of your branch name that you want to test.
-3. Click "run pipeline"
+2. Add a variable with the *input variable key* ``TESTED_BRANCH`` and the *input variable value* of your branch name that you want to test. Default is ``master``
+3. Optionally add a variable ``TESTED_PARSER`` with the value "xquery" if you want to test the XQuery parser. By default it tests the JSONiq parser.
+4. Click "run pipeline"
 
 This will run the pipeline with all the tests. To view your results, go to build -> pipelines and click on the status of the newest pipeline. Now you will see a tab called tests at the top which you can click on to see all the results of all the different parts of the testsuite.
 

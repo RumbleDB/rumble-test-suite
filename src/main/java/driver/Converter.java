@@ -32,7 +32,11 @@ public class Converter {
 
         // We need fn to specify we want the function
         Map.entry("true()", "fn:true()"),
+        Map.entry("fn:fn:true()", "fn:true()"), // not very nice but works for now
         Map.entry("false()", "fn:false()"),
+        Map.entry("fn:fn:false()", "fn:false()"),
+        Map.entry("not()", "fn:not()"),
+        Map.entry("fn:fn:not()", "fn:not()"),
 
         Map.entry("map(*)", "object"),
         Map.entry("map{", "{"),
