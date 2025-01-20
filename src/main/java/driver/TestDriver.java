@@ -184,22 +184,26 @@ public class TestDriver {
         XdmNode assertion = (XdmNode) xpc.evaluateSingle("result/*[1]", testCase);
 
         String finalTestString = testString.toString();
+        String skipReason = null;
         if (environment != null) {
             for (Map.Entry<String, String> fileLookup : environment.getResources().entrySet()) {
                 if (finalTestString.contains(fileLookup.getKey())) {
                     finalTestString = finalTestString.replace(fileLookup.getKey(), fileLookup.getValue());
                 }
             }
+            if (environment.isUnsupportedCollation()) {
+                skipReason = "unsupported collation";
+            }
         }
 
         // check for dependencies and stop if we dont support it
         String caseDependency = checkDependencies(testCase);
         if (caseDependency != null)
-            caseDependency = "DEPENDENCY " + caseDependency;
+            skipReason = caseDependency;
 
         allTests.add(
             new Object[] {
-                new TestCase(finalTestString, assertion, caseDependency),
+                new TestCase(finalTestString, assertion, skipReason),
                 currentTestSet,
                 currentTestCase }
         );
@@ -227,7 +231,7 @@ public class TestDriver {
             switch (type) {
                 case "calendar": {
                     // CB - I don't think we support any other calendar
-                    return (testCaseName + dependencyNode);
+                    return dependencyNode.toString();
                 }
                 case "unicode-version": {
                     // 7.0,3.1.1,5.2,6.0,6.2 - We will need to look at the tests. I am not sure which
@@ -242,7 +246,7 @@ public class TestDriver {
                 }
                 case "format-integer-sequence": {
                     // ⒈,Α,α - I am not sure what this is, I would need to see the tests.
-                    return (testCaseName + dependencyNode);
+                    return dependencyNode.toString();
                 }
                 case "xml-version": {
                     // Rumble doesn't care about xml version, its XML specific
@@ -255,7 +259,7 @@ public class TestDriver {
                     // TODO maybe it influences Saxon environment processor (check 221 in
                     // QT3TestDriverHE)
                     if (value.contains("1.0")) {
-                        return (testCaseName + dependencyNode);
+                        return dependencyNode.toString();
                     }
                     break;
                 }
@@ -289,21 +293,21 @@ public class TestDriver {
                             value.contains("arbitraryPrecisionDecimal")
                             || value.contains("staticTyping"))
                     ) {
-                        return (testCaseName + dependencyNode);
+                        return dependencyNode.toString();
                     }
                     break;
                 }
                 case "default-language": {
                     // fr-CA not supported - we just support en
                     if (!value.contains("en")) {
-                        return (testCaseName + dependencyNode);
+                        return dependencyNode.toString();
                     }
                     break;
                 }
                 case "language": {
                     // xib,de,fr,it not supported - we just support en
                     if (!value.contains("en")) {
-                        return (testCaseName + dependencyNode);
+                        return dependencyNode.toString();
                     }
                     break;
                 }
@@ -313,25 +317,25 @@ public class TestDriver {
                     // not
                     // if (!value.contains("XSLT") && !value.contains("XT")) {
                     if (!(value.contains("XQ") || value.contains("XP"))) {
-                        return (testCaseName + dependencyNode);
+                        return dependencyNode.toString();
                     }
 
                     // We can think about adding this because some tests have two versions and we generally only try to
                     // support 3.1. But it removes a lot of tests so for now I think its overkill
                     // if (value.equals("XQ10+")) {
-                    // return (testCaseName + dependencyNode);
+                    // return dependencyNode.toString();
                     // }
                     break;
                 }
                 case "limit": {
                     // year_lt_0 - I am not sure I don't think we have this limit.
-                    return (testCaseName + dependencyNode);
+                    return dependencyNode.toString();
                 }
                 default: {
                     System.out.println(
                         "WARNING: unconsidered dependency " + type + " in " + testCaseName + "; removing testcase"
                     );
-                    return (testCaseName + dependencyNode);
+                    return dependencyNode.toString();
                 }
             }
         }
