@@ -82,7 +82,7 @@ public class TestDriver {
         List<XdmNode> environments = catalogNode.select(Steps.descendant("environment")).asList();
         for (XdmNode environment : environments) {
             String envName = environment.attribute("name");
-            Environment env = new Environment(environment);
+            Environment env = new Environment(environment, testsRepositoryDirectoryPath);
             catalogEnvironments.put(envName, env);
         }
 
@@ -122,7 +122,7 @@ public class TestDriver {
             .select(Steps.child("environment"))
             .asList();
         for (XdmNode environment : environments) {
-            Environment env = new Environment(environment, testsRepositoryDirectoryPath, bigTestSet);
+            Environment env = new Environment(environment, testsRepositoryDirectoryPath.resolve(bigTestSet));
             String envName = environment.attribute("name");
             testSetEnvironments.put(envName, env);
         }
@@ -140,7 +140,7 @@ public class TestDriver {
         ) {
             allTests.add(
                 new Object[] {
-                    new TestCase(null, null, "testcase or testset on skiplist"),
+                    new TestCase(null, null, "testcase or testset on skiplist", null),
                     currentTestSet,
                     currentTestCase }
             );
@@ -148,7 +148,6 @@ public class TestDriver {
         }
 
         XdmNode testNode = testCase.select(Steps.child("test")).asNode();
-        StringBuilder testString = new StringBuilder();
 
         Environment environment = null;
         List<XdmNode> environments = testCase.select(Steps.child("environment")).asList();
@@ -165,20 +164,14 @@ public class TestDriver {
                 }
             } else {
                 // environment defined in testcase
-                environment = new Environment(environments.get(0));
+                environment = new Environment(
+                        environments.get(0),
+                        testsRepositoryDirectoryPath.resolve(currentTestSet)
+                );
             }
         }
 
-        if (environment != null) {
-            for (Map.Entry<String, String> param : environment.getParams().entrySet()) {
-                String name = param.getKey();
-                String select = param.getValue();
-                testString.append("let $").append(name).append(" := ").append(select).append(" ");
-            }
-            if (!environment.getParams().isEmpty()) {
-                testString.append("return ");
-            }
-        }
+        StringBuilder testString = new StringBuilder();
 
         testString.append(testNode.getStringValue());
         XdmNode assertion = (XdmNode) xpc.evaluateSingle("result/*[1]", testCase);
@@ -186,11 +179,6 @@ public class TestDriver {
         String finalTestString = testString.toString();
         String skipReason = null;
         if (environment != null) {
-            for (Map.Entry<String, String> fileLookup : environment.getResources().entrySet()) {
-                if (finalTestString.contains(fileLookup.getKey())) {
-                    finalTestString = finalTestString.replace(fileLookup.getKey(), fileLookup.getValue());
-                }
-            }
             if (environment.isUnsupportedCollation()) {
                 skipReason = "unsupported collation";
             }
@@ -203,7 +191,7 @@ public class TestDriver {
 
         allTests.add(
             new Object[] {
-                new TestCase(finalTestString, assertion, skipReason),
+                new TestCase(finalTestString, assertion, skipReason, environment),
                 currentTestSet,
                 currentTestCase }
         );
