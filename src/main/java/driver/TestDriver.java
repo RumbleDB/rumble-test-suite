@@ -115,14 +115,14 @@ public class TestDriver {
     /**
      * method that prepares the environments for the whole testset
      */
-    private void prepareTestSetEnvironments(XdmNode testSetDocNode, String bigTestSet) {
+    private void prepareTestSetEnvironments(XdmNode testSetDocNode, String testSet) {
         testSetEnvironments.clear();
         List<XdmNode> environments = testSetDocNode.select(Steps.child("test-set"))
             .asNode()
             .select(Steps.child("environment"))
             .asList();
         for (XdmNode environment : environments) {
-            Environment env = new Environment(environment, testsRepositoryDirectoryPath.resolve(bigTestSet));
+            Environment env = new Environment(environment, testsRepositoryDirectoryPath.resolve(testSet));
             String envName = environment.attribute("name");
             testSetEnvironments.put(envName, env);
         }
@@ -147,8 +147,7 @@ public class TestDriver {
             return;
         }
 
-        XdmNode testNode = testCase.select(Steps.child("test")).asNode();
-
+        // get the relevant environment for the testcase
         Environment environment = null;
         List<XdmNode> environments = testCase.select(Steps.child("environment")).asList();
         if (environments != null && !environments.isEmpty()) {
@@ -171,27 +170,22 @@ public class TestDriver {
             }
         }
 
-        StringBuilder testString = new StringBuilder();
-
-        testString.append(testNode.getStringValue());
-        XdmNode assertion = (XdmNode) xpc.evaluateSingle("result/*[1]", testCase);
-
-        String finalTestString = testString.toString();
+        // check for possible skip reasons
         String skipReason = null;
-        if (environment != null) {
-            if (environment.isUnsupportedCollation()) {
-                skipReason = "unsupported collation";
-            }
+        if (environment != null && environment.isUnsupportedCollation()) {
+            skipReason = "unsupported collation";
+        }
+        String caseDependency = checkDependencies(testCase);
+        if (caseDependency != null) {
+            skipReason = caseDependency;
         }
 
-        // check for dependencies and stop if we dont support it
-        String caseDependency = checkDependencies(testCase);
-        if (caseDependency != null)
-            skipReason = caseDependency;
+        XdmNode assertion = (XdmNode) xpc.evaluateSingle("result/*[1]", testCase);
+        String testString = testCase.select(Steps.child("test")).asNode().getStringValue();
 
         allTests.add(
             new Object[] {
-                new TestCase(finalTestString, assertion, skipReason, environment),
+                new TestCase(testString, assertion, skipReason, environment),
                 currentTestSet,
                 currentTestCase }
         );

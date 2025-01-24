@@ -93,8 +93,9 @@ public class TestBase {
     }
 
     private List<Item> runQuery(String query, Rumble rumble, Environment environment) {
-        if (environment != null)
+        if (environment != null) {
             query = environment.applyToQuery(query);
+        }
         if (this.useXQueryParser) {
             if (!query.startsWith("xquery version")) {
                 query = "xquery version \"3.1\"; " + query;
