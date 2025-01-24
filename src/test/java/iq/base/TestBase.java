@@ -52,6 +52,7 @@ public class TestBase {
         }
 
         XdmNode assertion = this.testCase.assertion;
+        Environment environment = this.testCase.environment;
         Rumble rumble = new Rumble(
                 new RumbleRuntimeConfiguration(
                         new String[] {
@@ -64,7 +65,7 @@ public class TestBase {
         );
         System.out.println("[[originalAssertion|" + assertion + "]]");
         try {
-            if (checkAssertion(convertedTestString, assertion, rumble)) {
+            if (checkAssertion(convertedTestString, assertion, rumble, environment)) {
                 // TODO we only check for conversion of test, if we convert only assertion then it is logged as PASS
                 // instead of MANAGED
                 if (convertedTestString.equals(testString))
@@ -91,7 +92,10 @@ public class TestBase {
         }
     }
 
-    private List<Item> runQuery(String query, Rumble rumble) {
+    private List<Item> runQuery(String query, Rumble rumble, Environment environment) {
+        if (environment != null) {
+            query = environment.applyToQuery(query);
+        }
         if (this.useXQueryParser) {
             if (!query.startsWith("xquery version")) {
                 query = "xquery version \"3.1\"; " + query;
@@ -104,13 +108,18 @@ public class TestBase {
         return resultAsList;
     }
 
-    public boolean checkAssertion(String convertedTestString, XdmNode assertion, Rumble rumble) {
+    public boolean checkAssertion(
+            String convertedTestString,
+            XdmNode assertion,
+            Rumble rumble,
+            Environment environment
+    ) {
         String tag = assertion.getNodeName().getLocalName();
         String secondQuery;
         List<Item> results;
         switch (tag) {
             case "assert-empty":
-                results = runQuery(convertedTestString, rumble);
+                results = runQuery(convertedTestString, rumble, environment);
                 assertTrue(results.isEmpty());
                 break;
             case "assert":
@@ -118,14 +127,14 @@ public class TestBase {
                     + convertedTestString
                     + "); "
                     + Converter.convert(assertion.getStringValue());
-                assertTrueSingleElement(runQuery(secondQuery, rumble));
+                assertTrueSingleElement(runQuery(secondQuery, rumble, environment));
                 break;
             case "not":
                 secondQuery = "declare variable $result := ("
                     + convertedTestString
                     + "); "
                     + Converter.convert(assertion.getStringValue());
-                assertFalseSingleElement(runQuery(secondQuery, rumble));
+                assertFalseSingleElement(runQuery(secondQuery, rumble, environment));
                 break;
             case "assert-eq":
                 secondQuery = "("
@@ -133,7 +142,7 @@ public class TestBase {
                     + ") eq ("
                     + Converter.convert(assertion.getStringValue())
                     + ")";
-                assertTrueSingleElement(runQuery(secondQuery, rumble));
+                assertTrueSingleElement(runQuery(secondQuery, rumble, environment));
                 break;
             case "assert-deep-eq":
                 secondQuery = "deep-equal(("
@@ -141,18 +150,18 @@ public class TestBase {
                     + "), ("
                     + Converter.convert(assertion.getStringValue())
                     + "))";
-                assertTrueSingleElement(runQuery(secondQuery, rumble));
+                assertTrueSingleElement(runQuery(secondQuery, rumble, environment));
                 break;
             case "assert-true":
-                results = runQuery(convertedTestString, rumble);
+                results = runQuery(convertedTestString, rumble, environment);
                 assertTrueSingleElement(results);
                 break;
             case "assert-false":
-                results = runQuery(convertedTestString, rumble);
+                results = runQuery(convertedTestString, rumble, environment);
                 assertFalseSingleElement(results);
                 break;
             case "assert-string-value":
-                results = runQuery(convertedTestString, rumble);
+                results = runQuery(convertedTestString, rumble, environment);
                 String serialized = results.stream().map(Item::serialize).collect(Collectors.joining(" "));
                 assertEquals("wrong string value", assertion.getStringValue(), serialized);
                 break;
@@ -166,7 +175,7 @@ public class TestBase {
                                     }
                             )
                     );
-                    checkAssertion(convertedTestString, individualAssertion, subRumble);
+                    checkAssertion(convertedTestString, individualAssertion, subRumble, environment);
                 }
                 break;
             case "any-of":
@@ -182,7 +191,7 @@ public class TestBase {
                             )
                     );
                     try {
-                        checkAssertion(convertedTestString, individualAssertion, subRumble);
+                        checkAssertion(convertedTestString, individualAssertion, subRumble, environment);
                         success = true;
                     } catch (RumbleException e) {
                         if (Constants.skipReasonErrorCodes.contains(e.getErrorCode())) {
@@ -206,19 +215,19 @@ public class TestBase {
                     + convertedTestString
                     + ") instance of "
                     + Converter.convert(assertion.getStringValue());
-                assertTrueSingleElement(runQuery(secondQuery, rumble));
+                assertTrueSingleElement(runQuery(secondQuery, rumble, environment));
                 break;
             case "assert-count":
-                results = runQuery(convertedTestString, rumble);
+                results = runQuery(convertedTestString, rumble, environment);
                 int count = Integer.parseInt(assertion.getStringValue());
                 assertEquals("wrong count", results.size(), count);
                 break;
             case "assert-permutation":
-                assertPermutation(convertedTestString, assertion, rumble);
+                assertPermutation(convertedTestString, assertion, rumble, environment);
                 break;
             case "error":
                 try {
-                    runQuery(convertedTestString, rumble);
+                    runQuery(convertedTestString, rumble, environment);
                     fail("expected to throw error but ran without error");
                 } catch (RumbleException re) {
                     if (!Constants.supportedErrorCodes.contains(re.getErrorCode())) {
@@ -265,7 +274,13 @@ public class TestBase {
         assertFalse("result is true", results.get(0).getBooleanValue());
     }
 
-    private void assertPermutation(String convertedTestString, XdmNode assertion, Rumble rumble) {
+    // TODO check this, I just took it over for now
+    private void assertPermutation(
+            String convertedTestString,
+            XdmNode assertion,
+            Rumble rumble,
+            Environment environment
+    ) {
         String assertExpression =
             "declare function allpermutations($sequence as item*) as array* {\n"
                 + " if(count($sequence) le 1)\n"
@@ -289,7 +304,7 @@ public class TestBase {
                 + "satisfies deep-equal($a[], (("
                 + Converter.convert(assertion.getStringValue())
                 + ")))";
-        List<Item> results = runQuery(assertExpression, rumble);
+        List<Item> results = runQuery(assertExpression, rumble, environment);
         assertTrueSingleElement(results);
     }
 }

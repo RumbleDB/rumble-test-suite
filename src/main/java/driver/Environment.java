@@ -12,9 +12,10 @@ import java.nio.file.Path;
 public class Environment {
     private final Map<String, String> resourceLookup = new HashMap<>();
     private final Map<String, String> paramLookup = new HashMap<>();
+    private final Map<String, String> roleLookup = new HashMap<>();
     private boolean unsupportedCollation = false;
 
-    public Environment(XdmNode environmentNode) {
+    public Environment(XdmNode environmentNode, Path envPath) {
         initParams(environmentNode);
         Iterator<XdmNode> collation = environmentNode.children("collation").iterator();
         if (
@@ -25,11 +26,8 @@ public class Environment {
         ) {
             unsupportedCollation = true;
         }
-    }
-
-    public Environment(XdmNode environmentNode, Path testsRepositoryDirectoryPath, String testSet) {
-        this(environmentNode);
-        initResources(environmentNode, testsRepositoryDirectoryPath, testSet);
+        initResources(environmentNode, envPath);
+        initSources(environmentNode, envPath);
 
     }
 
@@ -43,10 +41,10 @@ public class Environment {
         }
     }
 
-    private void initResources(XdmNode environmentNode, Path testsRepositoryDirectoryPath, String testSet) {
+    private void initResources(XdmNode environmentNode, Path envPath) {
         List<XdmNode> resources = environmentNode.select(Steps.descendant("resource")).asList();
         for (XdmNode resource : resources) {
-            String file = testsRepositoryDirectoryPath.resolve(testSet)
+            String file = envPath
                 .resolve(resource.attribute("file"))
                 .toString();
             String uri = resource.attribute("uri");
@@ -54,12 +52,56 @@ public class Environment {
         }
     }
 
-    public Map<String, String> getResources() {
-        return resourceLookup;
+    private void initSources(XdmNode environmentNode, Path envPath) {
+        List<XdmNode> sources = environmentNode.select(Steps.descendant("source")).asList();
+        for (XdmNode source : sources) {
+            String file = envPath
+                .resolve(source.attribute("file"))
+                .toString();
+            String uri = source.attribute("uri");
+            String role = source.attribute("role");
+            if (uri != null && !file.equals(uri)) {
+                resourceLookup.put(uri, file);
+            } else if (role != null) {
+                roleLookup.put(role, file);
+            }
+        }
     }
 
-    public Map<String, String> getParams() {
-        return paramLookup;
+    /**
+     * This method takes a query and modifies it such that it executes inside the environment. It adds a context-item
+     * declaration, variable declarations and replaces URIs with the right filepaths.
+     * 
+     * @param query contains the query that wants to be executed.
+     * @return a String containing the updated query with the context-item, params and resources set.
+     */
+    public String applyToQuery(String query) {
+        StringBuilder newQuery = new StringBuilder();
+        for (Map.Entry<String, String> r : roleLookup.entrySet()) {
+            String role = r.getKey();
+            String file = r.getValue();
+            if (role.equals(".")) {
+                newQuery.append("declare context item := doc(\"").append(file).append("\"); ");
+            }
+        }
+        for (Map.Entry<String, String> param : paramLookup.entrySet()) {
+            String name = param.getKey();
+            String select = param.getValue();
+            newQuery.append("let $").append(name).append(" := ").append(select).append(" ");
+        }
+        if (!paramLookup.isEmpty()) {
+            newQuery.append("return ");
+        }
+
+        newQuery.append(query);
+        String newQueryString = newQuery.toString();
+
+        for (Map.Entry<String, String> fileLookup : resourceLookup.entrySet()) {
+            if (newQueryString.contains(fileLookup.getKey())) {
+                newQueryString = newQueryString.replace(fileLookup.getKey(), fileLookup.getValue());
+            }
+        }
+        return newQueryString;
     }
 
     public boolean isUnsupportedCollation() {

@@ -82,7 +82,7 @@ public class TestDriver {
         List<XdmNode> environments = catalogNode.select(Steps.descendant("environment")).asList();
         for (XdmNode environment : environments) {
             String envName = environment.attribute("name");
-            Environment env = new Environment(environment);
+            Environment env = new Environment(environment, testsRepositoryDirectoryPath);
             catalogEnvironments.put(envName, env);
         }
 
@@ -115,14 +115,14 @@ public class TestDriver {
     /**
      * method that prepares the environments for the whole testset
      */
-    private void prepareTestSetEnvironments(XdmNode testSetDocNode, String bigTestSet) {
+    private void prepareTestSetEnvironments(XdmNode testSetDocNode, String testSet) {
         testSetEnvironments.clear();
         List<XdmNode> environments = testSetDocNode.select(Steps.child("test-set"))
             .asNode()
             .select(Steps.child("environment"))
             .asList();
         for (XdmNode environment : environments) {
-            Environment env = new Environment(environment, testsRepositoryDirectoryPath, bigTestSet);
+            Environment env = new Environment(environment, testsRepositoryDirectoryPath.resolve(testSet));
             String envName = environment.attribute("name");
             testSetEnvironments.put(envName, env);
         }
@@ -140,16 +140,14 @@ public class TestDriver {
         ) {
             allTests.add(
                 new Object[] {
-                    new TestCase(null, null, "testcase or testset on skiplist"),
+                    new TestCase(null, null, "testcase or testset on skiplist", null),
                     currentTestSet,
                     currentTestCase }
             );
             return;
         }
 
-        XdmNode testNode = testCase.select(Steps.child("test")).asNode();
-        StringBuilder testString = new StringBuilder();
-
+        // get the relevant environment for the testcase
         Environment environment = null;
         List<XdmNode> environments = testCase.select(Steps.child("environment")).asList();
         if (environments != null && !environments.isEmpty()) {
@@ -165,45 +163,29 @@ public class TestDriver {
                 }
             } else {
                 // environment defined in testcase
-                environment = new Environment(environments.get(0));
+                environment = new Environment(
+                        environments.get(0),
+                        testsRepositoryDirectoryPath.resolve(currentTestSet)
+                );
             }
         }
 
-        if (environment != null) {
-            for (Map.Entry<String, String> param : environment.getParams().entrySet()) {
-                String name = param.getKey();
-                String select = param.getValue();
-                testString.append("let $").append(name).append(" := ").append(select).append(" ");
-            }
-            if (!environment.getParams().isEmpty()) {
-                testString.append("return ");
-            }
-        }
-
-        testString.append(testNode.getStringValue());
-        XdmNode assertion = (XdmNode) xpc.evaluateSingle("result/*[1]", testCase);
-
-        String finalTestString = testString.toString();
+        // check for possible skip reasons
         String skipReason = null;
-        if (environment != null) {
-            for (Map.Entry<String, String> fileLookup : environment.getResources().entrySet()) {
-                if (finalTestString.contains(fileLookup.getKey())) {
-                    finalTestString = finalTestString.replace(fileLookup.getKey(), fileLookup.getValue());
-                }
-            }
-            if (environment.isUnsupportedCollation()) {
-                skipReason = "unsupported collation";
-            }
+        if (environment != null && environment.isUnsupportedCollation()) {
+            skipReason = "unsupported collation";
+        }
+        String caseDependency = checkDependencies(testCase);
+        if (caseDependency != null) {
+            skipReason = caseDependency;
         }
 
-        // check for dependencies and stop if we dont support it
-        String caseDependency = checkDependencies(testCase);
-        if (caseDependency != null)
-            skipReason = caseDependency;
+        XdmNode assertion = (XdmNode) xpc.evaluateSingle("result/*[1]", testCase);
+        String testString = testCase.select(Steps.child("test")).asNode().getStringValue();
 
         allTests.add(
             new Object[] {
-                new TestCase(finalTestString, assertion, skipReason),
+                new TestCase(testString, assertion, skipReason, environment),
                 currentTestSet,
                 currentTestCase }
         );

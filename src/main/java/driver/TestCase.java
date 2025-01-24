@@ -10,10 +10,12 @@ public class TestCase {
     public String testString;
     public XdmNode assertion;
     public String skipReason;
+    public Environment environment;
 
-    public TestCase(String testString, XdmNode assertion, String skipReason) {
+    public TestCase(String testString, XdmNode assertion, String skipReason, Environment environment) {
         this.testString = testString;
         this.assertion = assertion;
         this.skipReason = skipReason;
+        this.environment = environment;
     }
 }
