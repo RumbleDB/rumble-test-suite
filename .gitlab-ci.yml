@@ -4,7 +4,7 @@ variables:
   TESTED_PARSER: jsoniq
 
 workflow:
-  name: 'testing ${TESTED_BRANCH}'
+  name: 'testing ${TESTED_PARSER}-parser on ${TESTED_BRANCH} branch'
 
 stages:
   - build
