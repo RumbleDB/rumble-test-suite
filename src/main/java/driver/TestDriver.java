@@ -213,7 +213,7 @@ public class TestDriver {
             switch (type) {
                 case "calendar": {
                     // CB - I don't think we support any other calendar
-                    return dependencyNode.toString();
+                    return type + " " + value;
                 }
                 case "unicode-version": {
                     // 7.0,3.1.1,5.2,6.0,6.2 - We will need to look at the tests. I am not sure which
@@ -222,13 +222,13 @@ public class TestDriver {
                 }
                 case "unicode-normalization-form": {
                     // NFD,NFKD,NFKC,FULLY-NORMALIZED - We will need to play it by ear.
-                    // LogDependency(testCaseName + dependencyNode.toString());
+                    // LogDependency(testCaseName + type + " " + value);
                     // return;
                     break;
                 }
                 case "format-integer-sequence": {
                     // ⒈,Α,α - I am not sure what this is, I would need to see the tests.
-                    return dependencyNode.toString();
+                    return type + " " + value;
                 }
                 case "xml-version": {
                     // Rumble doesn't care about xml version, its XML specific
@@ -241,7 +241,7 @@ public class TestDriver {
                     // TODO maybe it influences Saxon environment processor (check 221 in
                     // QT3TestDriverHE)
                     if (value.contains("1.0")) {
-                        return dependencyNode.toString();
+                        return type + " " + value;
                     }
                     break;
                 }
@@ -275,21 +275,21 @@ public class TestDriver {
                             value.contains("arbitraryPrecisionDecimal")
                             || value.contains("staticTyping"))
                     ) {
-                        return dependencyNode.toString();
+                        return type + " " + value;
                     }
                     break;
                 }
                 case "default-language": {
                     // fr-CA not supported - we just support en
                     if (!value.contains("en")) {
-                        return dependencyNode.toString();
+                        return type + " " + value;
                     }
                     break;
                 }
                 case "language": {
                     // xib,de,fr,it not supported - we just support en
                     if (!value.contains("en")) {
-                        return dependencyNode.toString();
+                        return type + " " + value;
                     }
                     break;
                 }
@@ -299,25 +299,25 @@ public class TestDriver {
                     // not
                     // if (!value.contains("XSLT") && !value.contains("XT")) {
                     if (!(value.contains("XQ") || value.contains("XP"))) {
-                        return dependencyNode.toString();
+                        return type + " " + value;
                     }
 
                     // We can think about adding this because some tests have two versions and we generally only try to
                     // support 3.1. But it removes a lot of tests so for now I think its overkill
                     // if (value.equals("XQ10+")) {
-                    // return dependencyNode.toString();
+                    // return type + " " + value;
                     // }
                     break;
                 }
                 case "limit": {
                     // year_lt_0 - I am not sure I don't think we have this limit.
-                    return dependencyNode.toString();
+                    return type + " " + value;
                 }
                 default: {
                     System.out.println(
                         "WARNING: unconsidered dependency " + type + " in " + testCaseName + "; removing testcase"
                     );
-                    return dependencyNode.toString();
+                    return type + " " + value;
                 }
             }
         }

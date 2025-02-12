@@ -78,7 +78,7 @@ public class TestBase {
         } catch (RumbleException e) {
             if (Constants.skipReasonErrorCodes.contains(e.getErrorCode())) {
                 System.out.println("[[category|SKIP]]");
-                assumeTrue("skip errorcode: " + e.getErrorCode(), false);
+                assumeTrue("Skip errorcode: " + e.getErrorCode(), false);
             } else {
                 System.out.println("[[category|ERROR]]");
                 throw e;
@@ -163,7 +163,7 @@ public class TestBase {
             case "assert-string-value":
                 results = runQuery(convertedTestString, rumble, environment);
                 String serialized = results.stream().map(Item::serialize).collect(Collectors.joining(" "));
-                assertEquals("wrong string value", assertion.getStringValue(), serialized);
+                assertEquals("Wrong string value", assertion.getStringValue(), serialized);
                 break;
             case "all-of":
                 for (XdmNode individualAssertion : assertion.children("*")) {
@@ -209,7 +209,7 @@ public class TestBase {
                     }
                 }
                 System.out.println("[[ERRORS|" + errors + "]]");
-                assertTrue("all assertions in any-of failed", success);
+                assertTrue("All assertions in any-of failed", success);
                 break;
             case "assert-type":
                 secondQuery = "("
@@ -221,7 +221,7 @@ public class TestBase {
             case "assert-count":
                 results = runQuery(convertedTestString, rumble, environment);
                 int count = Integer.parseInt(assertion.getStringValue());
-                assertEquals("wrong count", results.size(), count);
+                assertEquals("Wrong count", results.size(), count);
                 break;
             case "assert-permutation":
                 assertPermutation(convertedTestString, assertion, rumble, environment);
@@ -229,11 +229,11 @@ public class TestBase {
             case "error":
                 try {
                     runQuery(convertedTestString, rumble, environment);
-                    fail("expected to throw error but ran without error");
+                    fail("Expected to throw error but ran without error");
                 } catch (RumbleException re) {
                     if (!Constants.supportedErrorCodes.contains(re.getErrorCode())) {
                         System.out.println("[[category|SKIP]]");
-                        assumeTrue("unsupported errorcode: " + re.getErrorCode(), false);
+                        assumeTrue("Unsupported errorcode: " + re.getErrorCode(), false);
                     }
                     if (Constants.skipReasonErrorCodes.contains(re.getErrorCode())) {
                         // we want these to be caught outside so we skip the testcase
@@ -264,15 +264,15 @@ public class TestBase {
     }
 
     private void assertTrueSingleElement(List<Item> results) {
-        assertEquals("not exactly one result", 1, results.size());
-        assertTrue("result is not boolean", results.get(0).isBoolean());
-        assertTrue("result is false", results.get(0).getBooleanValue());
+        assertEquals("Not exactly one result", 1, results.size());
+        assertTrue("Result is not boolean", results.get(0).isBoolean());
+        assertTrue("Result is false", results.get(0).getBooleanValue());
     }
 
     private void assertFalseSingleElement(List<Item> results) {
-        assertEquals("not exactly one result", 1, results.size());
-        assertTrue("result is not boolean", results.get(0).isBoolean());
-        assertFalse("result is true", results.get(0).getBooleanValue());
+        assertEquals("Not exactly one result", 1, results.size());
+        assertTrue("Result is not boolean", results.get(0).isBoolean());
+        assertFalse("Result is true", results.get(0).getBooleanValue());
     }
 
     // TODO check this, I just took it over for now
