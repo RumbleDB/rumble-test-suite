@@ -78,7 +78,7 @@ public class TestBase {
         } catch (RumbleException e) {
             if (Constants.skipReasonErrorCodes.contains(e.getErrorCode())) {
                 System.out.println("[[category|SKIP]]");
-                assumeTrue(e.toString(), false);
+                assumeTrue("skip errorcode: " + e.getErrorCode(), false);
             } else {
                 System.out.println("[[category|ERROR]]");
                 throw e;
@@ -208,7 +208,8 @@ public class TestBase {
                         errors.add(e);
                     }
                 }
-                assertTrue("all assertions in any-of failed: " + errors, success);
+                System.out.println("[[ERRORS|" + errors + "]]");
+                assertTrue("all assertions in any-of failed", success);
                 break;
             case "assert-type":
                 secondQuery = "("
@@ -240,7 +241,7 @@ public class TestBase {
                     }
 
                     assertEquals(
-                        "correctly threw error but with wrong error code",
+                        "Wrong error code",
                         assertion.attribute("code"),
                         re.getErrorCode()
                     );
@@ -251,7 +252,7 @@ public class TestBase {
             case "assert-serialization-error":
             case "assert-xml":
                 System.out.println("[[category|SKIP]]");
-                assumeTrue(tag + " assertion not implemented", false);
+                assumeTrue("assert-xml not implemented", false);
                 break;
             default:
                 // should never happen unless they add a new assertion type

@@ -140,7 +140,7 @@ public class TestDriver {
         ) {
             allTests.add(
                 new Object[] {
-                    new TestCase(null, null, "testcase or testset on skiplist", null),
+                    new TestCase(null, null, "Testcase/set on skiplist", null),
                     currentTestSet,
                     currentTestCase }
             );
@@ -177,7 +177,7 @@ public class TestDriver {
         }
         String caseDependency = checkDependencies(testCase);
         if (caseDependency != null) {
-            skipReason = caseDependency;
+            skipReason = "dependency " + caseDependency;
         }
 
         XdmNode assertion = (XdmNode) xpc.evaluateSingle("result/*[1]", testCase);
