@@ -165,7 +165,7 @@ public class TestDriver {
                 // environment defined in testcase
                 environment = new Environment(
                         environments.get(0),
-                        testsRepositoryDirectoryPath.resolve(currentTestSet)
+                        testsRepositoryDirectoryPath.resolve(currentTestSet).getParent() // looks bad but works for now
                 );
             }
         }
