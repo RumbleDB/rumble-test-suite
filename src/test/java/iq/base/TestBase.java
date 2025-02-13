@@ -53,15 +53,18 @@ public class TestBase {
 
         XdmNode assertion = this.testCase.assertion;
         Environment environment = this.testCase.environment;
+        List<String> config = new ArrayList<>(List.of(
+                "--output-format",
+                "json",
+                "--materialization-cap",
+                "1000000000"
+        ));
+        if (useXQueryParser) {
+            config.add("--default-language");
+            config.add("xquery31");
+        }
         Rumble rumble = new Rumble(
-                new RumbleRuntimeConfiguration(
-                        new String[] {
-                            "--output-format",
-                            "json",
-                            "--materialization-cap",
-                            "1000000000"
-                        }
-                )
+                new RumbleRuntimeConfiguration(config.toArray(new String[]{}))
         );
         System.out.println("[[originalAssertion|" + assertion + "]]");
         try {
