@@ -101,11 +101,6 @@ public class TestBase {
         if (environment != null) {
             query = environment.applyToQuery(query);
         }
-        if (this.useXQueryParser) {
-            if (!query.startsWith("xquery version")) {
-                query = "xquery version \"3.1\"; " + query;
-            }
-        }
         System.out.println("[[query|" + query + "]]");
         SequenceOfItems queryResult = rumble.runQuery(query);
         List<Item> resultAsList = new ArrayList<>();
