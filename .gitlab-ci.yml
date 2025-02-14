@@ -264,7 +264,7 @@ collect-artifacts:
 
 plot:
   stage: analytics
-  image: python:3.11
+  image: python:3.12
   dependencies:
     - collect-artifacts
   script:
