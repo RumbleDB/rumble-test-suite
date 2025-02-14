@@ -36,7 +36,7 @@ test-app:
   artifacts:
     when: always
     paths:
-      - target/surefire-reports
+      - target/surefire-reports/*.xml
     reports:
       junit: target/surefire-reports/*.xml
 
@@ -53,7 +53,7 @@ test-array:
   artifacts:
     when: always
     paths:
-      - target/surefire-reports
+      - target/surefire-reports/*.xml
     reports:
       junit: target/surefire-reports/*.xml
 
@@ -70,7 +70,7 @@ test-fn1:
   artifacts:
     when: always
     paths:
-      - target/surefire-reports
+      - target/surefire-reports/*.xml
     reports:
       junit: target/surefire-reports/*.xml
 
@@ -87,7 +87,7 @@ test-fn2:
   artifacts:
     when: always
     paths:
-      - target/surefire-reports
+      - target/surefire-reports/*.xml
     reports:
       junit: target/surefire-reports/*.xml
 
@@ -104,7 +104,7 @@ test-map:
   artifacts:
     when: always
     paths:
-      - target/surefire-reports
+      - target/surefire-reports/*.xml
     reports:
       junit: target/surefire-reports/*.xml
 
@@ -121,7 +121,7 @@ test-math:
   artifacts:
     when: always
     paths:
-      - target/surefire-reports
+      - target/surefire-reports/*.xml
     reports:
       junit: target/surefire-reports/*.xml
 
@@ -138,7 +138,7 @@ test-misc:
   artifacts:
     when: always
     paths:
-      - target/surefire-reports
+      - target/surefire-reports/*.xml
     reports:
       junit: target/surefire-reports/*.xml
 
@@ -155,7 +155,7 @@ test-op:
   artifacts:
     when: always
     paths:
-      - target/surefire-reports
+      - target/surefire-reports/*.xml
     reports:
       junit: target/surefire-reports/*.xml
 
@@ -172,7 +172,7 @@ test-prod1:
   artifacts:
     when: always
     paths:
-      - target/surefire-reports
+      - target/surefire-reports/*.xml
     reports:
       junit: target/surefire-reports/*.xml
 
@@ -189,7 +189,7 @@ test-prod2:
   artifacts:
     when: always
     paths:
-      - target/surefire-reports
+      - target/surefire-reports/*.xml
     reports:
       junit: target/surefire-reports/*.xml
 
@@ -206,7 +206,7 @@ test-ser:
   artifacts:
     when: always
     paths:
-      - target/surefire-reports
+      - target/surefire-reports/*.xml
     reports:
       junit: target/surefire-reports/*.xml
 
@@ -223,7 +223,7 @@ test-xs:
   artifacts:
     when: always
     paths:
-      - target/surefire-reports
+      - target/surefire-reports/*.xml
     reports:
       junit: target/surefire-reports/*.xml
 
