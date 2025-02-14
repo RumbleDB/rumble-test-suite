@@ -10,6 +10,7 @@ stages:
   - build
   - test
   - collect
+  - analytics
 
 build-job:
   stage: build
@@ -256,3 +257,14 @@ collect-artifacts:
     when: always
     paths:
       - collected-artifacts
+
+analytics:
+  stage: analytics
+  dependencies:
+    - collect-artifacts
+  script:
+    - mvn exec:java
+  artifacts:
+    when: always
+    paths:
+      - analytics
