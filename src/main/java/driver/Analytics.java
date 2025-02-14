@@ -21,10 +21,10 @@ public class Analytics {
             serializer.setOutputProperty(Serializer.Property.METHOD, "json");
             serializer.setOutputProperty(Serializer.Property.INDENT, "yes");
 
-            runAggregation(compiler, serializer, "count");
             runAggregation(compiler, serializer, "fail");
             runAggregation(compiler, serializer, "error");
             runAggregation(compiler, serializer, "skip");
+            runAggregation(compiler, serializer, "count");
 
         } catch (SaxonApiException | IOException e) {
             e.printStackTrace();
@@ -62,6 +62,9 @@ public class Analytics {
         try (FileWriter fileWriter = new FileWriter(outputFilePath)) {
             fileWriter.write(output.toString());
         }
-        System.out.println("JSON output written to: " + outputFilePath);
+        System.out.println("==================================");
+        System.out.println(queryName);
+        System.out.println("==================================");
+        System.out.println(output);
     }
 }

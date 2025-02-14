@@ -261,3 +261,16 @@ collect-artifacts:
     paths:
       - collected-artifacts
       - analytics_results
+
+plot:
+  stage: analytics
+  image: python:3.11
+  dependencies:
+    - collect-artifacts
+  script:
+    - pip install -r analytics/requirements.txt
+    - python analytics/plot.py
+  artifacts:
+    when: always
+    paths:
+      - plots
