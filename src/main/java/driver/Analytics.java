@@ -14,7 +14,7 @@ public class Analytics {
             // Initialize Saxon processor
             Processor processor = new Processor(false);
             XQueryCompiler compiler = processor.newXQueryCompiler();
-            compiler.setBaseURI(Paths.get("collect-artifacts").toUri());
+            compiler.setBaseURI(Paths.get("target/surefire-reports").toUri());
 
             // Initialize serializer
             Serializer serializer = processor.newSerializer();
