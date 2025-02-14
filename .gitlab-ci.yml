@@ -10,6 +10,7 @@ stages:
   - build
   - test
   - collect
+  - analytics
 
 build-job:
   stage: build
@@ -237,6 +238,7 @@ spotless-check:
 collect-artifacts:
   stage: collect
   dependencies:
+    - build-job
     - test-app
     - test-array
     - test-fn1
@@ -251,8 +253,25 @@ collect-artifacts:
     - test-xs
   script:
     - mkdir -p collected-artifacts
+    - mvn compile
+    - mvn exec:java
     - cp -r target/surefire-reports collected-artifacts/
   artifacts:
     when: always
     paths:
       - collected-artifacts
+      - analytics-results
+
+plot:
+  stage: analytics
+  image: python:3.12
+  dependencies:
+    - collect-artifacts
+  script:
+    - pip install -r analytics/requirements.txt
+    - python analytics/plot.py
+  artifacts:
+    when: always
+    paths:
+      - plots
+      - analytics-results
