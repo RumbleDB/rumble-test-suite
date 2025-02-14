@@ -260,7 +260,7 @@ collect-artifacts:
     when: always
     paths:
       - collected-artifacts
-      - analytics_results
+      - analytics-results
 
 plot:
   stage: analytics
@@ -274,3 +274,4 @@ plot:
     when: always
     paths:
       - plots
+      - analytics-results

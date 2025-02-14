@@ -59,7 +59,7 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <mainClass>driver.Analytics</mainClass>
+                    <mainClass>analytics.Analytics</mainClass>
                 </configuration>
             </plugin>
         </plugins>

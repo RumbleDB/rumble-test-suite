@@ -1,3 +1,6 @@
+# plots the json files in analytics-results
+# primarily for running inside Gitlab Pipeline
+# to run locally, use python 3.12 and run pip install -r analytics/requirements.txt
 import pandas as pd
 import matplotlib.pyplot as plt
 import os
@@ -63,8 +66,8 @@ def plot_df(df, title):
     os.makedirs('plots', exist_ok=True)
     plt.savefig(f"plots/{title}.png")
 
-df = pd.read_json(f"analytics_results/count.json").set_index("name").sort_index()
-plot_df(df, "Test Breakdown")
+df = pd.read_json(f"analytics-results/count.json").set_index("name").sort_index()
+plot_df(df, "Overview")
 print(df.sum())
 
 def plot_categories(df, cutoff, formatter, plot_settings):
@@ -131,6 +134,6 @@ plot_settings = {
     }
 }
 
-plot_categories(pd.read_json("analytics_results/error.json"), 5, error_formatter, plot_settings["error"])
-plot_categories(pd.read_json("analytics_results/fail.json"), 10, fail_formatter, plot_settings["failure"])
-plot_categories(pd.read_json("analytics_results/skip.json"), 50, skip_formatter, plot_settings["skip"])
+plot_categories(pd.read_json("analytics-results/error.json"), 5, error_formatter, plot_settings["error"])
+plot_categories(pd.read_json("analytics-results/fail.json"), 10, fail_formatter, plot_settings["failure"])
+plot_categories(pd.read_json("analytics-results/skip.json"), 50, skip_formatter, plot_settings["skip"])

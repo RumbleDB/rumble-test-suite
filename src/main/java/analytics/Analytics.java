@@ -1,4 +1,4 @@
-package driver;
+package analytics;
 
 import net.sf.saxon.s9api.*;
 
@@ -8,6 +8,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+/**
+ * Runs some xquery queries using Saxon that aggregate the xml testreports into json files for plotting.
+ */
 public class Analytics {
     public static void main(String[] args) {
         try {
@@ -34,7 +37,6 @@ public class Analytics {
     public static void runAggregation(XQueryCompiler compiler, Serializer serializer, String queryName)
             throws IOException,
                 SaxonApiException {
-        // Load XQuery from file
         String queryFilePath = "analytics/" + queryName + ".xquery";
         String query = new String(Files.readAllBytes(Paths.get(queryFilePath)));
 
@@ -51,13 +53,10 @@ public class Analytics {
 
         evaluator.run(serializer);
 
-        // Ensure the directory exists
-        Path outputPath = Paths.get("analytics_results");
+        Path outputPath = Paths.get("analytics-results");
         if (!Files.exists(outputPath)) {
             Files.createDirectories(outputPath);
         }
-
-        // Write the result to a JSON file
         String outputFilePath = outputPath.resolve(queryName + ".json").toString();
         try (FileWriter fileWriter = new FileWriter(outputFilePath)) {
             fileWriter.write(output.toString());
