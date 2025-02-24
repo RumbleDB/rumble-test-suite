@@ -83,7 +83,7 @@ public class Environment {
             if (role.equals(".")) {
                 newQuery.append("declare context item := doc(\"").append(file).append("\"); ");
             } else {
-                newQuery.append("declare variable ").append(role).append(" := doc(").append(file).append(");");
+                newQuery.append("declare variable ").append(role).append(" := doc(\"").append(file).append("\"); ");
             }
         }
         for (Map.Entry<String, String> param : paramLookup.entrySet()) {

@@ -270,6 +270,7 @@ plot:
   script:
     - pip install -r analytics/requirements.txt
     - python analytics/plot.py
+    - echo TO SEE THE PLOTS, CLICK ON BROWSE ON THE RIGHT
   artifacts:
     when: always
     paths:
