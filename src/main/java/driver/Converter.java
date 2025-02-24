@@ -1,5 +1,6 @@
 package driver;
 
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 
@@ -25,26 +26,28 @@ public class Converter {
         return convertedtestString;
     }
 
-    public static final Map<String, String> conversions = Map.ofEntries(
+    public static final Map<String, String> conversions = new LinkedHashMap<>();
+
+    static {
         // Also array(+), array(?), array()*, array()+, array()? do not exist
-        Map.entry("array(*)", "array"),
+        conversions.put("array(*)", "array");
 
         // Will cover all the subclasses - item()+, item()* and item()+. item(anything here) does not exist
-        Map.entry("item()", "item"),
+        conversions.put("item()", "item");
 
         // We need fn to specify we want the function
-        Map.entry("true()", "fn:true()"),
-        Map.entry("fn:fn:true()", "fn:true()"), // not very nice but works for now
-        Map.entry("false()", "fn:false()"),
-        Map.entry("fn:fn:false()", "fn:false()"),
-        Map.entry("not()", "fn:not()"),
-        Map.entry("fn:fn:not()", "fn:not()"),
+        conversions.put("true()", "fn:true()");
+        conversions.put("fn:fn:true()", "fn:true()"); // not very nice but works for now
+        conversions.put("false()", "fn:false()");
+        conversions.put("fn:fn:false()", "fn:false()");
+        conversions.put("not()", "fn:not()");
+        conversions.put("fn:fn:not()", "fn:not()");
 
-        Map.entry("map(*)", "object"),
-        Map.entry("map{", "{"),
-        Map.entry("map {", " {"),
+        conversions.put("map(*)", "object");
+        conversions.put("map{", "{");
+        conversions.put("map {", " {");
 
         // if it has a space, it is context item for sure
-        Map.entry(". ", "$$ ")
-    );
+        conversions.put(". ", "$$ ");
+    }
 }
