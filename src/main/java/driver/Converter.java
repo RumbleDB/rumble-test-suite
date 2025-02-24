@@ -11,9 +11,7 @@ public class Converter {
      * @param originalString string to be converted
      * @return convertedString that adheres to JSONiq++ grammar instead of XQuery
      */
-    public static String convert(String originalString, boolean useXQueryParser) {
-        if (useXQueryParser)
-            return originalString;
+    public static String convert(String originalString) {
 
         String convertedtestString = originalString;
 
@@ -22,7 +20,7 @@ public class Converter {
         }
 
         if (!originalString.equals(convertedtestString))
-            System.out.println("[[convertedString|" + convertedtestString + "]]");
+            System.out.println("[[convertedQuery|" + convertedtestString + "]]");
         return convertedtestString;
     }
 
