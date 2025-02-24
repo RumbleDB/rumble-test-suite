@@ -66,7 +66,12 @@ def plot_df(df, title):
     os.makedirs('plots', exist_ok=True)
     plt.savefig(f"plots/{title}.png")
 
-df = pd.read_json(f"analytics-results/count.json").set_index("name").sort_index()
+df = pd.read_json(f"analytics-results/count.json").set_index("name").sort_index(ascending=False)
+df.index = df.index.to_series().replace({
+    r'^iq\.XQuery(.*)': r'\1',
+    r'^iq\.(.*)': r'\1'
+}, regex=True)
+
 plot_df(df, "Overview")
 print(df.sum())
 
