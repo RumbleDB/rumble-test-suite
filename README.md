@@ -26,7 +26,6 @@ The most important keys and the meaning of their values are:
 - ``query`` a query that is evaluated by rumbleDB (can possibly be multiple per testcase incase there are multiple assertions)
 - ``category`` can be 
   - ``PASS`` testcase passed
-  - ``MANAGED`` testcase passed with modification
   - ``FAIL`` testcase ran but output didnt fullfill assertion
   - ``ERROR`` testcase threw error that is not a part of the skip reasons
   - ``SKIP`` testcase was skipped due to a skip reason

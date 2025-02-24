@@ -82,15 +82,14 @@ public class Environment {
             String file = r.getValue();
             if (role.equals(".")) {
                 newQuery.append("declare context item := doc(\"").append(file).append("\"); ");
+            } else {
+                newQuery.append("declare variable ").append(role).append(" := doc(\"").append(file).append("\"); ");
             }
         }
         for (Map.Entry<String, String> param : paramLookup.entrySet()) {
             String name = param.getKey();
             String select = param.getValue();
-            newQuery.append("let $").append(name).append(" := ").append(select).append(" ");
-        }
-        if (!paramLookup.isEmpty()) {
-            newQuery.append("return ");
+            newQuery.append("declare variable $").append(name).append(" := ").append(select).append(";");
         }
 
         newQuery.append(query);

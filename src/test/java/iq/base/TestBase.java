@@ -44,13 +44,6 @@ public class TestBase {
         String testString = this.testCase.testString;
         System.out.println("[[originalTest|" + testString + "]]");
 
-        String convertedTestString;
-        if (!useXQueryParser) {
-            convertedTestString = Converter.convert(testString, this.useXQueryParser);
-        } else {
-            convertedTestString = testString;
-        }
-
         XdmNode assertion = this.testCase.assertion;
         Environment environment = this.testCase.environment;
         List<String> config = new ArrayList<>(
@@ -70,13 +63,8 @@ public class TestBase {
         );
         System.out.println("[[originalAssertion|" + assertion + "]]");
         try {
-            if (checkAssertion(convertedTestString, assertion, rumble, environment)) {
-                // TODO we only check for conversion of test, if we convert only assertion then it is logged as PASS
-                // instead of MANAGED
-                if (convertedTestString.equals(testString))
-                    System.out.println("[[category|PASS]]");
-                else
-                    System.out.println("[[category|MANAGED]]");
+            if (checkAssertion(testString, assertion, rumble, environment)) {
+                System.out.println("[[category|PASS]]");
             } else {
                 System.out.println("VERYBAD");
             }
@@ -102,6 +90,9 @@ public class TestBase {
             query = environment.applyToQuery(query);
         }
         System.out.println("[[query|" + query + "]]");
+        if (!useXQueryParser) {
+            query = Converter.convert(query);
+        }
         SequenceOfItems queryResult = rumble.runQuery(query);
         List<Item> resultAsList = new ArrayList<>();
         queryResult.populateListWithWarningOnlyIfCapReached(resultAsList);
@@ -126,21 +117,21 @@ public class TestBase {
                 secondQuery = "declare variable $result := ("
                     + convertedTestString
                     + "); "
-                    + Converter.convert(assertion.getStringValue(), this.useXQueryParser);
+                    + assertion.getStringValue();
                 assertTrueSingleElement(runQuery(secondQuery, rumble, environment));
                 break;
             case "not":
                 secondQuery = "declare variable $result := ("
                     + convertedTestString
                     + "); "
-                    + Converter.convert(assertion.getStringValue(), this.useXQueryParser);
+                    + assertion.getStringValue();
                 assertFalseSingleElement(runQuery(secondQuery, rumble, environment));
                 break;
             case "assert-eq":
                 secondQuery = "("
                     + convertedTestString
                     + ") eq ("
-                    + Converter.convert(assertion.getStringValue(), this.useXQueryParser)
+                    + assertion.getStringValue()
                     + ")";
                 assertTrueSingleElement(runQuery(secondQuery, rumble, environment));
                 break;
@@ -148,7 +139,7 @@ public class TestBase {
                 secondQuery = "deep-equal(("
                     + convertedTestString
                     + "), ("
-                    + Converter.convert(assertion.getStringValue(), this.useXQueryParser)
+                    + assertion.getStringValue()
                     + "))";
                 assertTrueSingleElement(runQuery(secondQuery, rumble, environment));
                 break;
@@ -215,7 +206,7 @@ public class TestBase {
                 secondQuery = "("
                     + convertedTestString
                     + ") instance of "
-                    + Converter.convert(assertion.getStringValue(), this.useXQueryParser);
+                    + assertion.getStringValue();
                 assertTrueSingleElement(runQuery(secondQuery, rumble, environment));
                 break;
             case "assert-count":
@@ -303,7 +294,7 @@ public class TestBase {
                 + convertedTestString
                 + ")"
                 + "satisfies deep-equal($a[], (("
-                + Converter.convert(assertion.getStringValue(), this.useXQueryParser)
+                + assertion.getStringValue()
                 + ")))";
         List<Item> results = runQuery(assertExpression, rumble, environment);
         assertTrueSingleElement(results);
