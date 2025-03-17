@@ -222,10 +222,6 @@ public class TestBase {
                     runQuery(convertedTestString, rumble, environment);
                     fail("Expected to throw error but ran without error");
                 } catch (RumbleException re) {
-                    if (!Constants.supportedErrorCodes.contains(re.getErrorCode())) {
-                        System.out.println("[[category|SKIP]]");
-                        assumeTrue("Unsupported errorcode: " + re.getErrorCode(), false);
-                    }
                     if (Constants.skipReasonErrorCodes.contains(re.getErrorCode())) {
                         // we want these to be caught outside so we skip the testcase
                         throw re;
