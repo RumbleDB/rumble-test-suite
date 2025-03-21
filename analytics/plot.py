@@ -65,6 +65,7 @@ def plot_df(df, title):
     plt.tight_layout()
     os.makedirs('plots', exist_ok=True)
     plt.savefig(f"plots/{title}.png")
+    plt.savefig(f"plots/{title}.svg")
 
 df = pd.read_json(f"analytics-results/count.json").set_index("name").sort_index(ascending=False)
 df.index = df.index.to_series().replace({

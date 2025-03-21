@@ -1,4 +1,4 @@
-package driver;
+package evaluation;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -35,7 +35,7 @@ public class Constants {
 
     /**
      * Error codes that we assume indicate a skip reason. When such a exception is thrown we mark the testcase as
-     * skipped.
+     * skipped instead.
      */
     public static final List<String> skipReasonErrorCodes = List.of(
         "XPST0017", // method or type not implemented

@@ -1,4 +1,4 @@
-package driver;
+package evaluation;
 
 import net.sf.saxon.s9api.*;
 import net.sf.saxon.s9api.streams.Steps;
@@ -12,7 +12,7 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class TestDriver {
+public class CaseCollector {
     private Path testsRepositoryDirectoryPath;
     private String currentTestSet;
     private final List<Object[]> allTests = new ArrayList<>();

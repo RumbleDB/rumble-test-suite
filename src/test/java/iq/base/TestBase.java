@@ -1,6 +1,6 @@
 package iq.base;
 
-import driver.*;
+import evaluation.*;
 import net.sf.saxon.s9api.XdmNode;
 import org.junit.AssumptionViolatedException;
 import org.rumbledb.api.Item;
@@ -30,7 +30,7 @@ public class TestBase {
     }
 
     public static Iterable<Object[]> getData(String testSuite) throws Exception {
-        TestDriver testDriver = new TestDriver();
+        CaseCollector testDriver = new CaseCollector();
         testDriver.execute(testSuite);
         return testDriver.getAllTests();
     }
