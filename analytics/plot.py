@@ -102,7 +102,8 @@ def plot_categories(df, cutoff, formatter, plot_settings):
                     ha='center', va='center', xytext=(0, 10), textcoords='offset points', fontsize=12, color='black')
 
     plt.tight_layout()
-    plt.savefig(f"plots/{plot_settings["filepath"]}", dpi=300)
+    plt.savefig(f"plots/{plot_settings["filepath"]}.png", dpi=300)
+    plt.savefig(f"plots/{plot_settings["filepath"]}.svg")
 
 
 def error_formatter(input_string):
@@ -123,19 +124,19 @@ plot_settings = {
     "error": {
         "title": "Exception occurences by type",
         "xlabel": "Exception type",
-        "filepath": "exception_types.png",
+        "filepath": "exception_types",
         "color": "darkred"
     },
     "failure": {
         "title": "Failure occurences by type",
         "xlabel": "Failure type",
-        "filepath": "failure_types.png",
+        "filepath": "failure_types",
         "color": "red"
     },
     "skip": {
         "title": "Skip occurences by reason",
         "xlabel": "Skip reason",
-        "filepath": "skip_reasons.png",
+        "filepath": "skip_reasons",
         "color": "grey"
     }
 }
