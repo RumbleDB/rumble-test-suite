@@ -131,12 +131,11 @@ public class TestBase {
                 assertFalseSingleElement(runQuery(secondQuery, rumble, environment));
                 break;
             case "assert-eq":
-                secondQuery = "("
-                    + convertedTestString
-                    + ") eq ("
-                    + assertion.getStringValue()
-                    + ")";
-                assertTrueSingleElement(runQuery(secondQuery, rumble, environment));
+                String assertionQuery = "(" + assertion.getStringValue() + ")";
+                List<Item> testCaseResult = runQuery(convertedTestString, rumble, environment);
+                List<Item> assertionResult = runQuery(assertionQuery, rumble, environment);
+
+                assertEquals(testCaseResult, assertionResult);
                 break;
             case "assert-deep-eq":
                 secondQuery = "deep-equal(("
