@@ -69,7 +69,7 @@ public class TestBase {
                 System.out.println("VERYBAD");
             }
         } catch (RumbleException e) {
-            if (Constants.skipReasonErrorCodes.contains(e.getErrorCode())) {
+            if (isSkipErrorCode(e.getErrorCode())) {
                 System.out.println("[[category|SKIP]]");
                 assumeTrue("Skip errorcode: " + e.getErrorCode(), false);
             } else {
@@ -185,7 +185,7 @@ public class TestBase {
                         checkAssertion(convertedTestString, individualAssertion, subRumble, environment);
                         success = true;
                     } catch (RumbleException e) {
-                        if (Constants.skipReasonErrorCodes.contains(e.getErrorCode())) {
+                        if (isSkipErrorCode(e.getErrorCode())) {
                             // we want these to be caught outside so we skip the testcase
                             throw e;
                         } else {
@@ -222,7 +222,7 @@ public class TestBase {
                     runQuery(convertedTestString, rumble, environment);
                     fail("Expected to throw error but ran without error");
                 } catch (RumbleException re) {
-                    if (Constants.skipReasonErrorCodes.contains(re.getErrorCode())) {
+                    if (isSkipErrorCode(re.getErrorCode())) {
                         // we want these to be caught outside so we skip the testcase
                         throw re;
                     }
@@ -294,5 +294,18 @@ public class TestBase {
                 + ")))";
         List<Item> results = runQuery(assertExpression, rumble, environment);
         assertTrueSingleElement(results);
+    }
+
+    /**
+     * Returns true if the error code is a skip error code.
+     * 
+     * @param errorCode The error code to check.
+     * @return True if the error code is a skip error code, false otherwise.
+     */
+    private boolean isSkipErrorCode(String errorCode) {
+        // use the xQuery skip reason error codes if we are using the XQuery parser
+        return (this.useXQueryParser ? Constants.xQuerySkipReasonErrorCodes : Constants.skipReasonErrorCodes).contains(
+            errorCode
+        );
     }
 }
