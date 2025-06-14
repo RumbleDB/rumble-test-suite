@@ -53,14 +53,26 @@
                 <version>3.0.0</version>
                 <executions>
                     <execution>
+                        <id>analytics-aggregation</id>
+                        <phase>none</phase>
                         <goals>
                             <goal>java</goal>
                         </goals>
+                        <configuration>
+                            <mainClass>analytics.AnalyticsAggregation</mainClass>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>analytics-pre</id>
+                        <phase>none</phase>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                        <configuration>
+                            <mainClass>analytics.Analytics</mainClass>
+                        </configuration>
                     </execution>
                 </executions>
-                <configuration>
-                    <mainClass>analytics.Analytics</mainClass>
-                </configuration>
             </plugin>
         </plugins>
     </build>

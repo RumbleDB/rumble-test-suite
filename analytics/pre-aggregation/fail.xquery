@@ -1,7 +1,7 @@
-array{(let $cases := collection(".")/testsuite/testcase
+array{(let $cases := collection(".?select=*.xml")/testsuite/testcase
 for $case in $cases
 let $name := tokenize($case/@name ! data(), "\] ")[2]
-let $msg := $case/error/@type
+let $msg := $case/failure/@message
 where $msg
 group by $msg
 let $cnt := count($name)
