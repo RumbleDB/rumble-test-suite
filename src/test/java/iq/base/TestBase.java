@@ -21,12 +21,29 @@ public class TestBase {
     protected final String testSetName;
     protected final String testCaseName;
     private final boolean useXQueryParser;
+    /** The configuration for the Rumble runtimes spinned up for this test case. */
+    private final RumbleRuntimeConfiguration rumbleConfig;
 
     public TestBase(TestCase testCase, String testSetName, String testCaseName, boolean useXQueryParser) {
         this.testCase = testCase;
         this.testSetName = testSetName;
         this.testCaseName = testCaseName;
         this.useXQueryParser = useXQueryParser;
+        this.rumbleConfig = new RumbleRuntimeConfiguration(
+                useXQueryParser
+                    ? new String[] {
+                        "--output-format",
+                        "json",
+                        "--materialization-cap",
+                        "1000000000",
+                        "--default-language",
+                        "xquery31" }
+                    : new String[] {
+                        "--output-format",
+                        "json",
+                        "--materialization-cap",
+                        "1000000000" }
+        );
     }
 
     public static Iterable<Object[]> getData(String testSuite) throws Exception {
@@ -46,21 +63,7 @@ public class TestBase {
 
         XdmNode assertion = this.testCase.assertion;
         Environment environment = this.testCase.environment;
-        List<String> config = new ArrayList<>(
-                List.of(
-                    "--output-format",
-                    "json",
-                    "--materialization-cap",
-                    "1000000000"
-                )
-        );
-        if (useXQueryParser) {
-            config.add("--default-language");
-            config.add("xquery31");
-        }
-        Rumble rumble = new Rumble(
-                new RumbleRuntimeConfiguration(config.toArray(new String[] {}))
-        );
+        Rumble rumble = new Rumble(rumbleConfig);
         System.out.println("[[originalAssertion|" + assertion + "]]");
         try {
             if (checkAssertion(testString, assertion, rumble, environment)) {
@@ -158,14 +161,7 @@ public class TestBase {
                 break;
             case "all-of":
                 for (XdmNode individualAssertion : assertion.children("*")) {
-                    Rumble subRumble = new Rumble(
-                            new RumbleRuntimeConfiguration(
-                                    new String[] {
-                                        "--output-format",
-                                        "json"
-                                    }
-                            )
-                    );
+                    Rumble subRumble = new Rumble(rumbleConfig);
                     checkAssertion(convertedTestString, individualAssertion, subRumble, environment);
                 }
                 break;
@@ -173,14 +169,7 @@ public class TestBase {
                 boolean success = false;
                 List<Throwable> errors = new ArrayList<>();
                 for (XdmNode individualAssertion : assertion.children("*")) {
-                    Rumble subRumble = new Rumble(
-                            new RumbleRuntimeConfiguration(
-                                    new String[] {
-                                        "--output-format",
-                                        "json"
-                                    }
-                            )
-                    );
+                    Rumble subRumble = new Rumble(rumbleConfig);
                     try {
                         checkAssertion(convertedTestString, individualAssertion, subRumble, environment);
                         success = true;
@@ -308,4 +297,5 @@ public class TestBase {
             errorCode
         );
     }
+
 }
