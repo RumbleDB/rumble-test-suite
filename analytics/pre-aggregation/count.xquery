@@ -1,4 +1,4 @@
-array{let $docs := collection(".")/testsuite
+array{let $docs := collection(".?select=*.xml")/testsuite
 for $doc in $docs
 let $tests := $doc/@tests ! number()
 let $errors := $doc/@errors ! number()

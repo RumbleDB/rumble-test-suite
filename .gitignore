@@ -2,3 +2,7 @@
 /qt3tests/
 /rumble/
 /target/
+
+# analytics results
+analytics-results/
+analytics-pre/
