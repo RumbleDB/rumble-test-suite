@@ -8,6 +8,8 @@ import org.rumbledb.api.Rumble;
 import org.rumbledb.api.SequenceOfItems;
 import org.rumbledb.config.RumbleRuntimeConfiguration;
 import org.rumbledb.exceptions.RumbleException;
+import org.xmlunit.builder.DiffBuilder;
+import org.xmlunit.diff.Diff;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -111,6 +113,7 @@ public class TestBase {
         String tag = assertion.getNodeName().getLocalName();
         String secondQuery;
         List<Item> results;
+
         switch (tag) {
             case "assert-empty":
                 results = runQuery(convertedTestString, rumble, environment);
@@ -222,12 +225,25 @@ public class TestBase {
                     );
                 }
                 break;
+            case "assert-xml":
+                results = runQuery(convertedTestString, rumble, environment);
+                String actualXml = "<assert-xml>"
+                    + results.stream().map(Item::serialize).collect(Collectors.joining(""))
+                    + "</assert-xml>";
+                String expectedXml = "<assert-xml>" + assertion.getStringValue() + "</assert-xml>";
+
+                Diff diff = DiffBuilder.compare(expectedXml)
+                    .withTest(actualXml)
+                    .ignoreWhitespace()
+                    .build();
+
+                assertFalse("Expected vs actual XML are different:\n" + diff.toString(), diff.hasDifferences());
+                break;
             case "assert-serialization":
             case "serialization-matches":
             case "assert-serialization-error":
-            case "assert-xml":
                 System.out.println("[[category|SKIP]]");
-                assumeTrue("assert-xml not implemented", false);
+                assumeTrue(tag + " not implemented", false);
                 break;
             default:
                 // should never happen unless they add a new assertion type
