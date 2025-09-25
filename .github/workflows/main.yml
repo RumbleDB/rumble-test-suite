@@ -1,4 +1,4 @@
-name: 'testing ${{ env.TESTED_PARSER }}-parser on ${{ env.TESTED_BRANCH }} branch'
+name: 'testing TODO-parser on TODO branch'
 
 # This workflow is triggered on pushes, pull requests, or can be run manually.
 on:
