@@ -22,7 +22,7 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
-          # If you truly need to build a different branch than the one triggering the workflow
+          repository: gfourny/rumble
           ref: ${{ env.TESTED_BRANCH }}
 
       # The 'maven-version' input is no longer valid and has been removed.
