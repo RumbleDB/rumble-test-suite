@@ -1,0 +1,214 @@
+name: 'testing ${{ env.TESTED_PARSER }}-parser on ${{ env.TESTED_BRANCH }} branch'
+
+# This workflow is triggered on pushes, pull requests, or can be run manually.
+on:
+  push:
+    branches: [ main, master ] # Adjust to your default branch
+  pull_request:
+    branches: [ main, master ] # Adjust to your default branch
+  workflow_dispatch:
+
+# Environment variables available to all jobs in the workflow
+env:
+  TESTED_BRANCH: master
+  TESTED_PARSER: jsoniq
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up JDK 11 and Maven
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'temurin'
+          maven-version: '3.9.9'
+
+      - name: Clone and Build Rumble Repository
+        run: |
+          echo "cloning ${{ env.TESTED_BRANCH }}"
+          git clone --single-branch --branch "${{ env.TESTED_BRANCH }}" "https://github.com/gfourny/rumble.git"
+          cd rumble
+          mvn clean compile assembly:single -quiet
+          cd ..
+          
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rumble-build
+          path: rumble/target
+
+  test:
+    name: Test - ${{ matrix.test_name }}
+    needs: build
+    runs-on: ubuntu-latest
+    # Use a matrix to run all test jobs in parallel
+    strategy:
+      fail-fast: false # Allows all tests to finish even if one fails
+      matrix:
+        test_name: [ 'app', 'array', 'fn1', 'fn2', 'map', 'math', 'misc', 'op', 'prod1', 'prod2', 'ser', 'xs' ]
+        
+    # The job will be marked with a warning but won't fail the workflow.
+    continue-on-error: true
+
+    steps:
+      - name: Set up JDK 11 and Maven
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'temurin'
+          maven-version: '3.9.9'
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: rumble-build
+          path: . # download to the root
+
+      - name: Run Maven Tests
+        id: run-tests
+        run: |
+          # Capitalize the first letter of the test_name to form the class name
+          TEST_CLASS=$(echo ${{ matrix.test_name }} | awk '{print toupper(substr($0,1,1))substr($0,2)}')Test
+
+          if [ "${{ env.TESTED_PARSER }}" = "jsoniq" ]; then
+            mvn -Dtest=${TEST_CLASS} test -quiet
+          else
+            mvn -Dtest=XQuery${TEST_CLASS} test -quiet
+          fi
+
+      - name: Upload Surefire reports
+        # Corresponds to `when: always`
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-report-${{ matrix.test_name }}
+          path: target/surefire-reports/*.xml
+          retention-days: 7
+
+  spotless-check:
+    name: Spotless Check
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up JDK 11 and Maven
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'temurin'
+          maven-version: '3.9.9'
+          
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: rumble-build
+          path: .
+
+      - name: Run Spotless Check
+        run: mvn spotless:check
+
+  publish-test-results:
+    name: Publish Test Results
+    # This job runs after all jobs in the `test` matrix have completed.
+    needs: test
+    runs-on: ubuntu-latest
+    # This job should always run to report on which tests passed or failed.
+    if: always()
+    steps:
+      - name: Download all surefire reports
+        uses: actions/download-artifact@v4
+        with:
+          # Download all artifacts that match this pattern
+          pattern: surefire-report-*
+          path: all-surefire-reports
+          merge-multiple: true # merge all downloaded artifacts into one directory
+
+      - name: Publish Unit Test Results
+        uses: EnricoMi/publish-unit-test-results-action@v2
+        with:
+          files: all-surefire-reports/**/*.xml
+
+  collect:
+    name: Collect Artifacts
+    needs: [test, spotless-check]
+    runs-on: ubuntu-latest
+    # Corresponds to `when: always`
+    if: always()
+    steps:
+      # Checkout the repository to get access to analytics scripts etc.
+      - uses: actions/checkout@v4
+      
+      - name: Set up JDK 11 and Maven
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'temurin'
+          maven-version: '3.9.9'
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: rumble-build
+          path: .
+          
+      - name: Download all surefire reports
+        uses: actions/download-artifact@v4
+        with:
+          pattern: surefire-report-*
+          path: all-surefire-reports
+          merge-multiple: true
+
+      - name: Collect and process artifacts
+        run: |
+          mkdir -p collected-artifacts/surefire-reports
+          # Copy all downloaded reports into the target directory for processing
+          cp all-surefire-reports/*.xml target/surefire-reports/
+          cp -r target/surefire-reports collected-artifacts/
+          
+          # Run the collection/analytics Java code
+          mvn compile
+          mvn exec:java
+
+      - name: Upload collected data
+        uses: actions/upload-artifact@v4
+        with:
+          name: collected-data
+          path: |
+            collected-artifacts
+            analytics-results
+
+  plot:
+    name: Analytics and Plotting
+    needs: collect
+    runs-on: ubuntu-latest
+    # Corresponds to `when: always`
+    if: always()
+    steps:
+      # Checkout the repository to get the analytics scripts
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Download collected data
+        uses: actions/download-artifact@v4
+        with:
+          name: collected-data
+          path: .
+      
+      - name: Install dependencies and run plotting script
+        run: |
+          pip install -r analytics/requirements.txt
+          python analytics/plot.py
+          echo "TO SEE THE PLOTS, CHECK THE ARTIFACTS OF THIS WORKFLOW RUN"
+          
+      - name: Upload plots
+        uses: actions/upload-artifact@v4
+        with:
+          name: plots-and-results
+          path: |
+            plots
+            analytics-results
