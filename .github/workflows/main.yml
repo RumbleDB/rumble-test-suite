@@ -28,8 +28,6 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-          # NOTE: Caching is removed here because the pom.xml is in a subdirectory ('rumble'),
-          # which the cache action cannot find at the root level.
       
       - name: Build with Maven
         working-directory: ./rumble
@@ -52,7 +50,6 @@ jobs:
             
     continue-on-error: true
     steps:
-      # FIX: Added checkout step for the test-suite repository itself.
       - name: Checkout Test Suite Repository
         uses: actions/checkout@v4
 
@@ -61,14 +58,18 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-          # Caching will now work because checkout places the pom.xml at the root.
           cache: 'maven'
 
-      - name: Download build artifact
+      # --- START OF FIX ---
+      - name: Create directory structure for system-scoped dependency
+        run: mkdir -p rumble/target
+
+      - name: Download build artifact into the correct path
         uses: actions/download-artifact@v4
         with:
           name: rumble-target
-          path: target
+          path: rumble/target # This path now matches what the pom.xml expects
+      # --- END OF FIX ---
 
       - name: Run Maven Tests
         id: run-tests
@@ -93,7 +94,6 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      # FIX: Corrected logic to check out source code, not download an artifact.
       - name: Checkout Rumble Repository
         uses: actions/checkout@v4
         with:
@@ -106,7 +106,6 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-          # NOTE: Caching is also removed here because pom.xml is in a subdirectory.
 
       - name: Run Spotless Check
         working-directory: ./rumble
@@ -146,11 +145,16 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
-      - name: Download build artifact
+      # --- START OF FIX (Applied here as well) ---
+      - name: Create directory structure for system-scoped dependency
+        run: mkdir -p rumble/target
+
+      - name: Download build artifact into the correct path
         uses: actions/download-artifact@v4
         with:
           name: rumble-target
-          path: target
+          path: rumble/target # This path now matches what the pom.xml expects
+      # --- END OF FIX ---
                 
       - name: Download all surefire reports
         uses: actions/download-artifact@v4
@@ -162,8 +166,9 @@ jobs:
       - name: Collect and process artifacts
         run: |
           mkdir -p collected-artifacts
-          mkdir -p target/surefire-reports
-          cp all-surefire-reports/*.xml target/surefire-reports/
+          # This next line is important: Maven expects the surefire reports in target/, not the root.
+          mkdir -p target
+          mv all-surefire-reports target/surefire-reports
           cp -r target/surefire-reports collected-artifacts/
           mvn compile
           mvn exec:java
