@@ -36,13 +36,14 @@ jobs:
           cache: 'maven'
 
       - name: Build with Maven
+        working-directory: ./rumble
         run: mvn clean compile assembly:single -quiet
           
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: rumble-target
-          path: target
+          path: rumble/target
 
   test:
     name: Test - ${{ matrix.test_name }}
