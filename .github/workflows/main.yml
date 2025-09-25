@@ -1,44 +1,40 @@
-name: 'testing TODO-parser on TODO branch'
+name: 'Test RumbleDB Parser'
 
-# This workflow is triggered on pushes, pull requests, or can be run manually.
 on:
   push:
-    branches: [ main, master ] # Adjust to your default branch
+    branches: [ main, master ]
   pull_request:
-    branches: [ main, master ] # Adjust to your default branch
+    branches: [ main, master ]
   workflow_dispatch:
 
-# Environment variables available to all jobs in the workflow
 env:
   TESTED_BRANCH: master
   TESTED_PARSER: jsoniq
 
 jobs:
   build:
-    name: Build
+    name: Build Rumble
     runs-on: ubuntu-latest
     steps:
-      # This is the correct way to check out your repository code
-      - name: Checkout Repository
+      - name: Checkout Rumble Repository
         uses: actions/checkout@v4
         with:
           repository: RumbleDB/rumble
           ref: ${{ env.TESTED_BRANCH }}
           path: rumble
 
-      # The 'maven-version' input is no longer valid and has been removed.
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
-          # Cache Maven dependencies for faster builds
-          cache: 'maven'
-
+          # NOTE: Caching is removed here because the pom.xml is in a subdirectory ('rumble'),
+          # which the cache action cannot find at the root level.
+      
       - name: Build with Maven
         working-directory: ./rumble
         run: mvn clean compile assembly:single
-          
+
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
@@ -53,15 +49,19 @@ jobs:
       fail-fast: false
       matrix:
         test_name: [ 'app', 'array', 'fn1', 'fn2', 'map', 'math', 'misc', 'op', 'prod1', 'prod2', 'ser', 'xs' ]
-        
+            
     continue-on-error: true
-
     steps:
+      # FIX: Added checkout step for the test-suite repository itself.
+      - name: Checkout Test Suite Repository
+        uses: actions/checkout@v4
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
+          # Caching will now work because checkout places the pom.xml at the root.
           cache: 'maven'
 
       - name: Download build artifact
@@ -73,9 +73,7 @@ jobs:
       - name: Run Maven Tests
         id: run-tests
         run: |
-          # Capitalize the first letter of the test_name to form the class name
           TEST_CLASS=$(echo ${{ matrix.test_name }} | awk '{print toupper(substr($0,1,1))substr($0,2)}')Test
-
           if [ "${{ env.TESTED_PARSER }}" = "jsoniq" ]; then
             mvn -Dtest=${TEST_CLASS} test -quiet
           else
@@ -95,20 +93,23 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      # FIX: Corrected logic to check out source code, not download an artifact.
+      - name: Checkout Rumble Repository
+        uses: actions/checkout@v4
+        with:
+          repository: RumbleDB/rumble
+          ref: ${{ env.TESTED_BRANCH }}
+          path: rumble
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: 'maven'
-          
-      - name: Download build artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: rumble-target
-          path: target
+          # NOTE: Caching is also removed here because pom.xml is in a subdirectory.
 
       - name: Run Spotless Check
+        working-directory: ./rumble
         run: mvn spotless:check
 
   publish-test-results:
@@ -135,12 +136,13 @@ jobs:
     runs-on: ubuntu-latest
     if: always()
     steps:
-      - uses: actions/checkout@v4 # Checkout needed for analytics scripts
-
-      - name: Set up JDK 11
+      - name: Checkout Test Suite Repository
+        uses: actions/checkout@v4 
+      
+      - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          java-version: '11'
+          java-version: '17'
           distribution: 'temurin'
           cache: 'maven'
 
@@ -149,7 +151,7 @@ jobs:
         with:
           name: rumble-target
           path: target
-          
+                
       - name: Download all surefire reports
         uses: actions/download-artifact@v4
         with:
@@ -159,14 +161,10 @@ jobs:
 
       - name: Collect and process artifacts
         run: |
-          mkdir -p collected-artifacts/surefire-reports
-          # The download artifact action now places surefire reports in the correct directory
-          # so we just need to ensure the target/surefire-reports dir exists for the next step
+          mkdir -p collected-artifacts
           mkdir -p target/surefire-reports
           cp all-surefire-reports/*.xml target/surefire-reports/
           cp -r target/surefire-reports collected-artifacts/
-          
-          # Run the collection/analytics Java code
           mvn compile
           mvn exec:java
 
@@ -184,8 +182,9 @@ jobs:
     runs-on: ubuntu-latest
     if: always()
     steps:
-      - uses: actions/checkout@v4 # Checkout needed for analytics scripts
-
+      - name: Checkout Test Suite Repository
+        uses: actions/checkout@v4
+      
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
@@ -196,13 +195,13 @@ jobs:
         with:
           name: collected-data
           path: .
-      
+            
       - name: Install dependencies and run plotting script
         run: |
           pip install -r analytics/requirements.txt
           python analytics/plot.py
           echo "TO SEE THE PLOTS, CHECK THE ARTIFACTS OF THIS WORKFLOW RUN"
-          
+                
       - name: Upload plots
         uses: actions/upload-artifact@v4
         with:
