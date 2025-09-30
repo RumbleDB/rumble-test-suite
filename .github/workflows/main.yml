@@ -102,7 +102,6 @@ jobs:
           distribution: 'temurin'
 
       - name: Run Spotless Check
-        working-directory: ./rumble
         run: mvn spotless:check
 
   publish-test-results:
