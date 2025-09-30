@@ -86,6 +86,12 @@ jobs:
           path: target/surefire-reports/*.xml
           retention-days: 7
 
+      - name: Test Summary
+        uses: test-summary/action@v2
+        with:
+          paths: "target/surefire-reports/*.xml"
+        if: always()
+
   spotless-check:
     name: Spotless Check
     needs: build
@@ -102,24 +108,6 @@ jobs:
 
       - name: Run Spotless Check
         run: mvn spotless:check
-
-  publish-test-results:
-    name: Publish Test Results
-    needs: test
-    runs-on: ubuntu-latest
-    if: always()
-    steps:
-      - name: Download all surefire reports
-        uses: actions/download-artifact@v4
-        with:
-          pattern: surefire-report-*
-          path: all-surefire-reports
-          merge-multiple: true
-
-      - name: Publish Unit Test Results
-        uses: EnricoMi/publish-unit-test-results-action@v2
-        with:
-          files: all-surefire-reports/**/*.xml
 
   collect:
     name: Collect Artifacts
@@ -156,7 +144,6 @@ jobs:
       - name: Collect and process artifacts
         run: |
           mkdir -p collected-artifacts
-          # This next line is important: Maven expects the surefire reports in target/, not the root.
           mkdir -p target
           mv all-surefire-reports target/surefire-reports
           cp -r target/surefire-reports collected-artifacts/
@@ -194,9 +181,9 @@ jobs:
       - name: Install dependencies and run plotting script
         run: |
           pip install -r analytics/requirements.txt
-          python analytics/plot.py
-          echo "TO SEE THE PLOTS, CHECK THE ARTIFACTS OF THIS WORKFLOW RUN"
-                
+          python analytics/plot.py > script_output.txt
+          cat script_output.txt >> $GITHUB_STEP_SUMMARY
+
       - name: Upload plots
         uses: actions/upload-artifact@v4
         with:
