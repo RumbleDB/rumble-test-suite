@@ -171,7 +171,7 @@ jobs:
         if: always()
         with:
           name: Tests            # Name of the check run which will be created
-          path: target/surefire-reports/*.xml"    # Path to test results
+          path: "target/surefire-reports/*.xml"    # Path to test results
           reporter: java-junit        # Format of test results
 
   plot:
