@@ -60,7 +60,6 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
-      # --- START OF FIX ---
       - name: Create directory structure for system-scoped dependency
         run: mkdir -p rumble/target
 
@@ -68,8 +67,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: rumble-target
-          path: rumble/target # This path now matches what the pom.xml expects
-      # --- END OF FIX ---
+          path: rumble/target
 
       - name: Run Maven Tests
         id: run-tests
@@ -94,12 +92,8 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Rumble Repository
+      - name: Checkout Test Suite Repository
         uses: actions/checkout@v4
-        with:
-          repository: RumbleDB/rumble
-          ref: ${{ env.TESTED_BRANCH }}
-          path: rumble
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -145,7 +139,6 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
-      # --- START OF FIX (Applied here as well) ---
       - name: Create directory structure for system-scoped dependency
         run: mkdir -p rumble/target
 
@@ -153,8 +146,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: rumble-target
-          path: rumble/target # This path now matches what the pom.xml expects
-      # --- END OF FIX ---
+          path: rumble/target
                 
       - name: Download all surefire reports
         uses: actions/download-artifact@v4
