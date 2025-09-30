@@ -95,7 +95,7 @@ public class TestBase {
         }
         SequenceOfItems queryResult = rumble.runQuery(query);
         List<Item> resultAsList = new ArrayList<>();
-        queryResult.populateListWithWarningOnlyIfCapReached(resultAsList);
+        queryResult.populateList(resultAsList, 1000000000);
         return resultAsList;
     }
 
