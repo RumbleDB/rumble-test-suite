@@ -46,7 +46,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        test_name: [ 'app', 'array', 'fn1', 'fn2', 'map', 'math', 'misc', 'op', 'prod1', 'prod2', 'ser', 'xs' ]
+        test_name: [ 'App', 'Array', 'Fn1', 'Fn2', 'Map', 'Math', 'Misc', 'Op', 'Prod1', 'Prod2', 'Ser', 'Xs' ]
             
     continue-on-error: true
     steps:
@@ -72,11 +72,10 @@ jobs:
       - name: Run Maven Tests
         id: run-tests
         run: |
-          TEST_CLASS=$(echo ${{ matrix.test_name }} | awk '{print toupper(substr($0,1,1))substr($0,2)}')Test
           if [ "${{ env.TESTED_PARSER }}" = "jsoniq" ]; then
-            mvn -Dtest=${TEST_CLASS} test -quiet
+            mvn -Dtest=${{ matrix.test_name }}Test test -quiet
           else
-            mvn -Dtest=XQuery${TEST_CLASS} test -quiet
+            mvn -Dtest=XQuery${{ matrix.test_name }}Test test -quiet
           fi
 
       - name: Upload Surefire reports
