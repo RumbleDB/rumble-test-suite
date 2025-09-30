@@ -90,6 +90,7 @@ jobs:
         uses: test-summary/action@v2
         with:
           paths: "target/surefire-reports/*.xml"
+          show: "none"
         if: always()
 
   spotless-check:
@@ -157,6 +158,21 @@ jobs:
           path: |
             collected-artifacts
             analytics-results
+
+      - name: Test Summary
+        uses: test-summary/action@v2
+        with:
+          paths: "target/surefire-reports/*.xml"
+          show: "none"
+        if: always()
+
+      - name: Test Report
+        uses: dorny/test-reporter@v2
+        if: always()
+        with:
+          name: Tests            # Name of the check run which will be created
+          path: target/surefire-reports/*.xml"    # Path to test results
+          reporter: java-junit        # Format of test results
 
   plot:
     name: Analytics and Plotting
