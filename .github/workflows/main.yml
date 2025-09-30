@@ -124,7 +124,7 @@ jobs:
 
   collect:
     name: Collect Artifacts
-    needs: [test, spotless-check]
+    needs: test
     runs-on: ubuntu-latest
     if: always()
     steps:
