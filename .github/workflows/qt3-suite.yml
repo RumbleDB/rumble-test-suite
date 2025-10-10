@@ -51,7 +51,7 @@ jobs:
       - name: Upload RumbleDB target
         uses: actions/upload-artifact@v4
         with:
-          name: rumble-target
+          name: rumble-target-${{ inputs.tested_parser }}
           path: target
           retention-days: 1
 
@@ -70,11 +70,15 @@ jobs:
           repository: EPMatt/rumble-test-suite
           ref: master
           fetch-depth: 2
-
+      - name: Checkout caller (RumbleDB)
+        uses: actions/checkout@v4
+        with:
+          path: rumble
+          fetch-depth: 2
       - name: Download RumbleDB target
         uses: actions/download-artifact@v4
         with:
-          name: rumble-target
+          name: rumble-target-${{ inputs.tested_parser }}
           path: rumble/target
 
       - name: Set up JDK 17
