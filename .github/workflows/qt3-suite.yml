@@ -68,7 +68,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: EPMatt/rumble-test-suite
-          ref: ${{ github.workflow_ref }}
+          ref: master
+          fetch-depth: 2
 
       - name: Download RumbleDB target
         uses: actions/download-artifact@v4
@@ -123,7 +124,8 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: EPMatt/rumble-test-suite
-          ref: ${{ github.workflow_ref }}
+          ref: master
+          fetch-depth: 2
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -171,7 +173,8 @@ jobs:
         with:
           repository: EPMatt/rumble-test-suite
           path: rumble-test-suite
-          ref: ${{ github.workflow_ref }}
+          ref: master
+          fetch-depth: 2
 
       - name: Download collected artifacts
         uses: actions/download-artifact@v4
