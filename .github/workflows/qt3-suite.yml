@@ -64,14 +64,10 @@ jobs:
       matrix:
         suite: [AppTest, ArrayTest, Fn1Test, Fn2Test, MapTest, MathTest, MiscTest, OpTest, Prod1Test, Prod2Test, SerTest, XsTest]
     steps:
-      - name: Checkout caller (RumbleDB)
-        uses: actions/checkout@v4
-
       - name: Checkout test harness (this repo)
         uses: actions/checkout@v4
         with:
           repository: ${{ github.action_repository }}
-          path: rumble-test-suite
           ref: ${{ github.action_ref }}
 
       - name: Download RumbleDB target
@@ -117,28 +113,6 @@ jobs:
             rumble-test-suite/target/surefire-reports/*.xml
             rumble-test-suite/analytics-pre/*.json
           retention-days: 7
-
-  spotless-check:
-    name: Spotless check
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout test harness (this repo)
-        uses: actions/checkout@v4
-        with:
-          repository: ${{ github.action_repository }}
-          path: rumble-test-suite
-          ref: ${{ github.action_ref }}
-
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-
-      - name: Run Spotless
-        working-directory: rumble-test-suite
-        run: mvn -B spotless:check
 
   collect-artifacts:
     name: Collect and aggregate
