@@ -1,0 +1,232 @@
+name: QT3 Rumble Test Suite
+
+on:
+  workflow_call:
+    inputs:
+      tested_parser:
+        description: Parser to use (jsoniq or xquery)
+        required: false
+        type: string
+        default: jsoniq
+      run_analytics:
+        description: Run analytics and plots
+        required: false
+        type: boolean
+        default: true
+      mvn_args:
+        description: Extra Maven args (e.g. -Dtest=Prod1Test)
+        required: false
+        type: string
+        default: ''
+    secrets: {}
+
+permissions:
+  contents: read
+  actions: read
+  checks: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ inputs.tested_parser }}
+  cancel-in-progress: true
+
+env:
+  TESTED_PARSER: ${{ inputs.tested_parser }}
+jobs:
+  build:
+    name: Build RumbleDB
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout caller (RumbleDB)
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Build RumbleDB
+        run: mvn -B -q clean compile assembly:single
+
+      - name: Upload RumbleDB target
+        uses: actions/upload-artifact@v4
+        with:
+          name: rumble-target
+          path: target
+          retention-days: 1
+
+  tests:
+    name: Run test suite (${{ matrix.suite }})
+    needs: build
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [AppTest, ArrayTest, Fn1Test, Fn2Test, MapTest, MathTest, MiscTest, OpTest, Prod1Test, Prod2Test, SerTest, XsTest]
+    steps:
+      - name: Checkout caller (RumbleDB)
+        uses: actions/checkout@v4
+
+      - name: Checkout test harness (this repo)
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.action_repository }}
+          path: rumble-test-suite
+          ref: ${{ github.action_ref }}
+
+      - name: Download RumbleDB target
+        uses: actions/download-artifact@v4
+        with:
+          name: rumble-target
+          path: target
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Run Maven tests
+        working-directory: rumble-test-suite
+        shell: bash
+        run: |
+          if [[ "${TESTED_PARSER}" == "jsoniq" ]]; then
+            SUITE="${{ matrix.suite }}"
+          else
+            # Prepend XQuery for XQuery parser
+            SUITE="XQuery${{ matrix.suite }}"
+          fi
+          if [[ -n "${{ inputs.mvn_args }}" ]]; then
+            MVN_ARGS="${{ inputs.mvn_args }}"
+          else
+            MVN_ARGS="-Dtest=${SUITE}"
+          fi
+          mvn -B -q ${MVN_ARGS} test || true
+
+      - name: Pre-aggregate analytics for ${{ matrix.suite }}
+        if: always()
+        working-directory: rumble-test-suite
+        run: mvn -B exec:java@analytics-pre -Dexec.args="${{ matrix.suite }}"
+
+      - name: Upload reports and analytics (per suite)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-${{ matrix.suite }}
+          path: |
+            rumble-test-suite/target/surefire-reports/*.xml
+            rumble-test-suite/analytics-pre/*.json
+          retention-days: 7
+
+  spotless-check:
+    name: Spotless check
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout test harness (this repo)
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.action_repository }}
+          path: rumble-test-suite
+          ref: ${{ github.action_ref }}
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Run Spotless
+        working-directory: rumble-test-suite
+        run: mvn -B spotless:check
+
+  collect-artifacts:
+    name: Collect and aggregate
+    needs: [tests]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout test harness (this repo)
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.action_repository }}
+          path: rumble-test-suite
+          ref: ${{ github.action_ref }}
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Download per-suite artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: downloads
+
+      - name: Consolidate reports and analytics-pre
+        working-directory: rumble-test-suite
+        run: |
+          mkdir -p target/surefire-reports
+          mkdir -p analytics-pre
+          find ../downloads -name "*.xml" -exec cp {} target/surefire-reports/ \;
+          find ../downloads -name "*.json" -exec cp {} analytics-pre/ \;
+
+      - name: Compile and aggregate
+        working-directory: rumble-test-suite
+        run: |
+          mvn -B compile
+          mvn -B exec:java@analytics-aggregation
+
+      - name: Upload collected artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: collected-artifacts
+          path: |
+            rumble-test-suite/target/surefire-reports
+            rumble-test-suite/analytics-results
+          retention-days: 7
+
+  plot:
+    name: Generate plots
+    needs: collect-artifacts
+    runs-on: ubuntu-latest
+    if: inputs.run_analytics == true
+    steps:
+      - name: Checkout test harness (this repo)
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.action_repository }}
+          path: rumble-test-suite
+          ref: ${{ github.action_ref }}
+
+      - name: Download collected artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: collected-artifacts
+          path: rumble-test-suite
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install python dependencies
+        working-directory: rumble-test-suite
+        run: pip install -r analytics/requirements.txt
+
+      - name: Generate plots
+        working-directory: rumble-test-suite
+        run: python analytics/plot.py
+
+      - name: Upload plots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: plots
+          path: |
+            rumble-test-suite/plots
+            rumble-test-suite/analytics-results
+          retention-days: 7
+
+
