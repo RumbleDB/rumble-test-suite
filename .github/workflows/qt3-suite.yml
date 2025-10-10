@@ -67,8 +67,8 @@ jobs:
       - name: Checkout test harness (this repo)
         uses: actions/checkout@v4
         with:
-          repository: ${{ github.action_repository }}
-          ref: ${{ github.action_ref }}
+          repository: EPMatt/rumble-test-suite
+          ref: ${{ github.workflow_ref }}
 
       - name: Download RumbleDB target
         uses: actions/download-artifact@v4
@@ -122,9 +122,8 @@ jobs:
       - name: Checkout test harness (this repo)
         uses: actions/checkout@v4
         with:
-          repository: ${{ github.action_repository }}
-          path: rumble-test-suite
-          ref: ${{ github.action_ref }}
+          repository: EPMatt/rumble-test-suite
+          ref: ${{ github.workflow_ref }}
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -170,9 +169,9 @@ jobs:
       - name: Checkout test harness (this repo)
         uses: actions/checkout@v4
         with:
-          repository: ${{ github.action_repository }}
+          repository: EPMatt/rumble-test-suite
           path: rumble-test-suite
-          ref: ${{ github.action_ref }}
+          ref: ${{ github.workflow_ref }}
 
       - name: Download collected artifacts
         uses: actions/download-artifact@v4
