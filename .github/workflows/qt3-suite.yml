@@ -84,7 +84,6 @@ jobs:
           java-version: '17'
 
       - name: Run Maven tests
-        working-directory: rumble-test-suite
         shell: bash
         run: |
           if [[ "${TESTED_PARSER}" == "jsoniq" ]]; then
@@ -102,7 +101,6 @@ jobs:
 
       - name: Pre-aggregate analytics for ${{ matrix.suite }}
         if: always()
-        working-directory: rumble-test-suite
         run: mvn -B exec:java@analytics-pre -Dexec.args="${{ matrix.suite }}"
 
       - name: Upload reports and analytics (per suite)
