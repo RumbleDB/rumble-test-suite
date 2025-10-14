@@ -51,7 +51,7 @@ jobs:
       - name: Upload RumbleDB target
         uses: actions/upload-artifact@v4
         with:
-          name: rumble-target-${{ inputs.tested_parser }}-${{ github.run_id }}
+          name: rumble-target-${{ inputs.tested_parser }}
           path: target
           retention-days: 1
 
@@ -78,7 +78,7 @@ jobs:
       - name: Download RumbleDB target
         uses: actions/download-artifact@v4
         with:
-          name: rumble-target-${{ inputs.tested_parser }}-${{ github.run_id }}
+          name: rumble-target-${{ inputs.tested_parser }}
           path: rumble/target
       - name: (DEBUG) List rumble/target
         run: ls -R rumble
@@ -113,7 +113,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: surefire-${{ matrix.suite }}-${{ github.run_id}}
+          name: surefire-${{ inputs.tested_parser }}-${{ matrix.suite }}
           path: |
             target/surefire-reports/*.xml
           retention-days: 7
@@ -121,7 +121,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: analytics-pre-${{ matrix.suite }}-${{ github.run_id}}
+          name: analytics-pre-${{ inputs.tested_parser }}-${{ matrix.suite }}
           path: |
             analytics-pre/*.json
           retention-days: 7
@@ -147,7 +147,7 @@ jobs:
       - name: Download analytics artifacts
         uses: actions/download-artifact@v4
         with:
-          pattern: analytics-pre-*
+          pattern: analytics-pre-${{ inputs.tested_parser }}-*
           path: analytics-pre
           merge-multiple: true
       
@@ -157,7 +157,7 @@ jobs:
       - name: Download RumbleDB target
         uses: actions/download-artifact@v4
         with:
-          name: rumble-target-${{ inputs.tested_parser }}-${{ github.run_id }}
+          name: rumble-target-${{ inputs.tested_parser }}
           path: rumble/target
 
       - name: Compile and aggregate
