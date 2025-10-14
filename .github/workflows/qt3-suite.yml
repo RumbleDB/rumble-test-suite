@@ -115,8 +115,15 @@ jobs:
         with:
           name: surefire-${{ matrix.suite }}
           path: |
-            rumble-test-suite/target/surefire-reports/*.xml
-            rumble-test-suite/analytics-pre/*.json
+            target/surefire-reports/*.xml
+          retention-days: 7
+      - name: Upload reports and analytics (per suite)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: analytics-pre-${{ matrix.suite }}
+          path: |
+            analytics-pre/*.json
           retention-days: 7
 
   collect-artifacts:
@@ -140,18 +147,23 @@ jobs:
       - name: Download per-suite artifacts
         uses: actions/download-artifact@v4
         with:
-          path: downloads
-
-      - name: Consolidate reports and analytics-pre
-        working-directory: rumble-test-suite
-        run: |
-          mkdir -p target/surefire-reports
-          mkdir -p analytics-pre
-          find ../downloads -name "*.xml" -exec cp {} target/surefire-reports/ \;
-          find ../downloads -name "*.json" -exec cp {} analytics-pre/ \;
+          pattern: surefire-*
+          path: target/surefire-reports
+          merge-multiple: true
+          
+      - name: Download analytics artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: analytics-pre-*
+          path: analytics-pre
+          merge-multiple: true
+      
+      - name: (DEBUG) List target/surefire-reports
+        run: ls -R target/surefire-reports
+      - name: (DEBUG) List analytics-pre
+        run: ls -R analytics-pre
 
       - name: Compile and aggregate
-        working-directory: rumble-test-suite
         run: |
           mvn -B compile
           mvn -B exec:java@analytics-aggregation
@@ -162,8 +174,7 @@ jobs:
         with:
           name: collected-artifacts
           path: |
-            rumble-test-suite/target/surefire-reports
-            rumble-test-suite/analytics-results
+            analytics-results
           retention-days: 7
 
   plot:
@@ -184,7 +195,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: collected-artifacts
-          path: rumble-test-suite
+          path: 
 
       - name: Set up Python
         uses: actions/setup-python@v5
