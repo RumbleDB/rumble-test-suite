@@ -109,19 +109,19 @@ jobs:
         if: always()
         run: mvn -B exec:java@analytics-pre -Dexec.args="${{ matrix.suite }}"
 
-      - name: Upload reports and analytics (per suite)
+      - name: Upload reports (per suite)
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: surefire-${{ matrix.suite }}
+          name: surefire-${{ matrix.suite }}-${{ github.run_id}}
           path: |
             target/surefire-reports/*.xml
           retention-days: 7
-      - name: Upload reports and analytics (per suite)
+      - name: Upload analytics (per suite)
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: analytics-pre-${{ matrix.suite }}
+          name: analytics-pre-${{ matrix.suite }}-${{ github.run_id}}
           path: |
             analytics-pre/*.json
           retention-days: 7
@@ -144,13 +144,6 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Download per-suite artifacts
-        uses: actions/download-artifact@v4
-        with:
-          pattern: surefire-*
-          path: target/surefire-reports
-          merge-multiple: true
-          
       - name: Download analytics artifacts
         uses: actions/download-artifact@v4
         with:
@@ -158,8 +151,6 @@ jobs:
           path: analytics-pre
           merge-multiple: true
       
-      - name: (DEBUG) List target/surefire-reports
-        run: ls -R target/surefire-reports
       - name: (DEBUG) List analytics-pre
         run: ls -R analytics-pre
 
