@@ -51,7 +51,7 @@ jobs:
       - name: Upload RumbleDB target
         uses: actions/upload-artifact@v4
         with:
-          name: rumble-target-${{ inputs.tested_parser }}
+          name: rumble-target-${{ inputs.tested_parser }}-${{ github.run_id }}
           path: target
           retention-days: 1
 
@@ -78,7 +78,7 @@ jobs:
       - name: Download RumbleDB target
         uses: actions/download-artifact@v4
         with:
-          name: rumble-target-${{ inputs.tested_parser }}
+          name: rumble-target-${{ inputs.tested_parser }}-${{ github.run_id }}
           path: rumble/target
       - name: (DEBUG) List rumble/target
         run: ls -R rumble
@@ -153,6 +153,12 @@ jobs:
       
       - name: (DEBUG) List analytics-pre
         run: ls -R analytics-pre
+
+      - name: Download RumbleDB target
+        uses: actions/download-artifact@v4
+        with:
+          name: rumble-target-${{ inputs.tested_parser }}-${{ github.run_id }}
+          path: rumble/target
 
       - name: Compile and aggregate
         run: |
