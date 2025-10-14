@@ -169,7 +169,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: collected-artifacts
+          name: collected-artifacts-${{ inputs.tested_parser }}
           path: |
             analytics-results
           retention-days: 7
@@ -191,8 +191,8 @@ jobs:
       - name: Download collected artifacts
         uses: actions/download-artifact@v4
         with:
-          name: collected-artifacts
-          path: 
+          name: collected-artifacts-${{ inputs.tested_parser }}
+          path: analytics-results
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -211,10 +211,9 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: plots
+          name: plots-${{ inputs.tested_parser }}
           path: |
-            rumble-test-suite/plots
-            rumble-test-suite/analytics-results
+            plots
           retention-days: 7
 
 
