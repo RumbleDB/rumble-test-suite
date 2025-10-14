@@ -151,9 +151,6 @@ jobs:
           path: analytics-pre
           merge-multiple: true
       
-      - name: (DEBUG) List analytics-pre
-        run: ls -R analytics-pre
-
       - name: Download RumbleDB target
         uses: actions/download-artifact@v4
         with:
@@ -184,7 +181,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: EPMatt/rumble-test-suite
-          path: rumble-test-suite
           ref: master
           fetch-depth: 2
 
@@ -194,17 +190,18 @@ jobs:
           name: collected-artifacts-${{ inputs.tested_parser }}
           path: analytics-results
 
+      - name: (DEBUG) List analytics-results
+        run: ls -R analytics-results
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
       - name: Install python dependencies
-        working-directory: rumble-test-suite
         run: pip install -r analytics/requirements.txt
 
       - name: Generate plots
-        working-directory: rumble-test-suite
         run: python analytics/plot.py
 
       - name: Upload plots
