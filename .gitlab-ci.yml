@@ -34,10 +34,12 @@ test-app:
       else
       mvn -Dtest=XQueryAppTest test -quiet || true;
       fi
+    - mvn exec:java@analytics-pre -Dexec.args="AppTest" 
   artifacts:
     when: always
     paths:
       - target/surefire-reports/*.xml
+      - analytics-pre/*.json
     reports:
       junit: target/surefire-reports/*.xml
 
@@ -51,10 +53,12 @@ test-array:
       else
           mvn -Dtest=XQueryArrayTest test -quiet || true;
       fi
+    - mvn exec:java@analytics-pre -Dexec.args="ArrayTest"
   artifacts:
     when: always
     paths:
       - target/surefire-reports/*.xml
+      - analytics-pre/*.json
     reports:
       junit: target/surefire-reports/*.xml
 
@@ -68,10 +72,12 @@ test-fn1:
       else
           mvn -Dtest=XQueryFn1Test test -quiet || true;
       fi
+    - mvn exec:java@analytics-pre -Dexec.args="Fn1Test"
   artifacts:
     when: always
     paths:
       - target/surefire-reports/*.xml
+      - analytics-pre/*.json
     reports:
       junit: target/surefire-reports/*.xml
 
@@ -85,10 +91,12 @@ test-fn2:
       else
           mvn -Dtest=XQueryFn2Test test -quiet || true;
       fi
+    - mvn exec:java@analytics-pre -Dexec.args="Fn2Test"
   artifacts:
     when: always
     paths:
       - target/surefire-reports/*.xml
+      - analytics-pre/*.json
     reports:
       junit: target/surefire-reports/*.xml
 
@@ -102,10 +110,12 @@ test-map:
       else
           mvn -Dtest=XQueryMapTest test -quiet || true;
       fi
+    - mvn exec:java@analytics-pre -Dexec.args="MapTest"
   artifacts:
     when: always
     paths:
       - target/surefire-reports/*.xml
+      - analytics-pre/*.json
     reports:
       junit: target/surefire-reports/*.xml
 
@@ -119,10 +129,12 @@ test-math:
       else
           mvn -Dtest=XQueryMathTest test -quiet || true;
       fi
+    - mvn exec:java@analytics-pre -Dexec.args="MathTest"
   artifacts:
     when: always
     paths:
       - target/surefire-reports/*.xml
+      - analytics-pre/*.json
     reports:
       junit: target/surefire-reports/*.xml
 
@@ -136,10 +148,12 @@ test-misc:
       else
           mvn -Dtest=XQueryMiscTest test -quiet || true;
       fi
+    - mvn exec:java@analytics-pre -Dexec.args="MiscTest"
   artifacts:
     when: always
     paths:
       - target/surefire-reports/*.xml
+      - analytics-pre/*.json
     reports:
       junit: target/surefire-reports/*.xml
 
@@ -153,10 +167,12 @@ test-op:
       else
           mvn -Dtest=XQueryOpTest test -quiet || true;
       fi
+    - mvn exec:java@analytics-pre -Dexec.args="OpTest"
   artifacts:
     when: always
     paths:
       - target/surefire-reports/*.xml
+      - analytics-pre/*.json
     reports:
       junit: target/surefire-reports/*.xml
 
@@ -170,10 +186,12 @@ test-prod1:
       else
       mvn -Dtest=XQueryProd1Test test -quiet || true;
       fi
+    - mvn exec:java@analytics-pre -Dexec.args="Prod1Test"
   artifacts:
     when: always
     paths:
       - target/surefire-reports/*.xml
+      - analytics-pre/*.json
     reports:
       junit: target/surefire-reports/*.xml
 
@@ -187,10 +205,12 @@ test-prod2:
       else
           mvn -Dtest=XQueryProd2Test test -quiet || true;
       fi
+    - mvn exec:java@analytics-pre -Dexec.args="Prod2Test"
   artifacts:
     when: always
     paths:
       - target/surefire-reports/*.xml
+      - analytics-pre/*.json
     reports:
       junit: target/surefire-reports/*.xml
 
@@ -204,10 +224,12 @@ test-ser:
       else
           mvn -Dtest=XQuerySerTest test -quiet || true;
       fi
+    - mvn exec:java@analytics-pre -Dexec.args="SerTest"
   artifacts:
     when: always
     paths:
       - target/surefire-reports/*.xml
+      - analytics-pre/*.json
     reports:
       junit: target/surefire-reports/*.xml
 
@@ -221,10 +243,12 @@ test-xs:
       else
           mvn -Dtest=XQueryXsTest test -quiet || true;
       fi
+    - mvn exec:java@analytics-pre -Dexec.args="XsTest"
   artifacts:
     when: always
     paths:
       - target/surefire-reports/*.xml
+      - analytics-pre/*.json
     reports:
       junit: target/surefire-reports/*.xml
 
@@ -254,7 +278,7 @@ collect-artifacts:
   script:
     - mkdir -p collected-artifacts
     - mvn compile
-    - mvn exec:java
+    - mvn exec:java@analytics-aggregation
     - cp -r target/surefire-reports collected-artifacts/
   artifacts:
     when: always

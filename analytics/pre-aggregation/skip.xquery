@@ -1,7 +1,7 @@
 array{
 
 (
-for $d in collection(".")
+for $d in collection(".?select=*.xml")
 let $cases := $d/testsuite/testcase
 for $case in $cases
 let $name := tokenize($case/@name ! data(), "\] ")[2]

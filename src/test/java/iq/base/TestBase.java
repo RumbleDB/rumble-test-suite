@@ -8,6 +8,8 @@ import org.rumbledb.api.Rumble;
 import org.rumbledb.api.SequenceOfItems;
 import org.rumbledb.config.RumbleRuntimeConfiguration;
 import org.rumbledb.exceptions.RumbleException;
+import org.xmlunit.builder.DiffBuilder;
+import org.xmlunit.diff.Diff;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,12 +23,29 @@ public class TestBase {
     protected final String testSetName;
     protected final String testCaseName;
     private final boolean useXQueryParser;
+    /** The configuration for the Rumble runtimes spinned up for this test case. */
+    private final RumbleRuntimeConfiguration rumbleConfig;
 
     public TestBase(TestCase testCase, String testSetName, String testCaseName, boolean useXQueryParser) {
         this.testCase = testCase;
         this.testSetName = testSetName;
         this.testCaseName = testCaseName;
         this.useXQueryParser = useXQueryParser;
+        this.rumbleConfig = new RumbleRuntimeConfiguration(
+                useXQueryParser
+                    ? new String[] {
+                        "--output-format",
+                        "json",
+                        "--materialization-cap",
+                        "1000000000",
+                        "--default-language",
+                        "xquery31" }
+                    : new String[] {
+                        "--output-format",
+                        "json",
+                        "--materialization-cap",
+                        "1000000000" }
+        );
     }
 
     public static Iterable<Object[]> getData(String testSuite) throws Exception {
@@ -46,21 +65,7 @@ public class TestBase {
 
         XdmNode assertion = this.testCase.assertion;
         Environment environment = this.testCase.environment;
-        List<String> config = new ArrayList<>(
-                List.of(
-                    "--output-format",
-                    "json",
-                    "--materialization-cap",
-                    "1000000000"
-                )
-        );
-        if (useXQueryParser) {
-            config.add("--default-language");
-            config.add("xquery31");
-        }
-        Rumble rumble = new Rumble(
-                new RumbleRuntimeConfiguration(config.toArray(new String[] {}))
-        );
+        Rumble rumble = new Rumble(rumbleConfig);
         System.out.println("[[originalAssertion|" + assertion + "]]");
         try {
             if (checkAssertion(testString, assertion, rumble, environment)) {
@@ -69,7 +74,7 @@ public class TestBase {
                 System.out.println("VERYBAD");
             }
         } catch (RumbleException e) {
-            if (Constants.skipReasonErrorCodes.contains(e.getErrorCode())) {
+            if (isSkipErrorCode(e.getErrorCode())) {
                 System.out.println("[[category|SKIP]]");
                 assumeTrue("Skip errorcode: " + e.getErrorCode(), false);
             } else {
@@ -95,7 +100,7 @@ public class TestBase {
         }
         SequenceOfItems queryResult = rumble.runQuery(query);
         List<Item> resultAsList = new ArrayList<>();
-        queryResult.populateListWithWarningOnlyIfCapReached(resultAsList);
+        queryResult.populateList(resultAsList, 0);
         return resultAsList;
     }
 
@@ -108,6 +113,7 @@ public class TestBase {
         String tag = assertion.getNodeName().getLocalName();
         String secondQuery;
         List<Item> results;
+
         switch (tag) {
             case "assert-empty":
                 results = runQuery(convertedTestString, rumble, environment);
@@ -128,12 +134,11 @@ public class TestBase {
                 assertFalseSingleElement(runQuery(secondQuery, rumble, environment));
                 break;
             case "assert-eq":
-                secondQuery = "("
-                    + convertedTestString
-                    + ") eq ("
-                    + assertion.getStringValue()
-                    + ")";
-                assertTrueSingleElement(runQuery(secondQuery, rumble, environment));
+                String assertionQuery = "(" + assertion.getStringValue() + ")";
+                List<Item> testCaseResult = runQuery(convertedTestString, rumble, environment);
+                List<Item> assertionResult = runQuery(assertionQuery, rumble, environment);
+
+                assertEquals(testCaseResult, assertionResult);
                 break;
             case "assert-deep-eq":
                 secondQuery = "deep-equal(("
@@ -158,14 +163,7 @@ public class TestBase {
                 break;
             case "all-of":
                 for (XdmNode individualAssertion : assertion.children("*")) {
-                    Rumble subRumble = new Rumble(
-                            new RumbleRuntimeConfiguration(
-                                    new String[] {
-                                        "--output-format",
-                                        "json"
-                                    }
-                            )
-                    );
+                    Rumble subRumble = new Rumble(rumbleConfig);
                     checkAssertion(convertedTestString, individualAssertion, subRumble, environment);
                 }
                 break;
@@ -173,19 +171,12 @@ public class TestBase {
                 boolean success = false;
                 List<Throwable> errors = new ArrayList<>();
                 for (XdmNode individualAssertion : assertion.children("*")) {
-                    Rumble subRumble = new Rumble(
-                            new RumbleRuntimeConfiguration(
-                                    new String[] {
-                                        "--output-format",
-                                        "json"
-                                    }
-                            )
-                    );
+                    Rumble subRumble = new Rumble(rumbleConfig);
                     try {
                         checkAssertion(convertedTestString, individualAssertion, subRumble, environment);
                         success = true;
                     } catch (RumbleException e) {
-                        if (Constants.skipReasonErrorCodes.contains(e.getErrorCode())) {
+                        if (isSkipErrorCode(e.getErrorCode())) {
                             // we want these to be caught outside so we skip the testcase
                             throw e;
                         } else {
@@ -222,7 +213,7 @@ public class TestBase {
                     runQuery(convertedTestString, rumble, environment);
                     fail("Expected to throw error but ran without error");
                 } catch (RumbleException re) {
-                    if (Constants.skipReasonErrorCodes.contains(re.getErrorCode())) {
+                    if (isSkipErrorCode(re.getErrorCode())) {
                         // we want these to be caught outside so we skip the testcase
                         throw re;
                     }
@@ -234,12 +225,25 @@ public class TestBase {
                     );
                 }
                 break;
+            case "assert-xml":
+                results = runQuery(convertedTestString, rumble, environment);
+                String actualXml = "<assert-xml>"
+                    + results.stream().map(Item::serialize).collect(Collectors.joining(""))
+                    + "</assert-xml>";
+                String expectedXml = "<assert-xml>" + assertion.getStringValue() + "</assert-xml>";
+
+                Diff diff = DiffBuilder.compare(expectedXml)
+                    .withTest(actualXml)
+                    .ignoreWhitespace()
+                    .build();
+
+                assertFalse("Expected vs actual XML are different:\n" + diff.toString(), diff.hasDifferences());
+                break;
             case "assert-serialization":
             case "serialization-matches":
             case "assert-serialization-error":
-            case "assert-xml":
                 System.out.println("[[category|SKIP]]");
-                assumeTrue("assert-xml not implemented", false);
+                assumeTrue(tag + " not implemented", false);
                 break;
             default:
                 // should never happen unless they add a new assertion type
@@ -295,4 +299,18 @@ public class TestBase {
         List<Item> results = runQuery(assertExpression, rumble, environment);
         assertTrueSingleElement(results);
     }
+
+    /**
+     * Returns true if the error code is a skip error code.
+     * 
+     * @param errorCode The error code to check.
+     * @return True if the error code is a skip error code, false otherwise.
+     */
+    private boolean isSkipErrorCode(String errorCode) {
+        // use the xQuery skip reason error codes if we are using the XQuery parser
+        return (this.useXQueryParser ? Constants.xQuerySkipReasonErrorCodes : Constants.skipReasonErrorCodes).contains(
+            errorCode
+        );
+    }
+
 }

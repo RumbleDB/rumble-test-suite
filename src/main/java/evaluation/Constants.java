@@ -44,4 +44,18 @@ public class Constants {
         "FOCH0002" // unsupported collation parameter, rumble doesnt support additional collations
     );
 
+    /**
+     * Error codes that we assume indicate a skip reason. When such a exception is thrown we mark the testcase as
+     * skipped instead.
+     * These are the error codes used when evaluating the test cases with the XQuery parser.
+     */
+    public static final List<String> xQuerySkipReasonErrorCodes = List.of(
+        // XPST0017 is not in the list of error codes, as we treat it as an actual test case result
+        // this allows us to test also that such static errors are thrown for test cases that expect such error code
+        "XPST0051", // type not implemented
+        // XPST0003 is not in the list of error codes, as we treat it as an actual test case result
+        // this allows us to test also that parsing errors are thrown for test cases that expect such error code
+        "FOCH0002" // unsupported collation parameter, rumble doesnt support additional collations
+    );
+
 }

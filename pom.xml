@@ -53,14 +53,26 @@
                 <version>3.0.0</version>
                 <executions>
                     <execution>
+                        <id>analytics-aggregation</id>
+                        <phase>none</phase>
                         <goals>
                             <goal>java</goal>
                         </goals>
+                        <configuration>
+                            <mainClass>analytics.AnalyticsAggregation</mainClass>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>analytics-pre</id>
+                        <phase>none</phase>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                        <configuration>
+                            <mainClass>analytics.Analytics</mainClass>
+                        </configuration>
                     </execution>
                 </executions>
-                <configuration>
-                    <mainClass>analytics.Analytics</mainClass>
-                </configuration>
             </plugin>
         </plugins>
     </build>
@@ -69,27 +81,33 @@
         <dependency>
             <groupId>com.github.rumbledb</groupId>
             <artifactId>rumbledb</artifactId>
-            <version>1.23.0</version>
+            <version>2.0.0</version>
             <scope>system</scope>
-            <systemPath>${project.basedir}/rumble/target/rumbledb-1.23.0-jar-with-dependencies.jar</systemPath>
+            <systemPath>${project.basedir}/rumble/target/rumbledb-2.0.0-jar-with-dependencies.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-core_2.13</artifactId>
-            <version>3.5.1</version>
+            <version>4.0.1</version>
             <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-sql_2.13</artifactId>
-            <version>3.5.1</version>
+            <version>4.0.1</version>
             <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
             <artifactId>spark-mllib_2.13</artifactId>
-            <version>3.5.1</version>
+            <version>4.0.1</version>
             <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-hive_2.13</artifactId>
+            <version>4.0.1</version>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
@@ -112,6 +130,12 @@
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <version>4.13.2</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.xmlunit</groupId>
+            <artifactId>xmlunit-core</artifactId>
+            <version>2.9.1</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
