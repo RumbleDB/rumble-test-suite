@@ -14,6 +14,8 @@ import org.xmlunit.diff.Diff;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static org.junit.Assert.*;
 import static org.junit.Assume.assumeTrue;
@@ -252,10 +254,55 @@ public class TestBase {
                 assertFalse("Expected vs actual XML are different:\n" + diff.toString(), diff.hasDifferences());
                 break;
             case "assert-serialization":
+                String actualSerialization = serializeQueryResult(convertedTestString, rumble, environment);
+                String expectedSerialization = assertion.getStringValue();
+                assertEquals("Wrong serialization", expectedSerialization, actualSerialization);
+                break;
             case "serialization-matches":
+                String serializedResult = serializeQueryResult(convertedTestString, rumble, environment);
+                String patternString = assertion.getStringValue();
+                String flags = assertion.attribute("flags");
+
+                boolean quote = flags != null && flags.contains("q");
+                int patternFlags = 0;
+                if (flags != null) {
+                    if (flags.contains("i")) {
+                        patternFlags |= Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE;
+                    }
+                    if (flags.contains("m")) {
+                        patternFlags |= Pattern.MULTILINE;
+                    }
+                    if (flags.contains("s")) {
+                        patternFlags |= Pattern.DOTALL;
+                    }
+                    if (flags.contains("x")) {
+                        patternFlags |= Pattern.COMMENTS;
+                    }
+                }
+                if (quote) {
+                    patternString = Pattern.quote(patternString);
+                }
+
+                Pattern regex = Pattern.compile(patternString, patternFlags);
+                Matcher matcher = regex.matcher(serializedResult);
+                assertTrue("Serialization does not match regex", matcher.find());
+                break;
             case "assert-serialization-error":
-                System.out.println("[[category|SKIP]]");
-                assumeTrue(tag + " not implemented", false);
+                try {
+                    runQuery(convertedTestString, rumble, environment);
+                    fail("Expected to throw error but ran without error");
+                } catch (RumbleException re) {
+                    if (isSkipErrorCode(re.getErrorCode())) {
+                        // we want these to be caught outside so we skip the testcase
+                        throw re;
+                    }
+
+                    assertEquals(
+                        "Wrong error code",
+                        assertion.attribute("code"),
+                        re.getErrorCode()
+                    );
+                }
                 break;
             default:
                 // should never happen unless they add a new assertion type
@@ -276,6 +323,14 @@ public class TestBase {
         assertEquals("Not exactly one result", 1, results.size());
         assertTrue("Result is not boolean", results.get(0).isBoolean());
         assertFalse("Result is true", results.get(0).getBooleanValue());
+    }
+
+    /**
+     * Runs the given query and returns the concatenated serialization of all items in the result.
+     */
+    private String serializeQueryResult(String convertedTestString, Rumble rumble, Environment environment) {
+        List<Item> results = runQuery(convertedTestString, rumble, environment);
+        return results.stream().map(Item::serialize).collect(Collectors.joining());
     }
 
     // TODO check this, I just took it over for now

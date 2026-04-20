@@ -287,7 +287,8 @@ public class CaseCollector {
                             || value.contains("moduleImport")
                             ||
                             value.contains("arbitraryPrecisionDecimal")
-                            || value.contains("staticTyping"))
+                            || value.contains("staticTyping")
+                            || value.contains("serialization"))
                     ) {
                         return type + " " + value;
                     }

@@ -67,7 +67,7 @@ jobs:
       - name: Checkout test harness (this repo)
         uses: actions/checkout@v4
         with:
-          repository: EPMatt/rumble-test-suite
+          repository: RumbleDB/rumble-test-suite
           ref: master
           fetch-depth: 2
       - name: Checkout caller (RumbleDB)
@@ -134,7 +134,7 @@ jobs:
       - name: Checkout test harness (this repo)
         uses: actions/checkout@v4
         with:
-          repository: EPMatt/rumble-test-suite
+          repository: RumbleDB/rumble-test-suite
           ref: master
           fetch-depth: 2
 
@@ -180,7 +180,7 @@ jobs:
       - name: Checkout test harness (this repo)
         uses: actions/checkout@v4
         with:
-          repository: EPMatt/rumble-test-suite
+          repository: RumbleDB/rumble-test-suite
           ref: master
           fetch-depth: 2
 
