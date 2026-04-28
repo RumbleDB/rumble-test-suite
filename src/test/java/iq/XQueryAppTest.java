@@ -14,7 +14,7 @@ public class XQueryAppTest extends TestBase {
 
     @Parameterized.Parameters(name = "[{1}] {2}")
     public static Iterable<Object[]> data() throws Exception {
-        return getData("app");
+        return getData("app", true);
     }
 
     @Test(timeout = 1000000)

@@ -14,7 +14,7 @@ public class XQueryXsTest extends TestBase {
 
     @Parameterized.Parameters(name = "[{1}] {2}")
     public static Iterable<Object[]> data() throws Exception {
-        return getData("xs");
+        return getData("xs", true);
     }
 
     @Test(timeout = 1000000)

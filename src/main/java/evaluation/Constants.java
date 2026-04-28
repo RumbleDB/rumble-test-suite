@@ -25,12 +25,19 @@ public class Constants {
     /**
      * Individual testcases that we decide to skip
      */
-    public static final List<String> skippedTestCases = List.of(
+    public static final List<String> skippedGeneralTestCases = List.of(
         "fn-distinct-values-2", // does not terminate
         "cbcl-anyURI-004", // XQ10 version of a testcase that also has newer b version
         "cbcl-anyURI-006", // XQ10 version of a testcase that also has newer b version
         "cbcl-anyURI-009", // XQ10 version of a testcase that also has newer b version
         "cbcl-anyURI-012" // XQ10 version of a testcase that also has newer b version
+    );
+
+    /**
+     * Individual testcases that we decide to skip only in JSONiq
+     */
+    public static final List<String> skippedJSONIQTestCases = List.of(
+        "K-CodepointToStringFunc-13" // JSONiq does not support XQuery XML character references in string literals
     );
 
     /**
