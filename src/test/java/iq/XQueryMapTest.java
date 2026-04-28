@@ -14,7 +14,7 @@ public class XQueryMapTest extends TestBase {
 
     @Parameterized.Parameters(name = "[{1}] {2}")
     public static Iterable<Object[]> data() throws Exception {
-        return getData("map");
+        return getData("map", true);
     }
 
     @Test(timeout = 1000000)

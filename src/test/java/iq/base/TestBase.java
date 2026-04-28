@@ -51,7 +51,11 @@ public class TestBase {
     }
 
     public static Iterable<Object[]> getData(String testSuite) throws Exception {
-        CaseCollector testDriver = new CaseCollector();
+        return getData(testSuite, false);
+    }
+
+    public static Iterable<Object[]> getData(String testSuite, boolean useXQueryParser) throws Exception {
+        CaseCollector testDriver = new CaseCollector(useXQueryParser);
         testDriver.execute(testSuite);
         return testDriver.getAllTests();
     }
@@ -94,12 +98,20 @@ public class TestBase {
     }
 
     private List<Item> runQuery(String query, Rumble rumble, Environment environment) {
+        System.out.println("[[query-before-env|" + query + "]]");
+
         if (environment != null) {
             query = environment.applyToQuery(query);
         }
+
+        System.out.println("[[query-before-convert|" + query + "]]");
+
         if (!useXQueryParser) {
             query = Converter.convert(query);
         }
+
+        System.out.println("[[query-after-convert|" + query + "]]");
+
         SequenceOfItems queryResult = rumble.runQuery(query);
         List<Item> resultAsList = new ArrayList<>();
         queryResult.populateList(resultAsList, 0);

@@ -14,7 +14,7 @@ public class XQueryProd2Test extends TestBase {
 
     @Parameterized.Parameters(name = "[{1}] {2}")
     public static Iterable<Object[]> data() throws Exception {
-        return getData("prod/[k-zK-Z]");
+        return getData("prod/[k-zK-Z]", true);
     }
 
     @Test(timeout = 1000000)
