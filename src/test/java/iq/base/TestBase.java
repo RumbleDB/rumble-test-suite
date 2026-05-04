@@ -232,9 +232,15 @@ public class TestBase {
                         throw re;
                     }
 
+                    String expectedErrorCode = assertion.attribute("code");
+                    if (expectedErrorCode.equals("*")) {
+                        // any error code is fine, we just wanted to check that an error is thrown
+                        return true;
+                    }
+
                     assertEquals(
                         "Wrong error code",
-                        assertion.attribute("code"),
+                        expectedErrorCode,
                         re.getErrorCode()
                     );
                 }
