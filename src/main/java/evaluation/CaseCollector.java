@@ -154,7 +154,8 @@ public class CaseCollector {
         // check if testcase is skipped
         if (
             Constants.skippedTestSets.contains(this.currentTestSet)
-                || Constants.skippedGeneralTestCases.contains(currentTestCase) || (!useXQueryParser && Constants.skippedJSONIQTestCases.contains(currentTestCase))
+                || Constants.skippedGeneralTestCases.contains(currentTestCase)
+                || (!useXQueryParser && Constants.skippedJSONIQTestCases.contains(currentTestCase))
         ) {
             allTests.add(
                 new Object[] {

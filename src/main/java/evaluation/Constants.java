@@ -37,8 +37,7 @@ public class Constants {
      * Individual testcases that we decide to skip only in JSONiq
      */
     public static final List<String> skippedJSONIQTestCases = List.of(
-            "K-CodepointToStringFunc-13", // JSONiq does not support XQuery XML character references in string literals
-            "json-doc-007" // XQuery JSON-null-to-() semantics; not ported to JSONiq
+        "K-CodepointToStringFunc-13" // JSONiq does not support XQuery XML character references in string literals
     );
 
     /**
