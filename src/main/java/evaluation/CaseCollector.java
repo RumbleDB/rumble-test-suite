@@ -15,7 +15,12 @@ import java.util.regex.Pattern;
 public class CaseCollector {
     private Path testsRepositoryDirectoryPath;
     private String currentTestSet;
+    private final boolean useXQueryParser;
     private final List<Object[]> allTests = new ArrayList<>();
+
+    public CaseCollector(boolean useXQueryParser) {
+        this.useXQueryParser = useXQueryParser;
+    }
 
     // environments in current testset
     private final Map<String, Environment> testSetEnvironments = new HashMap<>();
@@ -149,7 +154,8 @@ public class CaseCollector {
         // check if testcase is skipped
         if (
             Constants.skippedTestSets.contains(this.currentTestSet)
-                || Constants.skippedTestCases.contains(currentTestCase)
+                || Constants.skippedGeneralTestCases.contains(currentTestCase)
+                || (!useXQueryParser && Constants.skippedJSONIQTestCases.contains(currentTestCase))
         ) {
             allTests.add(
                 new Object[] {

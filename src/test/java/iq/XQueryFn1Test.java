@@ -14,7 +14,7 @@ public class XQueryFn1Test extends TestBase {
 
     @Parameterized.Parameters(name = "[{1}] {2}")
     public static Iterable<Object[]> data() throws Exception {
-        return getData("fn/[a-jA-J]");
+        return getData("fn/[a-jA-J]", true);
     }
 
     @Test(timeout = 1000000)
