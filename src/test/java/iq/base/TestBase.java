@@ -46,7 +46,9 @@ public class TestBase {
                         "--output-format",
                         "json",
                         "--materialization-cap",
-                        "1000000000" }
+                        "1000000000",
+                        "--default-language",
+                        "jsoniq40" }
         );
     }
 
