@@ -1,6 +1,7 @@
 package iq.base;
 
 import evaluation.*;
+import evaluation.conversion.Converter;
 import net.sf.saxon.s9api.XdmNode;
 import org.junit.AssumptionViolatedException;
 import org.rumbledb.api.Item;
@@ -107,6 +108,8 @@ public class TestBase {
         if (!useXQueryParser) {
             query = Converter.convert(query);
         }
+
+        System.out.println("[[query]] " + query);
 
         SequenceOfItems queryResult = rumble.runQuery(query);
         List<Item> resultAsList = new ArrayList<>();
