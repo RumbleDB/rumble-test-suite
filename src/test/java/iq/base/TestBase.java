@@ -109,8 +109,6 @@ public class TestBase {
             query = Converter.convert(query);
         }
 
-        System.out.println("[[query]] " + query);
-
         SequenceOfItems queryResult = rumble.runQuery(query);
         List<Item> resultAsList = new ArrayList<>();
         queryResult.populateList(resultAsList, 0);
