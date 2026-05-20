@@ -85,7 +85,7 @@ public class TestBase {
         } catch (RumbleException e) {
             if (isSkipErrorCode(e.getErrorCode().toString())) {
                 System.out.println("[[category|SKIP]]");
-                assumeTrue("Skip errorcode: " + e.getErrorCode(), false);
+                assumeTrue("Skip errorcode: " + e.getErrorCode().toString(), false);
             } else {
                 System.out.println("[[category|ERROR]]");
                 throw e;
@@ -249,7 +249,7 @@ public class TestBase {
                     assertEquals(
                         "Wrong error code",
                         expectedErrorCode,
-                        re.getErrorCode()
+                        re.getErrorCode().toString()
                     );
                 }
                 break;
@@ -314,7 +314,7 @@ public class TestBase {
                     assertEquals(
                         "Wrong error code",
                         assertion.attribute("code"),
-                        re.getErrorCode()
+                        re.getErrorCode().toString()
                     );
                 }
                 break;
