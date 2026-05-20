@@ -29,7 +29,7 @@ public class Converter {
          * constructors.
          */
 
-        convertedtestString = escapeBackslashes(convertedtestString);
+        convertedtestString = convertXQueryStringLiteralsToJSONiqStringLiterals(convertedtestString);
 
         for (Map.Entry<String, String> entry : conversions.entrySet()) {
             convertedtestString = convertedtestString.replace(entry.getKey(), entry.getValue());
@@ -67,71 +67,45 @@ public class Converter {
 
 
     /**
-     * Doubles backslashes inside all string literals that occur syntactically inside
-     * XQuery map constructors.
+     * Converts XQuery string literals to JSONiq-compatible string literals.
+     *
+     * XQuery:
+     *   - allows both single-quoted and double-quoted strings
+     *   - escapes the delimiter by doubling it
+     *   - treats backslash as a normal character
+     *
+     * JSONiq:
+     *   - uses JSON-style double-quoted strings
+     *   - treats backslash as an escape character
+     *
+     * Therefore:
+     *   'abc'      -> "abc"
+     *   "a "" b"  -> "a \" b"
+     *   '\?'      -> "\\?"
+     *   '\'       -> "\\"
      */
-    private static String escapeBackslashes(String input) {
-        if (!input.contains("\\") || !input.contains("map")) {
+    private static String convertXQueryStringLiteralsToJSONiqStringLiterals(String input) {
+        if (input.indexOf('"') < 0 && input.indexOf('\'') < 0) {
             return input;
         }
 
         StringBuilder out = new StringBuilder(input.length());
 
         int i = 0;
-        int mapBraceDepth = 0;
-
         while (i < input.length()) {
-            if (mapBraceDepth == 0) {
-                int mapStartEnd = mapConstructorStartEnd(input, i);
-
-                if (mapStartEnd != -1) {
-                    out.append(input, i, mapStartEnd);
-                    i = mapStartEnd;
-                    mapBraceDepth = 1;
-                    continue;
-                }
-
-                char c = input.charAt(i);
-
-                if (c == '"' || c == '\'') {
-                    int end = findXQueryStringLiteralEnd(input, i);
-                    out.append(input, i, end);
-                    i = end;
-                    continue;
-                }
-
-                out.append(c);
-                i++;
+            if (startsWith(input, i, "(:")) {
+                int end = findXQueryCommentEnd(input, i);
+                out.append(input, i, end);
+                i = end;
                 continue;
             }
 
             char c = input.charAt(i);
 
             if (c == '"' || c == '\'') {
-                int end = findXQueryStringLiteralEnd(input, i);
-                String rawLiteral = input.substring(i, end);
-
-                if (rawLiteral.indexOf('\\') >= 0) {
-                    out.append(doubleBackslashesInsideLiteral(rawLiteral));
-                } else {
-                    out.append(rawLiteral);
-                }
-
-                i = end;
-                continue;
-            }
-
-            if (c == '{') {
-                mapBraceDepth++;
-                out.append(c);
-                i++;
-                continue;
-            }
-
-            if (c == '}') {
-                mapBraceDepth--;
-                out.append(c);
-                i++;
+                ParsedStringLiteral literal = parseXQueryStringLiteral(input, i);
+                out.append(toJSONiqStringLiteral(literal.value));
+                i = literal.end;
                 continue;
             }
 
@@ -140,6 +114,120 @@ public class Converter {
         }
 
         return out.toString();
+    }
+
+    private static ParsedStringLiteral parseXQueryStringLiteral(String input, int start) {
+        char quote = input.charAt(start);
+        StringBuilder value = new StringBuilder();
+
+        int i = start + 1;
+        while (i < input.length()) {
+            char c = input.charAt(i);
+
+            if (c == quote) {
+                if (i + 1 < input.length() && input.charAt(i + 1) == quote) {
+                    value.append(quote);
+                    i += 2;
+                    continue;
+                }
+
+                return new ParsedStringLiteral(value.toString(), i + 1);
+            }
+
+            value.append(c);
+            i++;
+        }
+
+        throw new IllegalArgumentException("Unterminated string literal starting at position " + start);
+    }
+
+    private static String toJSONiqStringLiteral(String value) {
+        StringBuilder out = new StringBuilder(value.length() + 2);
+        out.append('"');
+
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+
+            switch (c) {
+                case '\\':
+                    out.append("\\\\");
+                    break;
+                case '"':
+                    out.append("\\\"");
+                    break;
+                case '\b':
+                    out.append("\\b");
+                    break;
+                case '\f':
+                    out.append("\\f");
+                    break;
+                case '\n':
+                    out.append("\\n");
+                    break;
+                case '\r':
+                    out.append("\\r");
+                    break;
+                case '\t':
+                    out.append("\\t");
+                    break;
+                default:
+                    if (c < 0x20) {
+                        out.append("\\u");
+                        String hex = Integer.toHexString(c);
+                        for (int j = hex.length(); j < 4; j++) {
+                            out.append('0');
+                        }
+                        out.append(hex);
+                    } else {
+                        out.append(c);
+                    }
+            }
+        }
+
+        out.append('"');
+        return out.toString();
+    }
+
+    private static int findXQueryCommentEnd(String input, int start) {
+        int depth = 1;
+        int i = start + 2;
+
+        while (i < input.length()) {
+            if (startsWith(input, i, "(:")) {
+                depth++;
+                i += 2;
+                continue;
+            }
+
+            if (startsWith(input, i, ":)")) {
+                depth--;
+                i += 2;
+
+                if (depth == 0) {
+                    return i;
+                }
+
+                continue;
+            }
+
+            i++;
+        }
+
+        throw new IllegalArgumentException("Unterminated XQuery comment starting at position " + start);
+    }
+
+    private static boolean startsWith(String input, int offset, String prefix) {
+        return input.regionMatches(offset, prefix, 0, prefix.length());
+    }
+
+    private static final class ParsedStringLiteral {
+        private final String value;
+        private final int end;
+
+        private ParsedStringLiteral(String value, int end) {
+            this.value = value;
+            this.end = end;
+        }
     }
 
 
