@@ -96,6 +96,7 @@ final class StringLiteralConversion implements ConversionPass {
         throw new IllegalArgumentException("Unterminated string literal starting at position " + start);
     }
 
+    // TODO clarify whether raw control characters need to be escaped for JSONiq string literals
     private static String toJSONiqStringLiteral(String value) {
         StringBuilder output = new StringBuilder(value.length() + 2);
 
