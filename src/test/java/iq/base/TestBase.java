@@ -77,7 +77,7 @@ public class TestBase {
                 System.out.println("VERYBAD");
             }
         } catch (RumbleException e) {
-            if (isSkipErrorCode(e.getErrorCode())) {
+            if (isSkipErrorCode(e.getErrorCode().toString())) {
                 System.out.println("[[category|SKIP]]");
                 assumeTrue("Skip errorcode: " + e.getErrorCode(), false);
             } else {
@@ -190,7 +190,7 @@ public class TestBase {
                         checkAssertion(convertedTestString, individualAssertion, subRumble, environment);
                         success = true;
                     } catch (RumbleException e) {
-                        if (isSkipErrorCode(e.getErrorCode())) {
+                        if (isSkipErrorCode(e.getErrorCode().toString())) {
                             // we want these to be caught outside so we skip the testcase
                             throw e;
                         } else {
@@ -227,7 +227,7 @@ public class TestBase {
                     runQuery(convertedTestString, rumble, environment);
                     fail("Expected to throw error but ran without error");
                 } catch (RumbleException re) {
-                    if (isSkipErrorCode(re.getErrorCode())) {
+                    if (isSkipErrorCode(re.getErrorCode().toString())) {
                         // we want these to be caught outside so we skip the testcase
                         throw re;
                     }
@@ -298,7 +298,7 @@ public class TestBase {
                     runQuery(convertedTestString, rumble, environment);
                     fail("Expected to throw error but ran without error");
                 } catch (RumbleException re) {
-                    if (isSkipErrorCode(re.getErrorCode())) {
+                    if (isSkipErrorCode(re.getErrorCode().toString())) {
                         // we want these to be caught outside so we skip the testcase
                         throw re;
                     }
