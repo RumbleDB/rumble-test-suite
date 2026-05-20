@@ -3,26 +3,34 @@ package evaluation.conversion;
 /**
  * Converts XQuery string literals to JSONiq-compatible string literals.
  *
- * <p>Examples:</p>
+ * <p>
+ * Examples:
+ * </p>
  *
- * <pre>{@code
+ * <pre>
+ * {@code
  * 'abc'      -> "abc"
  * "a "" b"  -> "a \" b"
  * '\?'      -> "\\?"
  * '\'       -> "\\"
- * }</pre>
+ * }
+ * </pre>
  *
- * <p>XQuery escaping rules:</p>
+ * <p>
+ * XQuery escaping rules:
+ * </p>
  * <ul>
- *   <li>Quotes inside string literals are escaped by doubling them.</li>
- *   <li>Backslash has no special meaning in XQuery string literals.</li>
+ * <li>Quotes inside string literals are escaped by doubling them.</li>
+ * <li>Backslash has no special meaning in XQuery string literals.</li>
  * </ul>
  *
- * <p>JSONiq escaping rules:</p>
+ * <p>
+ * JSONiq escaping rules:
+ * </p>
  * <ul>
- *   <li>String literals use JSON-style escaping.</li>
- *   <li>Backslashes must be escaped.</li>
- *   <li>Double quotes must be escaped.</li>
+ * <li>String literals use JSON-style escaping.</li>
+ * <li>Backslashes must be escaped.</li>
+ * <li>Double quotes must be escaped.</li>
  * </ul>
  */
 final class StringLiteralConversion implements ConversionPass {
