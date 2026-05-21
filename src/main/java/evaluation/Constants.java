@@ -45,7 +45,6 @@ public class Constants {
      * skipped instead.
      */
     public static final List<String> skipReasonErrorCodes = List.of(
-        "XPST0017", // method or type not implemented
         "XPST0051", // type not implemented
         "XPST0003", // parser failed, assuming that feature is not implemented
         "FOCH0002" // unsupported collation parameter, rumble doesnt support additional collations
