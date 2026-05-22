@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import re
 import shlex
+import shutil
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -11,12 +12,13 @@ import questionary
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 TEST_DIR = REPO_ROOT / "src" / "test" / "java" / "iq"
+SUREFIRE_REPORTS_DIR = REPO_ROOT / "target" / "surefire-reports"
 TEST_CLASS_PATTERN = re.compile(r"public\s+class\s+([A-Za-z0-9_]+)")
 GET_DATA_PATTERN = re.compile(r'return\s+getData\("([^"]+)"(?:,\s*(true|false))?\);')
 ParserName = Literal["all", "jsoniq", "xquery"]
 USAGE = """Usage:
   python3 scripts/run_selected_tests.py
-  python3 scripts/run_selected_tests.py -- [extra Maven args]
+  python3 scripts/run_selected_tests.py -- [extra Maven test args]
 """
 
 
@@ -92,11 +94,39 @@ def build_choices(tests: list[TestClass]):
     ]
 
 
-def run_maven(class_names: list[str], maven_args: list[str]) -> int:
-    command = ["mvn", f"-Dtest={','.join(class_names)}", "test", *maven_args]
+def clear_surefire_reports() -> None:
+    if SUREFIRE_REPORTS_DIR.exists():
+        shutil.rmtree(SUREFIRE_REPORTS_DIR)
+
+
+def run_test(test: TestClass, maven_args: list[str]) -> int:
+    command = ["mvn", f"-Dtest={test.class_name}", "test", *maven_args]
     print(f"Running: {shlex.join(command)}")
     result = subprocess.run(command, cwd=REPO_ROOT)
     return result.returncode
+
+
+def run_preaggregate(scope: str) -> int:
+    command = ["mvn", "exec:java@analytics-pre", f"-Dexec.args={scope}"]
+    print(f"Running: {shlex.join(command)}")
+    result = subprocess.run(command, cwd=REPO_ROOT)
+    return result.returncode
+
+
+def run_pipeline(selected_tests: list[TestClass], maven_args: list[str]) -> int:
+    exit_code = 0
+    for test in selected_tests:
+        clear_surefire_reports()
+
+        test_exit_code = run_test(test, maven_args)
+        preaggregate_exit_code = run_preaggregate(f"{test.parser}.{test.class_name}")
+
+        if exit_code == 0 and test_exit_code != 0:
+            exit_code = test_exit_code
+        if exit_code == 0 and preaggregate_exit_code != 0:
+            exit_code = preaggregate_exit_code
+
+    return exit_code
 
 
 def run_interactive(tests: list[TestClass], maven_args: list[str]) -> int:
@@ -137,12 +167,13 @@ def run_interactive(tests: list[TestClass], maven_args: list[str]) -> int:
             continue
 
         if not questionary.confirm(
-            f"Run {len(chosen)} selected test class(es)?",
+            f"Run {len(chosen)} selected test class(es) one by one and pre-aggregate each suite?",
             default=True,
         ).ask():
             continue
 
-        return run_maven(chosen, maven_args)
+        selected_tests = [test for test in visible if test.class_name in chosen]
+        return run_pipeline(selected_tests, maven_args)
 
 
 def main() -> int:
