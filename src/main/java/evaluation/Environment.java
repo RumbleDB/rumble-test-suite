@@ -151,7 +151,8 @@ public class Environment {
             String role = source.attribute("role");
             if (uri != null && !file.equals(uri)) {
                 resourceLookup.put(uri, file);
-            } else if (role != null) {
+            }
+            if (role != null) {
                 roleLookup.put(role, file);
             }
         }
