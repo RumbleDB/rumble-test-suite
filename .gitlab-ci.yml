@@ -34,7 +34,7 @@ test-app:
       else
       mvn -Dtest=XQueryAppTest test -quiet || true;
       fi
-    - mvn exec:java@analytics-pre -Dexec.args="AppTest" 
+    - mvn exec:java@analytics-pre -Dexec.args="${TESTED_PARSER}.AppTest" 
   artifacts:
     when: always
     paths:
@@ -53,7 +53,7 @@ test-array:
       else
           mvn -Dtest=XQueryArrayTest test -quiet || true;
       fi
-    - mvn exec:java@analytics-pre -Dexec.args="ArrayTest"
+    - mvn exec:java@analytics-pre -Dexec.args="${TESTED_PARSER}.ArrayTest"
   artifacts:
     when: always
     paths:
@@ -72,7 +72,7 @@ test-fn1:
       else
           mvn -Dtest=XQueryFn1Test test -quiet || true;
       fi
-    - mvn exec:java@analytics-pre -Dexec.args="Fn1Test"
+    - mvn exec:java@analytics-pre -Dexec.args="${TESTED_PARSER}.Fn1Test"
   artifacts:
     when: always
     paths:
@@ -91,7 +91,7 @@ test-fn2:
       else
           mvn -Dtest=XQueryFn2Test test -quiet || true;
       fi
-    - mvn exec:java@analytics-pre -Dexec.args="Fn2Test"
+    - mvn exec:java@analytics-pre -Dexec.args="${TESTED_PARSER}.Fn2Test"
   artifacts:
     when: always
     paths:
@@ -110,7 +110,7 @@ test-map:
       else
           mvn -Dtest=XQueryMapTest test -quiet || true;
       fi
-    - mvn exec:java@analytics-pre -Dexec.args="MapTest"
+    - mvn exec:java@analytics-pre -Dexec.args="${TESTED_PARSER}.MapTest"
   artifacts:
     when: always
     paths:
@@ -129,7 +129,7 @@ test-math:
       else
           mvn -Dtest=XQueryMathTest test -quiet || true;
       fi
-    - mvn exec:java@analytics-pre -Dexec.args="MathTest"
+    - mvn exec:java@analytics-pre -Dexec.args="${TESTED_PARSER}.MathTest"
   artifacts:
     when: always
     paths:
@@ -148,7 +148,7 @@ test-misc:
       else
           mvn -Dtest=XQueryMiscTest test -quiet || true;
       fi
-    - mvn exec:java@analytics-pre -Dexec.args="MiscTest"
+    - mvn exec:java@analytics-pre -Dexec.args="${TESTED_PARSER}.MiscTest"
   artifacts:
     when: always
     paths:
@@ -167,7 +167,7 @@ test-op:
       else
           mvn -Dtest=XQueryOpTest test -quiet || true;
       fi
-    - mvn exec:java@analytics-pre -Dexec.args="OpTest"
+    - mvn exec:java@analytics-pre -Dexec.args="${TESTED_PARSER}.OpTest"
   artifacts:
     when: always
     paths:
@@ -186,7 +186,7 @@ test-prod1:
       else
       mvn -Dtest=XQueryProd1Test test -quiet || true;
       fi
-    - mvn exec:java@analytics-pre -Dexec.args="Prod1Test"
+    - mvn exec:java@analytics-pre -Dexec.args="${TESTED_PARSER}.Prod1Test"
   artifacts:
     when: always
     paths:
@@ -205,7 +205,7 @@ test-prod2:
       else
           mvn -Dtest=XQueryProd2Test test -quiet || true;
       fi
-    - mvn exec:java@analytics-pre -Dexec.args="Prod2Test"
+    - mvn exec:java@analytics-pre -Dexec.args="${TESTED_PARSER}.Prod2Test"
   artifacts:
     when: always
     paths:
@@ -224,7 +224,7 @@ test-ser:
       else
           mvn -Dtest=XQuerySerTest test -quiet || true;
       fi
-    - mvn exec:java@analytics-pre -Dexec.args="SerTest"
+    - mvn exec:java@analytics-pre -Dexec.args="${TESTED_PARSER}.SerTest"
   artifacts:
     when: always
     paths:
@@ -243,7 +243,7 @@ test-xs:
       else
           mvn -Dtest=XQueryXsTest test -quiet || true;
       fi
-    - mvn exec:java@analytics-pre -Dexec.args="XsTest"
+    - mvn exec:java@analytics-pre -Dexec.args="${TESTED_PARSER}.XsTest"
   artifacts:
     when: always
     paths:
