@@ -43,6 +43,13 @@ declare function local:summary-message($case as element(testcase)?) as xs:string
     )[. ne ""])
 };
 
+declare function local:parser-name($key as xs:string) as xs:string {
+    if (matches($key, "^[^:]*XQuery[^:]*::")) then
+        "xquery"
+    else
+        "jsoniq"
+};
+
 declare function local:case-data($key as xs:string, $case as element(testcase)?) as map(*) {
     let $raw-name := if (exists($case)) then string($case/@name) else substring-after($key, "::")
     let $name := normalize-space(replace($raw-name, "^test\[(.*)\]$", "$1"))
@@ -50,6 +57,7 @@ declare function local:case-data($key as xs:string, $case as element(testcase)?)
     return map {
         "key": $key,
         "name": $name,
+        "parser": local:parser-name($key),
         "suite": $suite,
         "status": local:status($case),
         "errorCode": local:error-code($case),
@@ -214,6 +222,25 @@ declare function local:by-suite($changes as array(*)) as map(*) {
     )
 };
 
+declare function local:by-parser($changes as array(*)) as map(*) {
+    map:merge(
+        for $parser in ("jsoniq", "xquery")
+        let $parser-changes := array {
+            for $change in $changes?*
+            where string($change?parser) = $parser
+            return $change
+        }
+        return map:entry(
+            $parser,
+            map {
+                "counts": local:group-counts($parser-changes),
+                "suite": local:by-suite($parser-changes)
+            }
+        ),
+        map { "duplicates": "use-last" }
+    )
+};
+
 let $baseline-cases := local:cases-by-key($baseline)
 let $candidate-cases := local:cases-by-key($candidate)
 let $changes := array {
@@ -223,10 +250,12 @@ let $changes := array {
     let $reasons := local:reasons($baseline-case, $candidate-case)
     where exists($reasons?*)
     let $transition := local:transition($baseline-case, $candidate-case)
+    let $source-case := if ($baseline-case?status = "MISSING") then $candidate-case else $baseline-case
     return map {
         "id": $key,
-        "testCase": $baseline-case?name,
-        "suite": $baseline-case?suite,
+        "testCase": $source-case?name,
+        "parser": $source-case?parser,
+        "suite": $source-case?suite,
         "transition": $transition,
         "reasons": $reasons,
         "baseline": map {
@@ -241,7 +270,4 @@ let $changes := array {
         }
     }
 }
-return map {
-    "counts": local:group-counts($changes),
-    "bySuite": local:by-suite($changes)
-}
+return local:by-parser($changes)
