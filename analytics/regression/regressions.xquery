@@ -44,13 +44,13 @@ declare function local:summary-message($case as element(testcase)?) as xs:string
 };
 
 declare function local:case-data($key as xs:string, $case as element(testcase)?) as map(*) {
-    let $class-name := if (exists($case)) then string($case/@classname) else substring-before($key, "::")
     let $raw-name := if (exists($case)) then string($case/@name) else substring-after($key, "::")
+    let $name := normalize-space(replace($raw-name, "^test\[(.*)\]$", "$1"))
+    let $suite := if (matches($name, "^\[[^/]+/")) then replace($name, "^\[([^/]+).*$", "$1") else "unknown"
     return map {
         "key": $key,
-        "className": $class-name,
-        "rawName": $raw-name,
-        "name": normalize-space(replace($raw-name, "^test\[(.*)\]$", "$1")),
+        "name": $name,
+        "suite": $suite,
         "status": local:status($case),
         "errorCode": local:error-code($case),
         "message": local:summary-message($case)
@@ -97,37 +97,121 @@ declare function local:reasons($baseline as map(*), $candidate as map(*)) as arr
     }
 };
 
-declare function local:count-reason($changes as array(*), $reason as xs:string) as xs:integer {
-    count(
-        for $change in $changes?*
-        where exists($change?reasons?*[. = $reason])
-        return $change
-    )
-};
-
-declare function local:count-transition(
-    $changes as array(*),
-    $from-status as xs:string,
-    $to-status as xs:string
-) as xs:integer {
-    count(
-        for $change in $changes?*
-        where string($change?baseline?status) = $from-status
-          and string($change?candidate?status) = $to-status
-        return $change
-    )
-};
-
 declare function local:transition($baseline as map(*), $candidate as map(*)) as xs:string {
     string($baseline?status) || "_TO_" || string($candidate?status)
 };
 
-declare function local:is-regression($reasons as array(*)) as xs:boolean {
-    exists($reasons?*[. = ("missing-in-candidate", "status-worsened", "error-code-changed")])
+declare function local:is-presence-change($change as map(*)) as xs:boolean {
+    exists($change?reasons?*[. = ("missing-in-candidate", "new-in-candidate")])
 };
 
-declare function local:is-improvement($baseline as map(*), $candidate as map(*)) as xs:boolean {
-    local:status-rank(string($candidate?status)) gt local:status-rank(string($baseline?status))
+declare function local:is-regression-change($change as map(*)) as xs:boolean {
+    exists($change?reasons?*[. = ("missing-in-candidate", "status-worsened", "error-code-changed")])
+};
+
+declare function local:is-improvement-change($change as map(*)) as xs:boolean {
+    not(local:is-regression-change($change))
+    and local:status-rank(string($change?candidate?status)) gt local:status-rank(string($change?baseline?status))
+};
+
+(: Classify change into 3 buckets: regressions, improvements, and neutral changes. :)
+declare function local:bucket($change as map(*)) as xs:string {
+    if (local:is-presence-change($change)) then
+        "presenceChanges"
+    else if (local:is-regression-change($change)) then
+        "regressions"
+    else if (local:is-improvement-change($change)) then
+        "improvements"
+    else
+        "neutralChanges"
+};
+
+(: Group changes by their transition type (e.g., PASS_TO_FAIL) within a given bucket. :)
+declare function local:grouped-by-transition($changes as array(*), $bucket as xs:string) as map(*) {
+    map:merge(
+        for $transition in sort(distinct-values(
+            for $change in $changes?*
+            where local:bucket($change) = $bucket
+            return string($change?transition)
+        ))
+        return map:entry(
+            $transition,
+            let $cases := array {
+                for $change in $changes?*
+                where local:bucket($change) = $bucket
+                  and string($change?transition) = $transition
+                return $change
+            }
+            return map {
+                "count": count($cases?*),
+                "cases": $cases
+            }
+        ),
+        map { "duplicates": "use-last" }
+    )
+};
+
+declare function local:presence-group($changes as array(*), $reason as xs:string) as map(*) {
+    let $cases := array {
+        for $change in $changes?*
+        where exists($change?reasons?*[. = $reason])
+        return $change
+    }
+    return map {
+        "count": count($cases?*),
+        "cases": $cases
+    }
+};
+
+declare function local:group-counts($changes as array(*)) as map(*) {
+    map {
+        "changed": count($changes?*),
+        "regressions": count(
+            for $change in $changes?*
+            where local:bucket($change) = "regressions"
+            return $change
+        ),
+        "improvements": count(
+            for $change in $changes?*
+            where local:bucket($change) = "improvements"
+            return $change
+        ),
+        "neutralChanges": count(
+            for $change in $changes?*
+            where local:bucket($change) = "neutralChanges"
+            return $change
+        ),
+        "presenceChanges": count(
+            for $change in $changes?*
+            where local:bucket($change) = "presenceChanges"
+            return $change
+        )
+    }
+};
+
+declare function local:by-suite($changes as array(*)) as map(*) {
+    map:merge(
+        for $suite in sort(distinct-values($changes?*?suite ! string(.)))
+        let $suiteChanges := array {
+            for $change in $changes?*
+            where string($change?suite) = $suite
+            return $change
+        }
+        return map:entry(
+            $suite,
+            map {
+                "counts": local:group-counts($suiteChanges),
+                "regressions": local:grouped-by-transition($suiteChanges, "regressions"),
+                "improvements": local:grouped-by-transition($suiteChanges, "improvements"),
+                "neutralChanges": local:grouped-by-transition($suiteChanges, "neutralChanges"),
+                "presenceChanges": map {
+                    "missingInCandidate": local:presence-group($suiteChanges, "missing-in-candidate"),
+                    "newInCandidate": local:presence-group($suiteChanges, "new-in-candidate")
+                }
+            }
+        ),
+        map { "duplicates": "use-last" }
+    )
 };
 
 let $baseline-cases := local:cases-by-key($baseline)
@@ -139,71 +223,25 @@ let $changes := array {
     let $reasons := local:reasons($baseline-case, $candidate-case)
     where exists($reasons?*)
     let $transition := local:transition($baseline-case, $candidate-case)
-    let $is-regression := local:is-regression($reasons)
-    let $is-improvement := local:is-improvement($baseline-case, $candidate-case)
     return map {
-        "key": $key,
-        "className": $baseline-case?className,
-        "rawName": $baseline-case?rawName,
-        "name": $baseline-case?name,
-        "baseline": $baseline-case,
-        "candidate": $candidate-case,
+        "id": $key,
+        "testCase": $baseline-case?name,
+        "suite": $baseline-case?suite,
         "transition": $transition,
         "reasons": $reasons,
-        "isRegression": $is-regression,
-        "isImprovement": $is-improvement
+        "baseline": map {
+            "status": $baseline-case?status,
+            "errorCode": $baseline-case?errorCode,
+            "message": $baseline-case?message
+        },
+        "candidate": map {
+            "status": $candidate-case?status,
+            "errorCode": $candidate-case?errorCode,
+            "message": $candidate-case?message
+        }
     }
 }
 return map {
-    "summary": map {
-        "totals": map {
-            "changed": count($changes?*),
-            "regressions": count(for $change in $changes?* where $change?isRegression return $change),
-            "improvements": count(for $change in $changes?* where $change?isImprovement return $change),
-            "neutralChanges": count(
-                for $change in $changes?*
-                where not($change?isRegression) and not($change?isImprovement)
-                return $change
-            )
-        },
-        "statusTransitions": map {
-            "passToFail": local:count-transition($changes, "PASS", "FAIL"),
-            "passToError": local:count-transition($changes, "PASS", "ERROR"),
-            "passToSkip": local:count-transition($changes, "PASS", "SKIP"),
-            "failToPass": local:count-transition($changes, "FAIL", "PASS"),
-            "errorToPass": local:count-transition($changes, "ERROR", "PASS"),
-            "skipToPass": local:count-transition($changes, "SKIP", "PASS"),
-            "failToError": local:count-transition($changes, "FAIL", "ERROR"),
-            "errorToFail": local:count-transition($changes, "ERROR", "FAIL")
-        },
-        "errorCodeChanges": map {
-            "errorCodeChanged": local:count-reason($changes, "error-code-changed")
-        },
-        "presenceChanges": map {
-            "missingInCandidate": local:count-reason($changes, "missing-in-candidate"),
-            "newInCandidate": local:count-reason($changes, "new-in-candidate")
-        },
-        "passingNow": map {
-            "nowPassing": count(
-                for $change in $changes?*
-                where string($change?candidate?status) = "PASS"
-                  and string($change?baseline?status) != "PASS"
-                return $change
-            ),
-            "fromFailToPass": local:count-transition($changes, "FAIL", "PASS"),
-            "fromErrorToPass": local:count-transition($changes, "ERROR", "PASS"),
-            "fromSkipToPass": local:count-transition($changes, "SKIP", "PASS")
-        }
-    },
-    "regressions": array {
-        for $change in $changes?*
-        where $change?isRegression
-        return $change
-    },
-    "improvements": array {
-        for $change in $changes?*
-        where $change?isImprovement
-        return $change
-    },
-    "changes": $changes
+    "counts": local:group-counts($changes),
+    "bySuite": local:by-suite($changes)
 }
