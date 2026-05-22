@@ -184,6 +184,7 @@ jobs:
             }
 
             core.setOutput("run_id", String(matchingArtifact.workflow_run.id));
+            core.setOutput("baseline_sha", String(matchingArtifact.workflow_run.head_sha));
 
       - name: Download baseline Surefire reports
         uses: actions/download-artifact@v4
@@ -204,6 +205,11 @@ jobs:
         run: |
           mvn -B compile
           mvn -B exec:java@analytics-regression -Dexec.args="baseline-surefire-reports candidate-surefire-reports"
+
+      - name: Write baseline metadata
+        run: |
+          printf '%s\n' '${{ steps.baseline-run.outputs.run_id }}' > analytics-regressions/baseline-run-id.txt
+          printf '%s\n' '${{ steps.baseline-run.outputs.baseline_sha }}' > analytics-regressions/baseline-sha.txt
 
       - name: Upload regression report
         if: always()
