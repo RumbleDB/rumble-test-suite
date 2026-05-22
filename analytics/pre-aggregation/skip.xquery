@@ -4,7 +4,7 @@ array{
 for $d in collection(".?select=*.xml")
 let $cases := $d/testsuite/testcase
 for $case in $cases
-let $name := tokenize($case/@name ! data(), "\] ")[2]
+let $name := replace(replace($case/@name ! data(), "^test\[(.*)\]$", "$1"), "^\s+|\s+$", "")
 let $msg := $case/skipped/@message
 where $msg
 group by $msg

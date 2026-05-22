@@ -1,6 +1,6 @@
 array{(let $cases := collection(".?select=*.xml")/testsuite/testcase
 for $case in $cases
-let $name := tokenize($case/@name ! data(), "\] ")[2]
+let $name := replace(replace($case/@name ! data(), "^test\[(.*)\]$", "$1"), "^\s+|\s+$", "")
 let $msg := $case/error/@type
 where $msg
 group by $msg
