@@ -133,15 +133,15 @@ public class TestBase {
                 break;
             case "assert":
                 secondQuery = declareResultVariableFromTestExpression(
-                        convertedTestString,
-                        assertion.getStringValue()
+                    convertedTestString,
+                    assertion.getStringValue()
                 );
                 assertTrueSingleElement(runQuery(secondQuery, rumble, environment));
                 break;
             case "not":
                 secondQuery = declareResultVariableFromTestExpression(
-                        convertedTestString,
-                        assertion.getStringValue()
+                    convertedTestString,
+                    assertion.getStringValue()
                 );
                 assertFalseSingleElement(runQuery(secondQuery, rumble, environment));
                 break;
@@ -155,11 +155,11 @@ public class TestBase {
             case "assert-deep-eq":
                 parts = splitLeadingDeclarations(convertedTestString);
                 secondQuery = parts.prolog
-                        + "\ndeep-equal(("
-                        + parts.body
-                        + "), ("
-                        + assertion.getStringValue()
-                        + "))";
+                    + "\ndeep-equal(("
+                    + parts.body
+                    + "), ("
+                    + assertion.getStringValue()
+                    + "))";
                 assertTrueSingleElement(runQuery(secondQuery, rumble, environment));
                 break;
             case "assert-true":
@@ -222,10 +222,10 @@ public class TestBase {
             case "assert-type":
                 parts = splitLeadingDeclarations(convertedTestString);
                 secondQuery = parts.prolog
-                        + "\n("
-                        + parts.body
-                        + ") instance of "
-                        + assertion.getStringValue();
+                    + "\n("
+                    + parts.body
+                    + ") instance of "
+                    + assertion.getStringValue();
                 assertTrueSingleElement(runQuery(secondQuery, rumble, environment));
                 break;
             case "assert-count":
@@ -435,7 +435,7 @@ public class TestBase {
     }
 
     private static final Pattern LEADING_DECLARATION =
-            Pattern.compile("\\G\\s*declare\\s+[^;]*;\\s*", Pattern.DOTALL);
+        Pattern.compile("\\G\\s*declare\\s+[^;]*;\\s*", Pattern.DOTALL);
 
     private static QueryParts splitLeadingDeclarations(String query) {
         Matcher matcher = LEADING_DECLARATION.matcher(query);
@@ -454,10 +454,10 @@ public class TestBase {
     private static String declareResultVariableFromTestExpression(String query, String assertionExpression) {
         QueryParts parts = splitLeadingDeclarations(query);
         return parts.prolog
-                + "\ndeclare variable $result := ("
-                + parts.body
-                + ");\n"
-                + assertionExpression;
+            + "\ndeclare variable $result := ("
+            + parts.body
+            + ");\n"
+            + assertionExpression;
     }
 
 }
