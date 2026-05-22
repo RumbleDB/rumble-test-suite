@@ -72,6 +72,16 @@
                             <mainClass>analytics.Analytics</mainClass>
                         </configuration>
                     </execution>
+                    <execution>
+                        <id>analytics-regression</id>
+                        <phase>none</phase>
+                        <goals>
+                            <goal>java</goal>
+                        </goals>
+                        <configuration>
+                            <mainClass>analytics.RegressionAnalytics</mainClass>
+                        </configuration>
+                    </execution>
                 </executions>
             </plugin>
         </plugins>
