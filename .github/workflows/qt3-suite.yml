@@ -107,7 +107,7 @@ jobs:
 
       - name: Pre-aggregate analytics for ${{ matrix.suite }}
         if: always()
-        run: mvn -B exec:java@analytics-pre -Dexec.args="${{ matrix.suite }}"
+        run: mvn -B exec:java@analytics-pre -Dexec.args="${{ inputs.tested_parser }}.${{ matrix.suite }}"
 
       - name: Upload reports (per suite)
         if: always()
@@ -212,5 +212,3 @@ jobs:
           path: |
             plots
           retention-days: 7
-
-
