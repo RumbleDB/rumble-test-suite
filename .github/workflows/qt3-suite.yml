@@ -143,6 +143,21 @@ jobs:
           ref: master
           fetch-depth: 2
 
+      - name: Checkout caller (RumbleDB)
+        uses: actions/checkout@v6
+        with:
+          path: rumble
+          fetch-depth: 2
+
+      - name: Download RumbleDB target
+        uses: actions/download-artifact@v8
+        with:
+          name: rumble-target-${{ inputs.tested_parser }}
+          path: rumble/target
+
+      - name: (DEBUG) List rumble/target
+        run: ls -R rumble
+
       - name: Download current Surefire reports
         uses: actions/download-artifact@v8
         with:
