@@ -24,7 +24,7 @@ public class TestBase {
     protected final String testCaseName;
     private final boolean useXQueryParser;
     /** The configuration for the Rumble runtimes spinned up for this test case. */
-    private RumbleRuntimeConfiguration rumbleConfig;
+    private final RumbleRuntimeConfiguration rumbleConfig;
 
     public TestBase(TestCase testCase, String testSetName, String testCaseName, boolean useXQueryParser) {
         this.testCase = testCase;

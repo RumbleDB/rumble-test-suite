@@ -13,7 +13,6 @@ import java.util.List;
 
 /**
  * Class to keep the test case string, execution environment, and a cached primary result
- *
  * The result must be cached, because some test cases are not deterministic. They are usually held inside an any-of assertion,
  * and we need to make sure that we are comparing always with the same result instead of re-evaluating every time
  */
