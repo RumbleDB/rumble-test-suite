@@ -71,8 +71,8 @@ jobs:
       - name: Checkout test harness (this repo)
         uses: actions/checkout@v6
         with:
-          repository: RumbleDB/rumble-test-suite
-          ref: master
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
           fetch-depth: 2
       - name: Checkout caller (RumbleDB)
         uses: actions/checkout@v6
@@ -139,8 +139,8 @@ jobs:
       - name: Checkout test harness (this repo)
         uses: actions/checkout@v6
         with:
-          repository: RumbleDB/rumble-test-suite
-          ref: master
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
           fetch-depth: 2
 
       - name: Checkout caller (RumbleDB)
@@ -201,8 +201,8 @@ jobs:
       - name: Checkout test harness (this repo)
         uses: actions/checkout@v6
         with:
-          repository: RumbleDB/rumble-test-suite
-          ref: master
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
           fetch-depth: 2
 
       - name: Set up JDK 17
@@ -263,8 +263,8 @@ jobs:
       - name: Checkout test harness (this repo)
         uses: actions/checkout@v6
         with:
-          repository: RumbleDB/rumble-test-suite
-          ref: master
+          repository: ${{ job.workflow_repository }}
+          ref: ${{ job.workflow_sha }}
           fetch-depth: 2
 
       - name: Download collected artifacts
