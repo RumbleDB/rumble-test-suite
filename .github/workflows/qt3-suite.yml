@@ -137,7 +137,7 @@ jobs:
     if: inputs.baseline_run_id != ''
     steps:
       - name: Checkout test harness (this repo)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: RumbleDB/rumble-test-suite
           ref: master
@@ -174,7 +174,7 @@ jobs:
           run-id: ${{ inputs.baseline_run_id }}
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
