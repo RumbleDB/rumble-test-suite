@@ -98,8 +98,10 @@ def run_test(class_name: str, maven_args: list[str]) -> int:
     return result.returncode
 
 
-def run_preaggregate(scope: str) -> int:
-    command = ["mvn", "exec:java@analytics-pre", f"-Dexec.args={scope}"]
+def run_analysis(baseline: str | None = None) -> int:
+    command = ["mvn", "exec:java@analytics"]
+    if baseline:
+        command.append(f"-Dbaseline={baseline}")    
     print(f"Running: {shlex.join(command)}")
     result = subprocess.run(command, cwd=REPO_ROOT)
     return result.returncode
@@ -111,14 +113,15 @@ def run_pipeline(
     clear_surefire_reports()
 
     exit_code = 0
-    for class_name, parser, logical_name in selected_tests:
+    for class_name, _parser, _logical_name in selected_tests:
         test_exit_code = run_test(class_name, maven_args)
-        preaggregate_exit_code = run_preaggregate(f"{parser}.{logical_name}")
 
         if exit_code == 0 and test_exit_code != 0:
             exit_code = test_exit_code
-        if exit_code == 0 and preaggregate_exit_code != 0:
-            exit_code = preaggregate_exit_code
+
+    analysis_exit_code = run_analysis()
+    if exit_code == 0 and analysis_exit_code != 0:
+        exit_code = analysis_exit_code
 
     return exit_code
 
@@ -155,7 +158,7 @@ def run_interactive(targets: list[TestTarget], maven_args: list[str]) -> int:
             return 0
 
         if not questionary.confirm(
-            f"Run {len(chosen)} selected test case(s) with {', '.join(parsers)} and pre-aggregate each run?",
+            f"Run {len(chosen)} selected test case(s) with {', '.join(parsers)} and generate one analysis report?",
             default=True,
         ).ask():
             continue
