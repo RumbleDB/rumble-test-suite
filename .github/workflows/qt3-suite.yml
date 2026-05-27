@@ -86,11 +86,6 @@ jobs:
           repository: ${{ job.workflow_repository }}
           ref: ${{ job.workflow_sha }}
 
-      - name: Checkout caller (RumbleDB)
-        uses: actions/checkout@v6
-        with:
-          path: rumble
-
       - name: Download RumbleDB target
         uses: actions/download-artifact@v8
         with:
