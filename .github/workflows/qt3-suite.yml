@@ -35,6 +35,9 @@ concurrency:
 
 env:
   TESTED_PARSER: ${{ inputs.tested_parser }}
+  JAVA_VERSION: '17'
+  PYTHON_VERSION: '3.12'
+
 jobs:
   build:
     name: Build RumbleDB
@@ -43,11 +46,11 @@ jobs:
       - name: Checkout caller (RumbleDB)
         uses: actions/checkout@v6
 
-      - name: Set up JDK 17
+      - name: Set up JDK
         uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: ${{ env.JAVA_VERSION }}
 
       - name: Build RumbleDB
         run: mvn -B -q clean compile assembly:single
@@ -91,7 +94,7 @@ jobs:
         uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: ${{ env.JAVA_VERSION }}
 
       - name: Run Maven tests
         shell: bash
@@ -173,11 +176,11 @@ jobs:
           repository: ${{ github.repository }}
           run-id: ${{ inputs.baseline_run_id }}
 
-      - name: Set up JDK 17
+      - name: Set up JDK
         uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: ${{ env.JAVA_VERSION }}
 
       - name: Generate regression report
         run: |
@@ -205,11 +208,11 @@ jobs:
           ref: ${{ job.workflow_sha }}
           fetch-depth: 2
 
-      - name: Set up JDK 17
+      - name: Set up JDK
         uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: ${{ env.JAVA_VERSION }}
 
       - name: Download analytics artifacts
         uses: actions/download-artifact@v8
@@ -279,7 +282,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
-          python-version: '3.12'
+          python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install python dependencies
         run: pip install -r analytics/requirements.txt
