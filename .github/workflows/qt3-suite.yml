@@ -8,6 +8,10 @@ on:
         required: false
         type: string
         default: jsoniq
+      rumble_artifact_name:
+        description: Arifact name with Rumble build
+        required: true
+        type: string
       baseline_run_id:
         description: Exact GitHub workflow run id whose Surefire artifact should be used as baseline for regression reporting
         required: false
@@ -38,29 +42,6 @@ env:
   PYTHON_VERSION: "3.14"
 
 jobs:
-  build:
-    name: Build RumbleDB
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout caller (RumbleDB)
-        uses: actions/checkout@v6
-
-      - name: Set up JDK
-        uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: ${{ env.JAVA_VERSION }}
-
-      - name: Build RumbleDB
-        run: mvn -B -q clean compile assembly:single
-
-      - name: Upload RumbleDB target
-        uses: actions/upload-artifact@v7
-        with:
-          name: rumble-target-${{ inputs.tested_parser }}
-          path: target
-          retention-days: 1
-
   tests:
     name: Run test suite (${{ matrix.suite }})
     needs: build
@@ -93,7 +74,7 @@ jobs:
       - name: Download RumbleDB target
         uses: actions/download-artifact@v8
         with:
-          name: rumble-target-${{ inputs.tested_parser }}
+          name: ${{ inputs.rumble_artifact_name }}
           path: rumble/target
 
       - name: (DEBUG) List rumble/target
@@ -170,7 +151,7 @@ jobs:
       - name: Download RumbleDB target
         uses: actions/download-artifact@v8
         with:
-          name: rumble-target-${{ inputs.tested_parser }}
+          name: ${{ inputs.rumble_artifact_name }}
           path: rumble/target
 
       - name: Generate analysis
