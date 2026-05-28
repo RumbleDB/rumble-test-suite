@@ -108,7 +108,7 @@ def build_comment(
         f"https://github.com/{repo_owner}/{repo_name}/actions/runs/{run_id}#artifacts"
     )
 
-    parts = [f"## QT3 Test Results - Parser: {parser_name}"]
+    parts = [f"## QT3 Test Results - Parser: `{parser_name}`"]
     if baseline_run_id:
         parts.extend(
             [
