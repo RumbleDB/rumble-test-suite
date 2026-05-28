@@ -17,6 +17,10 @@ on:
         required: false
         type: string
         default: ""
+    outputs:
+      ci_comment:
+        description: Markdown CI comment generated from the analysis report
+        value: ${{ jobs.analysis.outputs.ci_comment }}
     secrets: {}
 
 permissions:
@@ -31,7 +35,7 @@ concurrency:
 env:
   TESTED_PARSER: ${{ inputs.tested_parser }}
   JAVA_VERSION: "17"
-  # PYTHON_VERSION: '3.12'
+  PYTHON_VERSION: "3.14"
 
 jobs:
   build:
@@ -130,6 +134,8 @@ jobs:
     name: Generate analysis
     needs: [tests]
     runs-on: ubuntu-latest
+    outputs:
+      ci_comment: ${{ steps.ci_comment.outputs.ci_comment }}
     steps:
       - name: Checkout test harness (this repo)
         uses: actions/checkout@v6
@@ -180,6 +186,32 @@ jobs:
             echo "Performing standard analysis"
             mvn -B exec:java@analytics -Dexec.args="surefire-reports"
           fi
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Generate CI comment
+        id: ci_comment
+        shell: bash
+        run: |
+          args=(
+            --analysis-json analytics-results/analysis.json
+            --parser "${{ inputs.tested_parser }}"
+            --run-id "${{ github.run_id }}"
+            --repo-owner "${{ github.repository_owner }}"
+            --repo-name "${{ github.repository#*/ }}"
+          )
+          if [[ -n "${{ inputs.baseline_run_id }}" ]]; then
+            args+=(--baseline-run-id "${{ inputs.baseline_run_id }}")
+          fi
+
+          python3 .github/workflows/scripts/ci_comment.py "${args[@]}" > ci-comment.md
+          {
+            echo "ci_comment<<EOF"
+            cat ci-comment.md
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Upload analysis
         if: always()
