@@ -200,7 +200,7 @@ jobs:
             --parser "${{ inputs.tested_parser }}"
             --run-id "${{ github.run_id }}"
             --repo-owner "${{ github.repository_owner }}"
-            --repo-name "${{ github.repository#*/ }}"
+            --repo-name "${{ github.event.repository.name }}"
           )
           if [[ -n "${{ inputs.baseline_run_id }}" ]]; then
             args+=(--baseline-run-id "${{ inputs.baseline_run_id }}")
