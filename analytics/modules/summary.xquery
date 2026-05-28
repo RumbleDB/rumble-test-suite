@@ -35,15 +35,25 @@ declare function summary:issue-cases(
     $message-field as xs:string
 ) as array(*) {
     array {
-        for $case in $cases?*
-        let $message := normalize-space(string($case($message-field)))
-        where string($case?suite) = $suite
-          and string($case?status) = $status
-          and $message ne ""
-        order by string($case?id) ascending
+        for $message in sort(distinct-values(
+            for $case in $cases?*
+            let $case-message := normalize-space(string($case($message-field)))
+            where string($case?suite) = $suite
+              and string($case?status) = $status
+              and $case-message ne ""
+            return $case-message
+        ))
+        let $ids := array {
+            for $case in $cases?*
+            where string($case?suite) = $suite
+              and string($case?status) = $status
+              and normalize-space(string($case($message-field))) = $message
+            order by string($case?id) ascending
+            return string($case?id)
+        }
         return map {
-            "id": string($case?id),
-            "message": $message
+            "message": $message,
+            "ids": $ids
         }
     }
 };
