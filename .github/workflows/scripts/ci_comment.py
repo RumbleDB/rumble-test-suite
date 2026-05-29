@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+from urllib.parse import quote
 
 QT3TESTS_REPO_URL = "https://github.com/w3c/qt3tests/blob/master"
 
@@ -28,10 +29,13 @@ def parse_test_id(test_id: object) -> tuple[str, str]:
     return "", text
 
 
-def render_test_file_link(file_name: str) -> str:
+def render_test_file_link(file_name: str, test_name: str = "") -> str:
     if not file_name:
         return ""
-    return f"[{table_cell(file_name)}]({QT3TESTS_REPO_URL}/{file_name})"
+    fragment = ""
+    if test_name:
+        fragment = f"#:~:text={quote(test_name, safe='')}"
+    return f"[{table_cell(file_name)}]({QT3TESTS_REPO_URL}/{file_name}{fragment})"
 
 
 def render_regression_details(analysis: dict) -> str:
@@ -52,7 +56,7 @@ def render_regression_details(analysis: dict) -> str:
             raw_test_id = item.get("id", "")
             test_file, test_name = parse_test_id(raw_test_id)
             test_id = table_cell(test_name)
-            test_file_link = render_test_file_link(test_file)
+            test_file_link = render_test_file_link(test_file, test_name)
             status = table_cell(str(item.get("status", "")).upper())
             message = table_cell(item.get("message", ""))
             lines.append(
@@ -78,7 +82,7 @@ def render_improvement_details(analysis: dict) -> str:
     for suite, items in sorted(improvements.items()):
         for raw_test_id in sorted(items, key=str):
             test_file, test_name = parse_test_id(raw_test_id)
-            test_file_link = render_test_file_link(test_file)
+            test_file_link = render_test_file_link(test_file, test_name)
             lines.append(
                 f"| `{table_cell(suite)}` | {test_file_link} | `{table_cell(test_name)}` |"
             )
