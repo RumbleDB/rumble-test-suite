@@ -18,6 +18,14 @@ def table_cell(value: object) -> str:
     return str(value).replace("\n", " ").replace("|", "\\|")
 
 
+def parse_test_id(test_id: object) -> tuple[str, str]:
+    text = str(test_id)
+    if text.startswith("[") and "] " in text:
+        file_name, case_name = text[1:].split("] ", 1)
+        return file_name, case_name
+    return "", text
+
+
 def render_regression_details(analysis: dict) -> str:
     regressions = analysis.get("regressions", {})
     if not regressions:
@@ -27,17 +35,20 @@ def render_regression_details(analysis: dict) -> str:
     lines = [
         f"‼️ Regression summary: **{total}** previously passing test(s) now fail, error, or skip.",
         "",
-        "| Suite | Status | Test case | Message |",
-        "| --- | --- | --- | --- |",
+        "| Suite | Status | Test file | Test case | Message |",
+        "| --- | --- | --- | --- | --- |",
     ]
 
     for suite, items in sorted(regressions.items()):
         for item in sorted(items, key=lambda entry: str(entry.get("id", ""))):
-            test_id = table_cell(item.get("id", ""))
+            raw_test_id = item.get("id", "")
+            test_file, test_name = parse_test_id(raw_test_id)
+            test_id = table_cell(test_name)
+            test_file = table_cell(test_file)
             status = table_cell(str(item.get("status", "")).upper())
             message = table_cell(item.get("message", ""))
             lines.append(
-                f"| `{table_cell(suite)}` | `{status}` | `{test_id}` | `{message}` |"
+                f"| `{table_cell(suite)}` | `{status}` | `{test_file}` | `{test_id}` | `{message}` |"
             )
 
     return "\n".join(lines)
