@@ -62,6 +62,30 @@ def render_regression_details(analysis: dict) -> str:
     return "\n".join(lines)
 
 
+def render_now_passing_details(analysis: dict) -> str:
+    now_passing = analysis.get("nowPassing", {})
+    if not now_passing:
+        return ""
+
+    total = sum(len(items) for items in now_passing.values())
+    lines = [
+        f"✅ Newly passing summary: **{total}** test(s) previously failing, errored, or skipped now pass.",
+        "",
+        "| Suite | Test file | Test case |",
+        "| --- | --- | --- |",
+    ]
+
+    for suite, items in sorted(now_passing.items()):
+        for raw_test_id in sorted(items, key=str):
+            test_file, test_name = parse_test_id(raw_test_id)
+            test_file_link = render_test_file_link(test_file)
+            lines.append(
+                f"| `{table_cell(suite)}` | {test_file_link} | `{table_cell(test_name)}` |"
+            )
+
+    return "\n".join(lines)
+
+
 def render_summary(summary: dict) -> str:
     lines = [
         "| Test Suite | Passing | Failing | Errors | Skipped | Total |",
@@ -93,10 +117,14 @@ def render_summary(summary: dict) -> str:
 
 def render_parser_section(parser_name: str, analysis: dict, artifacts_url: str) -> str:
     regression_details = render_regression_details(analysis)
+    now_passing_details = render_now_passing_details(analysis)
     parts = []
 
     if regression_details:
         parts.extend([regression_details, ""])
+
+    if now_passing_details:
+        parts.extend([now_passing_details, ""])
 
     parts.extend(
         [
