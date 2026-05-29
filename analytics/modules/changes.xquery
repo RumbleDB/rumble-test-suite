@@ -79,7 +79,7 @@ declare function changes:regressions($baseline-cases as map(*), $candidate-cases
     )
 };
 
-declare function changes:now-passing(
+declare function changes:improvements(
     $baseline-cases as map(*),
     $candidate-cases as map(*)
 ) as map(*) {
