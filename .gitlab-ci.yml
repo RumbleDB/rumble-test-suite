@@ -29,11 +29,7 @@ test-app:
   dependencies:
     - build-job
   script:
-    - if [ "$TESTED_PARSER" = "jsoniq" ]; then
-      mvn -Dtest=AppTest test -quiet || true;
-      else
-      mvn -Dtest=XQueryAppTest test -quiet || true;
-      fi
+    - mvn -Dparser="${TESTED_PARSER}" -Dtest=AppTest test -quiet || true;
     - mvn exec:java@analytics-pre -Dexec.args="${TESTED_PARSER}.AppTest" 
   artifacts:
     when: always
@@ -48,11 +44,7 @@ test-array:
   dependencies:
     - build-job
   script:
-    - if [ "$TESTED_PARSER" = "jsoniq" ]; then
-          mvn -Dtest=ArrayTest test -quiet || true;
-      else
-          mvn -Dtest=XQueryArrayTest test -quiet || true;
-      fi
+    - mvn -Dparser="${TESTED_PARSER}" -Dtest=ArrayTest test -quiet || true;
     - mvn exec:java@analytics-pre -Dexec.args="${TESTED_PARSER}.ArrayTest"
   artifacts:
     when: always
@@ -67,11 +59,7 @@ test-fn1:
   dependencies:
     - build-job
   script:
-    - if [ "$TESTED_PARSER" = "jsoniq" ]; then
-          mvn -Dtest=Fn1Test test -quiet || true;
-      else
-          mvn -Dtest=XQueryFn1Test test -quiet || true;
-      fi
+    - mvn -Dparser="${TESTED_PARSER}" -Dtest=Fn1Test test -quiet || true;
     - mvn exec:java@analytics-pre -Dexec.args="${TESTED_PARSER}.Fn1Test"
   artifacts:
     when: always
@@ -86,11 +74,7 @@ test-fn2:
   dependencies:
     - build-job
   script:
-    - if [ "$TESTED_PARSER" = "jsoniq" ]; then
-          mvn -Dtest=Fn2Test test -quiet || true;
-      else
-          mvn -Dtest=XQueryFn2Test test -quiet || true;
-      fi
+    - mvn -Dparser="${TESTED_PARSER}" -Dtest=Fn2Test test -quiet || true;
     - mvn exec:java@analytics-pre -Dexec.args="${TESTED_PARSER}.Fn2Test"
   artifacts:
     when: always
@@ -105,11 +89,7 @@ test-map:
   dependencies:
     - build-job
   script:
-    - if [ "$TESTED_PARSER" = "jsoniq" ]; then
-          mvn -Dtest=MapTest test -quiet || true;
-      else
-          mvn -Dtest=XQueryMapTest test -quiet || true;
-      fi
+    - mvn -Dparser="${TESTED_PARSER}" -Dtest=MapTest test -quiet || true;
     - mvn exec:java@analytics-pre -Dexec.args="${TESTED_PARSER}.MapTest"
   artifacts:
     when: always
@@ -124,11 +104,7 @@ test-math:
   dependencies:
     - build-job
   script:
-    - if [ "$TESTED_PARSER" = "jsoniq" ]; then
-          mvn -Dtest=MathTest test -quiet || true;
-      else
-          mvn -Dtest=XQueryMathTest test -quiet || true;
-      fi
+    - mvn -Dparser="${TESTED_PARSER}" -Dtest=MathTest test -quiet || true;
     - mvn exec:java@analytics-pre -Dexec.args="${TESTED_PARSER}.MathTest"
   artifacts:
     when: always
@@ -143,11 +119,7 @@ test-misc:
   dependencies:
     - build-job
   script:
-    - if [ "$TESTED_PARSER" = "jsoniq" ]; then
-          mvn -Dtest=MiscTest test -quiet || true;
-      else
-          mvn -Dtest=XQueryMiscTest test -quiet || true;
-      fi
+    - mvn -Dparser="${TESTED_PARSER}" -Dtest=MiscTest test -quiet || true;
     - mvn exec:java@analytics-pre -Dexec.args="${TESTED_PARSER}.MiscTest"
   artifacts:
     when: always
@@ -162,11 +134,7 @@ test-op:
   dependencies:
     - build-job
   script:
-    - if [ "$TESTED_PARSER" = "jsoniq" ]; then
-          mvn -Dtest=OpTest test -quiet || true;
-      else
-          mvn -Dtest=XQueryOpTest test -quiet || true;
-      fi
+    - mvn -Dparser="${TESTED_PARSER}" -Dtest=OpTest test -quiet || true;
     - mvn exec:java@analytics-pre -Dexec.args="${TESTED_PARSER}.OpTest"
   artifacts:
     when: always
@@ -181,11 +149,7 @@ test-prod1:
   dependencies:
     - build-job
   script:
-    - if [ "$TESTED_PARSER" = "jsoniq" ]; then
-      mvn -Dtest=Prod1Test test -quiet || true;
-      else
-      mvn -Dtest=XQueryProd1Test test -quiet || true;
-      fi
+    - mvn -Dparser="${TESTED_PARSER}" -Dtest=Prod1Test test -quiet || true;
     - mvn exec:java@analytics-pre -Dexec.args="${TESTED_PARSER}.Prod1Test"
   artifacts:
     when: always
@@ -200,11 +164,7 @@ test-prod2:
   dependencies:
     - build-job
   script:
-    - if [ "$TESTED_PARSER" = "jsoniq" ]; then
-          mvn -Dtest=Prod2Test test -quiet || true;
-      else
-          mvn -Dtest=XQueryProd2Test test -quiet || true;
-      fi
+    - mvn -Dparser="${TESTED_PARSER}" -Dtest=Prod2Test test -quiet || true;
     - mvn exec:java@analytics-pre -Dexec.args="${TESTED_PARSER}.Prod2Test"
   artifacts:
     when: always
@@ -219,11 +179,7 @@ test-ser:
   dependencies:
     - build-job
   script:
-    - if [ "$TESTED_PARSER" = "jsoniq" ]; then
-          mvn -Dtest=SerTest test -quiet || true;
-      else
-          mvn -Dtest=XQuerySerTest test -quiet || true;
-      fi
+    - mvn -Dparser="${TESTED_PARSER}" -Dtest=SerTest test -quiet || true;
     - mvn exec:java@analytics-pre -Dexec.args="${TESTED_PARSER}.SerTest"
   artifacts:
     when: always
@@ -238,11 +194,7 @@ test-xs:
   dependencies:
     - build-job
   script:
-    - if [ "$TESTED_PARSER" = "jsoniq" ]; then
-          mvn -Dtest=XsTest test -quiet || true;
-      else
-          mvn -Dtest=XQueryXsTest test -quiet || true;
-      fi
+    - mvn -Dparser="${TESTED_PARSER}" -Dtest=XsTest test -quiet || true;
     - mvn exec:java@analytics-pre -Dexec.args="${TESTED_PARSER}.XsTest"
   artifacts:
     when: always

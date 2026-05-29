@@ -88,18 +88,12 @@ jobs:
       - name: Run Maven tests
         shell: bash
         run: |
-          if [[ "${TESTED_PARSER}" == "jsoniq" ]]; then
-            SUITE="${{ matrix.suite }}"
-          else
-            # Prepend XQuery for XQuery parser
-            SUITE="XQuery${{ matrix.suite }}"
-          fi
           if [[ -n "${{ inputs.mvn_args }}" ]]; then
             MVN_ARGS="${{ inputs.mvn_args }}"
           else
-            MVN_ARGS="-Dtest=${SUITE}"
+            MVN_ARGS="-Dtest=${{ matrix.suite }}"
           fi
-          mvn -B -q ${MVN_ARGS} test || true
+          mvn -B -q -Dparser="${TESTED_PARSER}" ${MVN_ARGS} test || true
 
       - name: Upload reports (per suite)
         if: always()
