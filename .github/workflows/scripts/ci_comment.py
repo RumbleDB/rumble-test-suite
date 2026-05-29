@@ -5,6 +5,8 @@ import argparse
 import json
 from pathlib import Path
 
+QT3TESTS_REPO_URL = "https://github.com/w3c/qt3tests/blob/master"
+
 
 def load_analysis(analysis_json: str) -> dict:
     path = Path(analysis_json)
@@ -26,6 +28,12 @@ def parse_test_id(test_id: object) -> tuple[str, str]:
     return "", text
 
 
+def render_test_file_link(file_name: str) -> str:
+    if not file_name:
+        return ""
+    return f"[{table_cell(file_name)}]({QT3TESTS_REPO_URL}/{file_name})"
+
+
 def render_regression_details(analysis: dict) -> str:
     regressions = analysis.get("regressions", {})
     if not regressions:
@@ -44,11 +52,11 @@ def render_regression_details(analysis: dict) -> str:
             raw_test_id = item.get("id", "")
             test_file, test_name = parse_test_id(raw_test_id)
             test_id = table_cell(test_name)
-            test_file = table_cell(test_file)
+            test_file_link = render_test_file_link(test_file)
             status = table_cell(str(item.get("status", "")).upper())
             message = table_cell(item.get("message", ""))
             lines.append(
-                f"| `{table_cell(suite)}` | `{status}` | `{test_file}` | `{test_id}` | `{message}` |"
+                f"| `{table_cell(suite)}` | `{status}` | {test_file_link} | `{test_id}` | `{message}` |"
             )
 
     return "\n".join(lines)
