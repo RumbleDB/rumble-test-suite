@@ -51,13 +51,33 @@ public class TestBase {
     }
 
     public static Iterable<Object[]> getData(String testSuite) throws Exception {
-        return getData(testSuite, false);
+        return getData(testSuite, useXQueryParserFromConfiguration());
     }
 
     public static Iterable<Object[]> getData(String testSuite, boolean useXQueryParser) throws Exception {
         CaseCollector testDriver = new CaseCollector(useXQueryParser);
         testDriver.execute(testSuite);
         return testDriver.getAllTests();
+    }
+
+    protected static boolean useXQueryParserFromConfiguration() {
+        String configuredParser = System.getProperty("parser");
+        if (configuredParser == null || configuredParser.isBlank()) {
+            return false;
+        }
+
+        switch (configuredParser.toLowerCase()) {
+            case "jsoniq":
+                return false;
+            case "xquery":
+                return true;
+            default:
+                throw new IllegalArgumentException(
+                        "Unsupported parser selection '"
+                            + configuredParser
+                            + "'. Use jsoniq or xquery."
+                );
+        }
     }
 
     public void testCase() {
