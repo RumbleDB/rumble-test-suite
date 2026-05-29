@@ -24,17 +24,12 @@ USAGE = """Usage:
 
 @dataclass(frozen=True)
 class TestTarget:
-    logical_name: str
     suite: str
-    jsoniq_class: str | None
-    xquery_class: str | None
-
-    def class_name(self, parser: ParserName) -> str | None:
-        return self.jsoniq_class if parser == "jsoniq" else self.xquery_class
+    class_name: str
 
 
 def discover_targets() -> list[TestTarget]:
-    grouped: dict[str, dict[str, str | None]] = {}
+    targets: list[TestTarget] = []
     for path in sorted(TEST_DIR.glob("*Test.java")):
         if path.name == "TestBase.java":
             continue
@@ -49,29 +44,14 @@ def discover_targets() -> list[TestTarget]:
             )
             continue
 
-        class_name = class_match.group(1)
-        suite = data_match.group(1)
-        parser = "xquery" if data_match.group(2) == "true" else "jsoniq"
-        logical_name = (
-            class_name.removeprefix("XQuery") if parser == "xquery" else class_name
+        targets.append(
+            TestTarget(
+                suite=data_match.group(1),
+                class_name=class_match.group(1),
+            )
         )
-        if logical_name not in grouped:
-            grouped[logical_name] = {
-                "suite": suite,
-                "jsoniq_class": None,
-                "xquery_class": None,
-            }
-        grouped[logical_name][f"{parser}_class"] = class_name
 
-    return [
-        TestTarget(
-            logical_name=logical_name,
-            suite=str(data["suite"]),
-            jsoniq_class=data["jsoniq_class"],
-            xquery_class=data["xquery_class"],
-        )
-        for logical_name, data in sorted(grouped.items())
-    ]
+    return targets
 
 
 def parse_maven_args(argv: list[str]) -> list[str]:
@@ -91,47 +71,55 @@ def clear_surefire_reports() -> None:
         shutil.rmtree(SUREFIRE_REPORTS_DIR)
 
 
-def run_test(class_name: str, maven_args: list[str]) -> int:
-    command = ["mvn", f"-Dtest={class_name}", "test", *maven_args]
+def run_test(class_name: str, parser: ParserName, maven_args: list[str]) -> int:
+    command = [
+        "mvn",
+        f"-Dtest={class_name}",
+        f"-Dparser={parser}",
+        "test",
+        *maven_args,
+    ]
     print(f"Running: {shlex.join(command)}")
     result = subprocess.run(command, cwd=REPO_ROOT)
     return result.returncode
 
 
-def run_preaggregate(scope: str) -> int:
-    command = ["mvn", "exec:java@analytics-pre", f"-Dexec.args={scope}"]
+def run_analysis(baseline: str | None = None) -> int:
+    command = ["mvn", "exec:java@analytics"]
+    if baseline:
+        command.append(f"-Dbaseline={baseline}")
     print(f"Running: {shlex.join(command)}")
     result = subprocess.run(command, cwd=REPO_ROOT)
     return result.returncode
 
 
 def run_pipeline(
-    selected_tests: list[tuple[str, ParserName, str]], maven_args: list[str]
+    selected_tests: list[tuple[str, ParserName]], maven_args: list[str]
 ) -> int:
     clear_surefire_reports()
 
     exit_code = 0
-    for class_name, parser, logical_name in selected_tests:
-        test_exit_code = run_test(class_name, maven_args)
-        preaggregate_exit_code = run_preaggregate(f"{parser}.{logical_name}")
+    for class_name, parser in selected_tests:
+        test_exit_code = run_test(class_name, parser, maven_args)
 
         if exit_code == 0 and test_exit_code != 0:
             exit_code = test_exit_code
-        if exit_code == 0 and preaggregate_exit_code != 0:
-            exit_code = preaggregate_exit_code
+
+    analysis_exit_code = run_analysis()
+    if exit_code == 0 and analysis_exit_code != 0:
+        exit_code = analysis_exit_code
 
     return exit_code
 
 
 def run_interactive(targets: list[TestTarget], maven_args: list[str]) -> int:
-    targets_by_name = {target.logical_name: target for target in targets}
     while True:
         chosen = questionary.checkbox(
             f"Select test classes to run ({len(targets)} available)",
             choices=[
                 questionary.Choice(
-                    title=f"{target.logical_name}  {target.suite}",
-                    value=target.logical_name,
+                    title=f"{target.class_name}  {target.suite}",
+                    value=target.class_name,
                 )
                 for target in targets
             ],
@@ -155,17 +143,13 @@ def run_interactive(targets: list[TestTarget], maven_args: list[str]) -> int:
             return 0
 
         if not questionary.confirm(
-            f"Run {len(chosen)} selected test case(s) with {', '.join(parsers)} and pre-aggregate each run?",
+            f"Run {len(chosen)} selected test case(s) with {', '.join(parsers)} and generate one analysis report?",
             default=True,
         ).ask():
             continue
 
         selected_tests = [
-            (class_name, parser, logical_name)
-            for logical_name in chosen
-            for parser in parsers
-            for class_name in [targets_by_name[logical_name].class_name(parser)]
-            if class_name is not None
+            (class_name, parser) for class_name in chosen for parser in parsers
         ]
         return run_pipeline(selected_tests, maven_args)
 

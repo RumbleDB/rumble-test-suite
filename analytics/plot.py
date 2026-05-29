@@ -1,6 +1,7 @@
-# plots the json files in analytics-results
+# plots analytics-results/analysis.json
 # primarily for running inside Gitlab Pipeline
 # to run locally, use python 3.12 and run pip install -r analytics/requirements.txt
+import json
 import pandas as pd
 import matplotlib.pyplot as plt
 import os
@@ -67,7 +68,10 @@ def plot_df(df, title):
     plt.savefig(f"plots/{title}.png")
     plt.savefig(f"plots/{title}.svg")
 
-df = pd.read_json(f"analytics-results/count.json").set_index("name").sort_index(ascending=False)
+with open("analytics-results/analysis.json", "r", encoding="utf-8") as handle:
+    analysis = json.load(handle)
+
+df = pd.DataFrame.from_dict(analysis["summary"], orient="index").sort_index(ascending=False)
 df.index = df.index.to_series().replace({
     r'^iq\.XQuery(.*)': r'\1',
     r'^iq\.(.*)': r'\1'
@@ -77,8 +81,14 @@ plot_df(df, "Overview")
 print(df.sum())
 
 def plot_categories(df, cutoff, formatter, plot_settings):
-    # format x labels
-    df["msg"] = df["msg"].map(formatter)
+    if df.empty:
+        df = pd.DataFrame(columns=["msg", "cnt"])
+    else:
+        df = (
+            df.assign(msg=df["msg"].map(formatter), cnt=1)
+              .groupby("msg", as_index=False)["cnt"]
+              .sum()
+        )
 
     # add bar with all other ones summed up
     other_count = df[df["cnt"] < cutoff]["cnt"].sum()
@@ -102,8 +112,26 @@ def plot_categories(df, cutoff, formatter, plot_settings):
                     ha='center', va='center', xytext=(0, 10), textcoords='offset points', fontsize=12, color='black')
 
     plt.tight_layout()
-    plt.savefig(f"plots/{plot_settings["filepath"]}.png", dpi=300)
-    plt.savefig(f"plots/{plot_settings["filepath"]}.svg")
+    plt.savefig(f"plots/{plot_settings['filepath']}.png", dpi=300)
+    plt.savefig(f"plots/{plot_settings['filepath']}.svg")
+
+
+def issues_to_df(issue_map):
+    if not issue_map:
+        return pd.DataFrame(columns=["suite", "case", "msg"])
+    return pd.DataFrame(
+        [
+            {"suite": suite, "case": issue["id"], "msg": issue["message"]}
+            for suite, issues in issue_map.items()
+            for issue in issues
+        ]
+    )
+
+def issues_for_status(status):
+    return {
+        suite: suite_issues[status]
+        for suite, suite_issues in analysis["issues"].items()
+    }
 
 
 def error_formatter(input_string):
@@ -141,6 +169,6 @@ plot_settings = {
     }
 }
 
-plot_categories(pd.read_json("analytics-results/error.json"), 5, error_formatter, plot_settings["error"])
-plot_categories(pd.read_json("analytics-results/fail.json"), 10, fail_formatter, plot_settings["failure"])
-plot_categories(pd.read_json("analytics-results/skip.json"), 50, skip_formatter, plot_settings["skip"])
+plot_categories(issues_to_df(issues_for_status("error")), 5, error_formatter, plot_settings["error"])
+plot_categories(issues_to_df(issues_for_status("fail")), 10, fail_formatter, plot_settings["failure"])
+plot_categories(issues_to_df(issues_for_status("skip")), 50, skip_formatter, plot_settings["skip"])
