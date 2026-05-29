@@ -21,6 +21,7 @@ return map:merge((
         ()
     else
         map {
-            "regressions": changes:regressions($baseline-cases, $candidate-cases)
+            "regressions": changes:regressions($baseline-cases, $candidate-cases),
+            "nowPassing": changes:now-passing($baseline-cases, $candidate-cases)
         }
 ))
