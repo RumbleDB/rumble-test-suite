@@ -27,7 +27,7 @@ def render_regression_details(analysis: dict) -> str:
     lines = [
         f"‼️ Regression summary: **{total}** previously passing test(s) now fail, error, or skip.",
         "",
-        "| Suite | Current Status | Test case | Message |",
+        "| Suite | Status | Test case | Message |",
         "| --- | --- | --- | --- |",
     ]
 
