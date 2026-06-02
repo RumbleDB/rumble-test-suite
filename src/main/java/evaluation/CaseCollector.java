@@ -3,16 +3,17 @@ package evaluation;
 import net.sf.saxon.s9api.*;
 import net.sf.saxon.s9api.streams.Steps;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class CaseCollector {
+    private static final Path TESTS_REPOSITORY_PATH = Constants.WORKING_DIRECTORY_PATH.resolve("qt3tests");
+
     private Path testsRepositoryDirectoryPath;
     private String currentTestSet;
     private final boolean useXQueryParser;
@@ -31,7 +32,7 @@ public class CaseCollector {
     /**
      * method that collects all the testcases into a local variable allowing getAllTests() to be called later
      */
-    public void execute(String testFolder) throws IOException, SaxonApiException, InterruptedException {
+    public void execute(String testFolder) throws IOException, SaxonApiException {
         getTestsRepository();
         processCatalog(testFolder);
     }
@@ -43,33 +44,16 @@ public class CaseCollector {
         return this.allTests;
     }
 
-    /**
-     * method that clones the git repository containing the tests and assigns testsRepositoryScriptFileName
-     */
-    public void getTestsRepository() throws IOException, InterruptedException {
-        System.out.println("Running sh script to obtain the required tests repository!");
-
-        String testsRepositoryScriptFileName = "get-tests-repository.sh";
-        ProcessBuilder pb = new ProcessBuilder(
-                Constants.WORKING_DIRECTORY_PATH.resolve(testsRepositoryScriptFileName).toString()
-        );
-
-        Process p = pb.start();
-        final int exitValue = p.waitFor();
-
-        if (exitValue == 0) {
-            testsRepositoryDirectoryPath = Constants.WORKING_DIRECTORY_PATH.resolve("qt3tests");
-            System.out.println("Tests repository obtained!");
-        } else {
-            BufferedReader stderr = new BufferedReader(new InputStreamReader(p.getErrorStream()));
-            String line;
-            StringBuilder result = new StringBuilder();
-            while ((line = stderr.readLine()) != null) {
-                result.append(line);
-            }
-            throw new IOException("Error with get-tests-repository.sh script" + result);
+    public void getTestsRepository() throws IOException {
+        if (!Files.isDirectory(TESTS_REPOSITORY_PATH)) {
+            throw new IOException(
+                "Missing QT3 test repository at "
+                    + TESTS_REPOSITORY_PATH
+                    + ". Run ./get-tests-repository.sh before executing tests."
+            );
         }
 
+        this.testsRepositoryDirectoryPath = TESTS_REPOSITORY_PATH;
     }
 
     private String extractXmlVersion(XdmNode testCase) {

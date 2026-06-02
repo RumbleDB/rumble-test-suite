@@ -55,6 +55,7 @@ If you want to work on this repo, you can install it locally with the following 
 4. ``cd rumble``
 5. ``mvn clean compile assembly:single -quiet``
 6. ``cd ..``
+7. ``./get-tests-repository.sh``
 
 Then you can run a test folder like this (example for *prod*)
 ```
@@ -65,6 +66,9 @@ Or all the tests at once with
 mvn test
 ```
 The output reports will be generated in rumble-test-suite/target/surefire-reports/*
+
+The test harness expects the W3C QT3 checkout to already exist in ``qt3tests/``.
+Tests do not clone or pull that repository automatically anymore.
 
 (Tested with Python 3.12)
 Finally, analytics can be generated and plotted by running
