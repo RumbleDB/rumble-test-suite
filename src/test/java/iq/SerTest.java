@@ -1,6 +1,7 @@
 package iq;
 
 import evaluation.CollectedTestCase;
+import org.junit.jupiter.api.DisplayName;
 import iq.base.TestBase;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -14,7 +15,8 @@ public class SerTest extends TestBase {
         return getData("ser").stream();
     }
 
-    @ParameterizedTest(name = "{0}")
+    @DisplayName("test")
+    @ParameterizedTest(name = "[{0}]")
     @MethodSource("data")
     @Timeout(value = 1000000, unit = TimeUnit.MILLISECONDS)
     public void test(CollectedTestCase testCase) {
