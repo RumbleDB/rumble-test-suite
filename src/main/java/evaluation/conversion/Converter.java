@@ -28,10 +28,6 @@ public final class Converter {
             convertedString = conversionPass.convert(convertedString);
         }
 
-        if (!originalString.equals(convertedString)) {
-            System.out.println("[[convertedQuery|" + convertedString + "]]");
-        }
-
         return convertedString;
     }
 }

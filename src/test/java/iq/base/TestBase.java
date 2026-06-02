@@ -77,16 +77,13 @@ public class TestBase {
     protected void testCase(CollectedTestCase collectedTestCase) {
         TestCase testCase = collectedTestCase.testCase();
         if (testCase.skipReason != null) {
-            System.out.println("[[category|SKIP]]");
             assumeTrue(false, testCase.skipReason);
         }
 
         String testString = testCase.testString;
-        System.out.println("[[originalTest|" + testString + "]]");
 
         XdmNode assertion = testCase.assertion;
         Environment environment = testCase.environment;
-        System.out.println("[[originalAssertion|" + assertion + "]]");
         try {
             checkAssertion(
                 assertion,
@@ -98,20 +95,15 @@ public class TestBase {
                         testCase.xmlVersion
                 )
             );
-            System.out.println("[[category|PASS]]");
         } catch (RumbleException e) {
             if (isSkipErrorCode(e.getErrorCode().toString())) {
-                System.out.println("[[category|SKIP]]");
                 assumeTrue(false, "Skip errorcode: " + e.getErrorCode().toString());
             } else {
-                System.out.println("[[category|ERROR]]");
                 throw e;
             }
         } catch (AssertionError e) {
-            System.out.println("[[category|FAIL]]");
             throw e;
         } catch (Exception e) {
-            System.out.println("[[category|ERROR]]");
             throw e;
         }
     }
@@ -205,7 +197,6 @@ public class TestBase {
                         errors.add(e);
                     }
                 }
-                System.out.println("[[ERRORS|" + errors + "]]");
                 assertTrue(success, "All assertions in any-of failed");
                 break;
             case "assert-type":
@@ -279,7 +270,6 @@ public class TestBase {
                 break;
             default:
                 // should never happen unless they add a new assertion type
-                System.out.println("[[category|SKIP]]");
                 assumeTrue(false, tag + " assertion is new and not implemented");
                 break;
         }
