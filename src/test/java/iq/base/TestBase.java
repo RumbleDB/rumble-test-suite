@@ -2,6 +2,7 @@ package iq.base;
 
 import evaluation.*;
 import net.sf.saxon.s9api.XdmNode;
+import org.junit.jupiter.api.BeforeAll;
 import org.opentest4j.TestAbortedException;
 import org.rumbledb.api.Item;
 import org.rumbledb.config.RumbleRuntimeConfiguration;
@@ -19,29 +20,33 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class TestBase {
+    private static final String[] XQUERY_RUNTIME_ARGUMENTS = {
+        "--output-format",
+        "json",
+        "--materialization-cap",
+        "1000000000",
+        "--default-language",
+        "xquery31"
+    };
+
+    private static final String[] JSONIQ_RUNTIME_ARGUMENTS = {
+        "--output-format",
+        "json",
+        "--materialization-cap",
+        "1000000000",
+        "--default-language",
+        "jsoniq40"
+    };
+
     private final boolean useXQueryParser;
-    /** The configuration for the Rumble runtimes spinned up for this test case. */
-    private final RumbleRuntimeConfiguration rumbleConfig;
 
     protected TestBase() {
         this.useXQueryParser = useXQueryParserFromConfiguration();
-        this.rumbleConfig = new RumbleRuntimeConfiguration(
-                this.useXQueryParser
-                    ? new String[] {
-                        "--output-format",
-                        "json",
-                        "--materialization-cap",
-                        "1000000000",
-                        "--default-language",
-                        "xquery31" }
-                    : new String[] {
-                        "--output-format",
-                        "json",
-                        "--materialization-cap",
-                        "1000000000",
-                        "--default-language",
-                        "jsoniq40" }
-        );
+    }
+
+    @BeforeAll
+    static void initializeSparkSession() {
+        SparkTestSession.ensureInitialized();
     }
 
     public static List<CollectedTestCase> getData(String testSuite) throws Exception {
@@ -91,7 +96,6 @@ public class TestBase {
                         testString,
                         environment,
                         useXQueryParser,
-                        rumbleConfig,
                         testCase.xmlVersion
                 )
             );
@@ -106,6 +110,13 @@ public class TestBase {
         } catch (Exception e) {
             throw e;
         }
+    }
+
+    static RumbleRuntimeConfiguration createRumbleRuntimeConfiguration(boolean useXQueryParser) {
+        String[] runtimeArguments = useXQueryParser
+            ? XQUERY_RUNTIME_ARGUMENTS
+            : JSONIQ_RUNTIME_ARGUMENTS;
+        return new RumbleRuntimeConfiguration(runtimeArguments.clone());
     }
 
     private void checkAssertion(XdmNode assertion, AssertionContext context) {
