@@ -1,4 +1,4 @@
-image: maven:3.9.9-eclipse-temurin-11
+image: maven:3.9.9-eclipse-temurin-17
 variables:
   TESTED_BRANCH: master
   TESTED_PARSER: jsoniq
@@ -17,12 +17,14 @@ build-job:
   script:
     - echo cloning ${TESTED_BRANCH}
     - git clone --single-branch --branch "${TESTED_BRANCH}" "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.inf.ethz.ch/gfourny/rumble.git" 
+    - ./get-tests-repository.sh
     - cd rumble
     - mvn clean compile assembly:single -quiet
     - cd ..
   artifacts:
     paths:
       - rumble/target
+      - qt3tests
 
 test-app:
   stage: test

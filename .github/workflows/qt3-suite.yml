@@ -85,6 +85,10 @@ jobs:
           distribution: temurin
           java-version: ${{ env.JAVA_VERSION }}
 
+      - name: Prepare QT3 test repository
+        shell: bash
+        run: ./get-tests-repository.sh
+
       - name: Run Maven tests
         shell: bash
         run: |
