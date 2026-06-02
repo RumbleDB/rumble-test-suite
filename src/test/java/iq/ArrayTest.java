@@ -1,24 +1,23 @@
 package iq;
 
-import evaluation.TestCase;
+import evaluation.CollectedTestCase;
 import iq.base.TestBase;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
-@RunWith(Parameterized.class)
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
+
 public class ArrayTest extends TestBase {
-    public ArrayTest(TestCase testCase, String testSetName, String testCaseName) {
-        super(testCase, testSetName, testCaseName, useXQueryParserFromConfiguration());
+    public static Stream<CollectedTestCase> data() throws Exception {
+        return getData("array").stream();
     }
 
-    @Parameterized.Parameters(name = "[{1}] {2}")
-    public static Iterable<Object[]> data() throws Exception {
-        return getData("array");
-    }
-
-    @Test(timeout = 1000000)
-    public void test() {
-        testCase();
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("data")
+    @Timeout(value = 1000000, unit = TimeUnit.MILLISECONDS)
+    public void test(CollectedTestCase testCase) {
+        testCase(testCase);
     }
 }

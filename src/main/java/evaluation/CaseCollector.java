@@ -16,7 +16,7 @@ public class CaseCollector {
     private Path testsRepositoryDirectoryPath;
     private String currentTestSet;
     private final boolean useXQueryParser;
-    private final List<Object[]> allTests = new ArrayList<>();
+    private final List<CollectedTestCase> allTests = new ArrayList<>();
 
     public CaseCollector(boolean useXQueryParser) {
         this.useXQueryParser = useXQueryParser;
@@ -39,7 +39,7 @@ public class CaseCollector {
     /**
      * method that returns all collected testcases. execute() needs to be called beforehand
      */
-    public List<Object[]> getAllTests() {
+    public List<CollectedTestCase> getAllTests() {
         return this.allTests;
     }
 
@@ -158,10 +158,11 @@ public class CaseCollector {
                 || (!useXQueryParser && Constants.skippedJSONIQTestCases.contains(currentTestCase))
         ) {
             allTests.add(
-                new Object[] {
-                    new TestCase(null, null, "Testcase/set on skiplist", null, null),
-                    currentTestSet,
-                    currentTestCase }
+                new CollectedTestCase(
+                        new TestCase(null, null, "Testcase/set on skiplist", null, null),
+                        currentTestSet,
+                        currentTestCase
+                )
             );
             return;
         }
@@ -204,10 +205,11 @@ public class CaseCollector {
         String testString = testCase.select(Steps.child("test")).asNode().getStringValue();
 
         allTests.add(
-            new Object[] {
-                new TestCase(testString, assertion, skipReason, environment, xmlVersion),
-                currentTestSet,
-                currentTestCase }
+            new CollectedTestCase(
+                    new TestCase(testString, assertion, skipReason, environment, xmlVersion),
+                    currentTestSet,
+                    currentTestCase
+            )
         );
     }
 
