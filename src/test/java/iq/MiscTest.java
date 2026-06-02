@@ -1,6 +1,7 @@
 package iq;
 
 import evaluation.CollectedTestCase;
+import org.junit.jupiter.api.DisplayName;
 import iq.base.TestBase;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -12,7 +13,8 @@ public class MiscTest extends TestBase {
         return getData("misc").stream();
     }
 
-    @ParameterizedTest(name = "{0}")
+    @DisplayName("test")
+    @ParameterizedTest(name = "[{0}]")
     @MethodSource("data")
     public void test(CollectedTestCase testCase) {
         testCase(testCase);
