@@ -51,11 +51,10 @@ public class TestBase {
     }
 
     public static Iterable<Object[]> getData(String testSuite) throws Exception {
-        return getData(testSuite, useXQueryParserFromConfiguration());
-    }
-
-    public static Iterable<Object[]> getData(String testSuite, boolean useXQueryParser) throws Exception {
-        CaseCollector testDriver = new CaseCollector(useXQueryParser);
+        CaseCollector testDriver = new CaseCollector(
+                useXQueryParserFromConfiguration(),
+                TestCaseSelection.fromSystemProperties()
+        );
         testDriver.execute(testSuite);
         return testDriver.getAllTests();
     }
