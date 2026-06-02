@@ -43,7 +43,7 @@ public class Analytics {
                     break;
                 default:
                     throw new IllegalArgumentException(
-                        "Expected zero, one, or two arguments: [candidate-surefire-dir] or <baseline-surefire-dir> <candidate-surefire-dir>"
+                            "Expected zero, one, or two arguments: [candidate-surefire-dir] or <baseline-surefire-dir> <candidate-surefire-dir>"
                     );
             }
         } catch (IOException | SaxonApiException e) {
