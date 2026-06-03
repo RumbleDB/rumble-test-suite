@@ -353,9 +353,6 @@ public class CaseCollector {
                     return type + " " + value;
                 }
                 default: {
-                    System.out.println(
-                        "WARNING: unconsidered dependency " + type + " in " + testCaseName + "; removing testcase"
-                    );
                     return type + " " + value;
                 }
             }
