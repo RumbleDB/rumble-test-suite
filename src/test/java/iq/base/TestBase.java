@@ -34,23 +34,18 @@ public class TestBase {
         this.testSetName = testSetName;
         this.testCaseName = testCaseName;
         this.useXQueryParser = useXQueryParser;
-        this.rumbleConfig = new RumbleRuntimeConfiguration(
-                useXQueryParser
-                    ? new String[] {
-                        "--output-format",
-                        "json",
-                        "--materialization-cap",
-                        "1000000000",
-                        "--default-language",
-                        "xquery31" }
-                    : new String[] {
-                        "--output-format",
-                        "json",
-                        "--materialization-cap",
-                        "1000000000",
-                        "--default-language",
-                        "jsoniq40" }
-        );
+        this.rumbleConfig = new RumbleRuntimeConfiguration(createConfigurationArguments(useXQueryParser));
+    }
+
+    private static String[] createConfigurationArguments(boolean useXQueryParser) {
+        return new String[] {
+            "--output-format",
+            "json",
+            "--materialization-cap",
+            "1000000000",
+            "--default-language",
+            useXQueryParser ? "xquery31" : "jsoniq40"
+        };
     }
 
     public static Iterable<Object[]> getData(String testSuite) throws Exception {
@@ -74,7 +69,7 @@ public class TestBase {
 
         XdmNode assertion = this.testCase.assertion;
         Environment environment = this.testCase.environment;
-        applyXmlVersionDependencyToConfig();
+        this.testCase.applyDependenciesTo(this.rumbleConfig);
         Rumble rumble = new Rumble(rumbleConfig);
         System.out.println("[[originalAssertion|" + assertion + "]]");
         try {
@@ -187,7 +182,7 @@ public class TestBase {
                 break;
             case "all-of":
                 for (XdmNode individualAssertion : assertion.children("*")) {
-                    applyXmlVersionDependencyToConfig();
+                    this.testCase.applyDependenciesTo(this.rumbleConfig);
                     Rumble subRumble = new Rumble(rumbleConfig);
                     checkAssertion(convertedTestString, individualAssertion, subRumble, environment);
                 }
@@ -196,7 +191,7 @@ public class TestBase {
                 boolean success = false;
                 List<Throwable> errors = new ArrayList<>();
                 for (XdmNode individualAssertion : assertion.children("*")) {
-                    applyXmlVersionDependencyToConfig();
+                    this.testCase.applyDependenciesTo(this.rumbleConfig);
                     Rumble subRumble = new Rumble(rumbleConfig);
                     try {
                         checkAssertion(convertedTestString, individualAssertion, subRumble, environment);
@@ -398,22 +393,6 @@ public class TestBase {
         return (this.useXQueryParser ? Constants.xQuerySkipReasonErrorCodes : Constants.skipReasonErrorCodes).contains(
             errorCode
         );
-    }
-
-
-    private void applyXmlVersionDependencyToConfig() {
-        // default fallback
-        this.rumbleConfig.setXmlVersion("1.0");
-
-        String v = this.testCase.xmlVersion;
-        if (v != null)
-            v = v.trim();
-
-        if ("1.1".equals(v)) {
-            this.rumbleConfig.setXmlVersion("1.1");
-        } else if ("1.0".equals(v)) {
-            this.rumbleConfig.setXmlVersion("1.0");
-        }
     }
 
     private static String normalizeSpace(String s) {

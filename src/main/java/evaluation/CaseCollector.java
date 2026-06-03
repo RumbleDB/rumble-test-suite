@@ -72,19 +72,6 @@ public class CaseCollector {
 
     }
 
-    private String extractXmlVersion(XdmNode testCase) {
-        List<XdmNode> dependencies = new ArrayList<>(testCase.select(Steps.child("dependency")).asList());
-        dependencies.addAll(testCase.getParent().select(Steps.child("dependency")).asList());
-
-        for (XdmNode dep : dependencies) {
-            String type = dep.attribute("type");
-            if ("xml-version".equals(type)) {
-                return dep.attribute("value");
-            }
-        }
-        return null; // fallback -> default (according to tests: XML10)
-    }
-
     private void processCatalog(String testFolder) throws SaxonApiException {
         File catalogFile = new File(testsRepositoryDirectoryPath.resolve("catalog.xml").toString());
         Processor testDriverProcessor = new Processor(false);
@@ -159,7 +146,7 @@ public class CaseCollector {
         ) {
             allTests.add(
                 new Object[] {
-                    new TestCase(null, null, "Testcase/set on skiplist", null, null),
+                    new TestCase(null, null, "Testcase/set on skiplist", null, null, null),
                     currentTestSet,
                     currentTestCase }
             );
@@ -194,35 +181,41 @@ public class CaseCollector {
         if (environment != null && environment.isUnsupportedCollation()) {
             skipReason = "unsupported collation";
         }
-        String caseDependency = checkDependencies(testCase);
-        if (caseDependency != null) {
-            skipReason = "dependency " + caseDependency;
+        DependencyCheckResult dependencies = checkDependencies(testCase);
+        if (dependencies.skipReason != null) {
+            skipReason = "dependency " + dependencies.skipReason;
         }
-        String xmlVersion = extractXmlVersion(testCase);
 
         XdmNode assertion = (XdmNode) xpc.evaluateSingle("result/*[1]", testCase);
         String testString = testCase.select(Steps.child("test")).asNode().getStringValue();
 
         allTests.add(
             new Object[] {
-                new TestCase(testString, assertion, skipReason, environment, xmlVersion),
+                new TestCase(
+                        testString,
+                        assertion,
+                        skipReason,
+                        environment,
+                        dependencies.xmlVersion,
+                        dependencies.defaultFormattingLanguage
+                ),
                 currentTestSet,
                 currentTestCase }
         );
     }
 
     /**
-     * method that takes a testcase and returns
-     * a String with the dependency that is problematic
-     * or null if there is no problematic dependency
+     * method that takes a testcase and returns dependency-derived skip and configuration information
      */
-    private String checkDependencies(XdmNode testCase) {
+    private DependencyCheckResult checkDependencies(XdmNode testCase) {
         String testCaseName = testCase.attribute("name");
         List<XdmNode> dependencies = testCase.select(Steps.child("dependency")).asList();
         dependencies.addAll(testCase.getParent().select(Steps.child("dependency")).asList());
 
-        if (dependencies.isEmpty())
-            return null;
+        DependencyCheckResult result = new DependencyCheckResult();
+        if (dependencies.isEmpty()) {
+            return result;
+        }
         for (XdmNode dependencyNode : dependencies) {
             String type = dependencyNode.attribute("type");
             String value = dependencyNode.attribute("value");
@@ -232,8 +225,7 @@ public class CaseCollector {
 
             switch (type) {
                 case "calendar": {
-                    // CB - I don't think we support any other calendar
-                    return type + " " + value;
+                    break;
                 }
                 case "unicode-version": {
                     // 7.0,3.1.1,5.2,6.0,6.2 - We will need to look at the tests. I am not sure which
@@ -248,12 +240,13 @@ public class CaseCollector {
                 }
                 case "format-integer-sequence": {
                     // ⒈,Α,α - I am not sure what this is, I would need to see the tests.
-                    return type + " " + value;
+                    result.skipReason = type + " " + value;
+                    return result;
                 }
                 case "xml-version": {
-                    // Rumble doesn't care about xml version, its XML specific
-                    // TODO maybe it influences Saxon environment processor (check 197 in
-                    // QT3TestDriverHE)
+                    if ("1.0".equals(value) || "1.1".equals(value)) {
+                        result.xmlVersion = value;
+                    }
                     break;
                 }
                 case "xsd-version": {
@@ -261,7 +254,8 @@ public class CaseCollector {
                     // TODO maybe it influences Saxon environment processor (check 221 in
                     // QT3TestDriverHE)
                     if (value.contains("1.0")) {
-                        return type + " " + value;
+                        result.skipReason = type + " " + value;
+                        return result;
                     }
                     break;
                 }
@@ -274,7 +268,7 @@ public class CaseCollector {
                     // directory-as-collection-uri (we don't support collection() yet)
                     // non_unicode_codepoint_collation (we don't support other collations)
                     // simple-uca-fallback (we don't support other collations)
-                    // olson-timezone (not supported yet)
+                    // olson-timezone (partly supported by the datetime formatting builtins, unskip for now)
                     // fn-format-integer-CLDR (not supported yet)
                     // xpath-1.0-compatibility (we are not backwards compatible with XPath 1.0)
                     // fn-load-xquery-module (not supported yet)
@@ -294,24 +288,22 @@ public class CaseCollector {
                             ||
                             value.contains("arbitraryPrecisionDecimal")
                             || value.contains("staticTyping")
+                            || value.contains("olson-timezone")
                             || value.contains("serialization"))
                     ) {
-                        return type + " " + value;
+                        result.skipReason = type + " " + value;
+                        return result;
                     }
                     break;
                 }
                 case "default-language": {
-                    // fr-CA not supported - we just support en
-                    if (!value.contains("en")) {
-                        return type + " " + value;
+                    String satisfied = dependencyNode.attribute("satisfied");
+                    if (!"false".equals(satisfied)) {
+                        result.defaultFormattingLanguage = value;
                     }
                     break;
                 }
                 case "language": {
-                    // xib,de,fr,it not supported - we just support en
-                    if (!value.contains("en")) {
-                        return type + " " + value;
-                    }
                     break;
                 }
                 // Check if not the XSLT (isApplicable original method)
@@ -320,12 +312,14 @@ public class CaseCollector {
                     // not
                     // if (!value.contains("XSLT") && !value.contains("XT")) {
                     if (!(value.contains("XQ") || value.contains("XP"))) {
-                        return type + " " + value;
+                        result.skipReason = type + " " + value;
+                        return result;
                     }
                     // Skip XP30, XQ30
                     for (String spec : value.trim().split("\\s+")) {
                         if ("XP30".equals(spec) || "XQ30".equals(spec)) {
-                            return type + " " + value;
+                            result.skipReason = type + " " + value;
+                            return result;
                         }
                     }
 
@@ -338,13 +332,15 @@ public class CaseCollector {
                 }
                 case "limit": {
                     // year_lt_0 - I am not sure I don't think we have this limit.
-                    return type + " " + value;
+                    result.skipReason = type + " " + value;
+                    return result;
                 }
                 default: {
                     System.out.println(
                         "WARNING: unconsidered dependency " + type + " in " + testCaseName + "; removing testcase"
                     );
-                    return type + " " + value;
+                    result.skipReason = type + " " + value;
+                    return result;
                 }
             }
         }
@@ -352,9 +348,15 @@ public class CaseCollector {
 
         // check if it uses module
         if (testCase.select(Steps.child("module")).exists()) {
-            return "module requirement not implemented";
+            result.skipReason = "module requirement not implemented";
         }
 
-        return null;
+        return result;
+    }
+
+    private static final class DependencyCheckResult {
+        private String skipReason;
+        private String xmlVersion;
+        private String defaultFormattingLanguage;
     }
 }
