@@ -16,7 +16,7 @@ public class SerTest extends TestBase {
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("data")
-    @Timeout(value = 1000000, unit = TimeUnit.MILLISECONDS)
+    @Timeout(value = 1000000, unit = TimeUnit.MILLISECONDS, threadMode = Timeout.ThreadMode.SEPARATE_THREAD)
     public void test(CollectedTestCase testCase) {
         testCase(testCase);
     }
