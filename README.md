@@ -61,6 +61,10 @@ Then you can run a test folder like this (example for *prod*)
 ```
 mvn -Dtest=Prod1Test test
 ```
+Or run a single named QT3 test case by passing its test-case name:
+```
+mvn -Dtest=OpTest -Dtest.case=fn-union-node-args-002 test
+```
 Or all the tests at once with
 ```
 mvn test
