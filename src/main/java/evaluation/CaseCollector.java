@@ -17,9 +17,11 @@ public class CaseCollector {
     private String currentTestSet;
     private final boolean useXQueryParser;
     private final List<CollectedTestCase> allTests = new ArrayList<>();
+    private final TestCaseSelection testCaseSelection;
 
-    public CaseCollector(boolean useXQueryParser) {
+    public CaseCollector(boolean useXQueryParser, TestCaseSelection testCaseSelection) {
         this.useXQueryParser = useXQueryParser;
+        this.testCaseSelection = testCaseSelection;
     }
 
     // environments in current testset
@@ -29,30 +31,36 @@ public class CaseCollector {
     private final Map<String, Environment> catalogEnvironments = new HashMap<>();
 
     /**
-     * method that collects all the testcases into a local variable allowing getAllTests() to be called later
+     * method that collects all the testcases into a local variable allowing
+     * getAllTests() to be called later
      */
     public void execute(String testFolder) throws IOException, SaxonApiException, InterruptedException {
         getTestsRepository();
         processCatalog(testFolder);
+
+        /// Check if the selected test case was resolved to at least one test. If not,
+        /// throw an exception.
+        this.testCaseSelection.verifyResolved();
     }
 
     /**
-     * method that returns all collected testcases. execute() needs to be called beforehand
+     * method that returns all collected testcases. execute() needs to be called
+     * beforehand
      */
     public List<CollectedTestCase> getAllTests() {
         return this.allTests;
     }
 
     /**
-     * method that clones the git repository containing the tests and assigns testsRepositoryScriptFileName
+     * method that clones the git repository containing the tests and assigns
+     * testsRepositoryScriptFileName
      */
     public void getTestsRepository() throws IOException, InterruptedException {
         System.out.println("Running sh script to obtain the required tests repository!");
 
         String testsRepositoryScriptFileName = "get-tests-repository.sh";
         ProcessBuilder pb = new ProcessBuilder(
-                Constants.WORKING_DIRECTORY_PATH.resolve(testsRepositoryScriptFileName).toString()
-        );
+                Constants.WORKING_DIRECTORY_PATH.resolve(testsRepositoryScriptFileName).toString());
 
         Process p = pb.start();
         final int exitValue = p.waitFor();
@@ -104,7 +112,8 @@ public class CaseCollector {
             catalogEnvironments.put(envName, env);
         }
 
-        // testsets are defined with regex, allowing for example the split of fn into two
+        // testsets are defined with regex, allowing for example the split of fn into
+        // two
         // most are just substring matching
         Pattern pattern = Pattern.compile("^" + testFolder);
         for (XdmNode testSet : catalogNode.select(Steps.descendant("test-set")).asList()) {
@@ -136,34 +145,32 @@ public class CaseCollector {
     private void prepareTestSetEnvironments(XdmNode testSetDocNode, String testSet) {
         testSetEnvironments.clear();
         List<XdmNode> environments = testSetDocNode.select(Steps.child("test-set"))
-            .asNode()
-            .select(Steps.child("environment"))
-            .asList();
+                .asNode()
+                .select(Steps.child("environment"))
+                .asList();
         for (XdmNode environment : environments) {
             Environment env = new Environment(environment, testsRepositoryDirectoryPath.resolve(testSet));
             String envName = environment.attribute("name");
             testSetEnvironments.put(envName, env);
         }
 
-
     }
 
     private void processTestCase(XdmNode testCase, XPathCompiler xpc) throws SaxonApiException {
         String currentTestCase = testCase.attribute("name");
+        if (!this.testCaseSelection.shouldRun(currentTestCase)) {
+            return;
+        }
 
         // check if testcase is skipped
-        if (
-            Constants.skippedTestSets.contains(this.currentTestSet)
+        if (Constants.skippedTestSets.contains(this.currentTestSet)
                 || Constants.skippedGeneralTestCases.contains(currentTestCase)
-                || (!useXQueryParser && Constants.skippedJSONIQTestCases.contains(currentTestCase))
-        ) {
+                || (!useXQueryParser && Constants.skippedJSONIQTestCases.contains(currentTestCase))) {
             allTests.add(
-                new CollectedTestCase(
-                        new TestCase(null, null, "Testcase/set on skiplist", null, null),
-                        currentTestSet,
-                        currentTestCase
-                )
-            );
+                    new CollectedTestCase(
+                            new TestCase(null, null, "Testcase/set on skiplist", null, null),
+                            currentTestSet,
+                            currentTestCase));
             return;
         }
 
@@ -205,12 +212,10 @@ public class CaseCollector {
         String testString = testCase.select(Steps.child("test")).asNode().getStringValue();
 
         allTests.add(
-            new CollectedTestCase(
-                    new TestCase(testString, assertion, skipReason, environment, xmlVersion),
-                    currentTestSet,
-                    currentTestCase
-            )
-        );
+                new CollectedTestCase(
+                        new TestCase(testString, assertion, skipReason, environment, xmlVersion),
+                        currentTestSet,
+                        currentTestCase));
     }
 
     /**
@@ -238,7 +243,8 @@ public class CaseCollector {
                     return type + " " + value;
                 }
                 case "unicode-version": {
-                    // 7.0,3.1.1,5.2,6.0,6.2 - We will need to look at the tests. I am not sure which
+                    // 7.0,3.1.1,5.2,6.0,6.2 - We will need to look at the tests. I am not sure
+                    // which
                     // unicode Java 8 supports. For now you can keep them all.
                     break;
                 }
@@ -290,14 +296,12 @@ public class CaseCollector {
                     // schema-location-hint (XML specific)
                     // Only three below are supported by Rumble. Included staticTyping myself as +20
                     // pass, 30 fail, 20 unsupported types but no crashes!
-                    if (
-                        !(value.contains("higherOrderFunctions")
+                    if (!(value.contains("higherOrderFunctions")
                             || value.contains("moduleImport")
                             ||
                             value.contains("arbitraryPrecisionDecimal")
                             || value.contains("staticTyping")
-                            || value.contains("serialization"))
-                    ) {
+                            || value.contains("serialization"))) {
                         return type + " " + value;
                     }
                     break;
@@ -331,7 +335,8 @@ public class CaseCollector {
                         }
                     }
 
-                    // We can think about adding this because some tests have two versions and we generally only try to
+                    // We can think about adding this because some tests have two versions and we
+                    // generally only try to
                     // support 3.1. But it removes a lot of tests so for now I think its overkill
                     // if (value.equals("XQ10+")) {
                     // return type + " " + value;
@@ -344,8 +349,7 @@ public class CaseCollector {
                 }
                 default: {
                     System.out.println(
-                        "WARNING: unconsidered dependency " + type + " in " + testCaseName + "; removing testcase"
-                    );
+                            "WARNING: unconsidered dependency " + type + " in " + testCaseName + "; removing testcase");
                     return type + " " + value;
                 }
             }
