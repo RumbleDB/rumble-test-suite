@@ -40,6 +40,7 @@ env:
   TESTED_PARSER: ${{ inputs.tested_parser }}
   JAVA_VERSION: "17"
   PYTHON_VERSION: "3.14"
+  NODE_VERSION: "26"
 
 jobs:
   tests:
@@ -161,6 +162,33 @@ jobs:
             mvn -B exec:java@analytics -Dexec.args="surefire-reports"
           fi
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 11
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: analytics/ui/pnpm-lock.yaml
+
+      - name: Install dashboard dependencies
+        shell: bash
+        working-directory: analytics/ui
+        run: pnpm install --frozen-lockfile
+
+      - name: Build dashboard
+        shell: bash
+        working-directory: analytics/ui
+        run: pnpm build:report ../../analytics-results/analysis.json
+
+      - name: Rename dashboard artifact file
+        shell: bash
+        working-directory: analytics/ui/dist
+        run: cp index.html analytics-${{ inputs.tested_parser }}.html
+
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
@@ -194,6 +222,15 @@ jobs:
           name: analysis-${{ inputs.tested_parser }}
           path: |
             analytics-results
+          retention-days: 7
+
+      - name: Upload dashboard report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: dashboard-${{ inputs.tested_parser }}
+          path: analytics/ui/dist/analytics-${{ inputs.tested_parser }}.html
+          archive: false
           retention-days: 7
 
       - name: Upload merged Surefire reports
