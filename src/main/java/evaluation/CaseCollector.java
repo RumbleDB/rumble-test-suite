@@ -16,10 +16,12 @@ public class CaseCollector {
     private Path testsRepositoryDirectoryPath;
     private String currentTestSet;
     private final boolean useXQueryParser;
+    private final TestCaseSelection testCaseSelection;
     private final List<Object[]> allTests = new ArrayList<>();
 
-    public CaseCollector(boolean useXQueryParser) {
+    public CaseCollector(boolean useXQueryParser, TestCaseSelection testCaseSelection) {
         this.useXQueryParser = useXQueryParser;
+        this.testCaseSelection = testCaseSelection;
     }
 
     // environments in current testset
@@ -34,6 +36,10 @@ public class CaseCollector {
     public void execute(String testFolder) throws IOException, SaxonApiException, InterruptedException {
         getTestsRepository();
         processCatalog(testFolder);
+
+        /// Check if the selected test case was resolved to at least one test. If not,
+        /// throw an exception.
+        this.testCaseSelection.verifyResolved();
     }
 
     /**
@@ -150,6 +156,9 @@ public class CaseCollector {
 
     private void processTestCase(XdmNode testCase, XPathCompiler xpc) throws SaxonApiException {
         String currentTestCase = testCase.attribute("name");
+        if (!this.testCaseSelection.shouldRun(currentTestCase)) {
+            return;
+        }
 
         // check if testcase is skipped
         if (
