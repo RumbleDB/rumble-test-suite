@@ -80,16 +80,16 @@ public class TestBase {
     protected void testCase(CollectedTestCase collectedTestCase) {
         TestCase testCase = collectedTestCase.testCase();
         if (testCase.skipReason != null) {
-            System.out.println("[[category|SKIP]]");
+            // System.out.println("[[category|SKIP]]");
             assumeTrue(false, testCase.skipReason);
         }
 
         String testString = testCase.testString;
-        System.out.println("[[originalTest|" + testString + "]]");
+        // System.out.println("[[originalTest|" + testString + "]]");
 
         XdmNode assertion = testCase.assertion;
         Environment environment = testCase.environment;
-        System.out.println("[[originalAssertion|" + assertion + "]]");
+        // System.out.println("[[originalAssertion|" + assertion + "]]");
         try {
             checkAssertion(
                 assertion,
@@ -101,20 +101,20 @@ public class TestBase {
                         testCase.xmlVersion
                 )
             );
-            System.out.println("[[category|PASS]]");
+            // System.out.println("[[category|PASS]]");
         } catch (RumbleException e) {
             if (isSkipErrorCode(e.getErrorCode().toString())) {
-                System.out.println("[[category|SKIP]]");
+                // System.out.println("[[category|SKIP]]");
                 assumeTrue(false, "Skip errorcode: " + e.getErrorCode().toString());
             } else {
-                System.out.println("[[category|ERROR]]");
+                // System.out.println("[[category|ERROR]]");
                 throw e;
             }
         } catch (AssertionError e) {
-            System.out.println("[[category|FAIL]]");
+            // System.out.println("[[category|FAIL]]");
             throw e;
         } catch (Exception e) {
-            System.out.println("[[category|ERROR]]");
+            // System.out.println("[[category|ERROR]]");
             throw e;
         }
     }
@@ -201,14 +201,15 @@ public class TestBase {
                             errors.add(e);
                         }
                     } catch (TestAbortedException e) {
-                        // specific assertion has skip reason, we want to pass that on and skip the whole test
+                        // specific assertion has skip reason, we want to pass that on and skip the
+                        // whole test
                         throw e;
                     } catch (AssertionError | Exception e) {
                         // specific assertion has failed
                         errors.add(e);
                     }
                 }
-                System.out.println("[[ERRORS|" + errors + "]]");
+                // System.out.println("[[ERRORS|" + errors + "]]");
                 assertTrue(success, "All assertions in any-of failed");
                 break;
             case "assert-type":
@@ -282,7 +283,7 @@ public class TestBase {
                 break;
             default:
                 // should never happen unless they add a new assertion type
-                System.out.println("[[category|SKIP]]");
+                // System.out.println("[[category|SKIP]]");
                 assumeTrue(false, tag + " assertion is new and not implemented");
                 break;
         }
@@ -318,7 +319,8 @@ public class TestBase {
     }
 
     /**
-     * Runs the given query and returns the concatenated serialization of all items in the result.
+     * Runs the given query and returns the concatenated serialization of all items
+     * in the result.
      */
     private String serializeQueryResult(AssertionContext context) {
         return context.getPrimaryResult().stream().map(Item::serialize).collect(Collectors.joining());
@@ -329,29 +331,28 @@ public class TestBase {
             XdmNode assertion,
             AssertionContext context
     ) {
-        String assertExpression =
-            "declare function allpermutations($sequence as item*) as array* {\n"
-                + " if(count($sequence) le 1)\n"
-                + " then\n"
-                + "   [ $sequence ]\n"
-                + " else\n"
-                + "   for $i in 1 to count($sequence)\n"
-                + "   let $first := $sequence[$i]\n"
-                + "   let $others :=\n"
-                + "     for $s in $sequence\n"
-                + "     count $c\n"
-                + "     where $c ne $i\n"
-                + "     return $s\n"
-                + "   for $recursive in allpermutations($others)\n"
-                + "   return [ $first, $recursive[]]\n"
-                + "};\n"
-                + "\n"
-                + "some $a in allpermutations("
-                + context.getTestString()
-                + ")"
-                + "satisfies deep-equal($a[], (("
-                + assertion.getStringValue()
-                + ")))";
+        String assertExpression = "declare function allpermutations($sequence as item*) as array* {\n"
+            + " if(count($sequence) le 1)\n"
+            + " then\n"
+            + "   [ $sequence ]\n"
+            + " else\n"
+            + "   for $i in 1 to count($sequence)\n"
+            + "   let $first := $sequence[$i]\n"
+            + "   let $others :=\n"
+            + "     for $s in $sequence\n"
+            + "     count $c\n"
+            + "     where $c ne $i\n"
+            + "     return $s\n"
+            + "   for $recursive in allpermutations($others)\n"
+            + "   return [ $first, $recursive[]]\n"
+            + "};\n"
+            + "\n"
+            + "some $a in allpermutations("
+            + context.getTestString()
+            + ")"
+            + "satisfies deep-equal($a[], (("
+            + assertion.getStringValue()
+            + ")))";
         List<Item> results = context.runQuery(assertExpression);
         assertTrueSingleElement(results);
     }
