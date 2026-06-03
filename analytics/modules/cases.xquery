@@ -27,10 +27,15 @@ declare function cases:suite($id as xs:string) as xs:string {
 
 declare function cases:case-data($case as element(testcase)) as map(*) {
     let $id := cases:normalize-id(string($case/@name))
+    let $parser-prop := $case/../properties/property[@name = 'parser']/@value/string()
+    let $parser := if (empty($parser-prop)) then "jsoniq" else $parser-prop
+    let $time := if (exists($case/@time)) then xs:double($case/@time) else 0.0
     return map {
         "id": $id,
         "suite": cases:suite($id),
         "status": cases:status($case),
+        "parser": $parser,
+        "time": $time,
         "errorMessage": normalize-space(string($case/error/@type)),
         "failureMessage": normalize-space(string($case/failure/@message)),
         "skipMessage": normalize-space(string($case/skipped/@message))

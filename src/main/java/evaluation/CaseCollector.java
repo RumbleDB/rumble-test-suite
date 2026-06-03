@@ -39,8 +39,7 @@ public class CaseCollector {
         getTestsRepository();
         processCatalog(testFolder);
 
-        /// Check if the selected test case was resolved to at least one test. If not,
-        /// throw an exception.
+        /// Check if the selected test case was resolved to at least one test. If not, throw an exception.
         this.testCaseSelection.verifyResolved();
     }
 
@@ -129,9 +128,9 @@ public class CaseCollector {
     private void prepareTestSetEnvironments(XdmNode testSetDocNode, String testSet) {
         testSetEnvironments.clear();
         List<XdmNode> environments = testSetDocNode.select(Steps.child("test-set"))
-                .asNode()
-                .select(Steps.child("environment"))
-                .asList();
+            .asNode()
+            .select(Steps.child("environment"))
+            .asList();
         for (XdmNode environment : environments) {
             Environment env = new Environment(environment, testsRepositoryDirectoryPath.resolve(testSet));
             String envName = environment.attribute("name");
@@ -147,14 +146,18 @@ public class CaseCollector {
         }
 
         // check if testcase is skipped
-        if (Constants.skippedTestSets.contains(this.currentTestSet)
+        if (
+            Constants.skippedTestSets.contains(this.currentTestSet)
                 || Constants.skippedGeneralTestCases.contains(currentTestCase)
-                || (!useXQueryParser && Constants.skippedJSONIQTestCases.contains(currentTestCase))) {
+                || (!useXQueryParser && Constants.skippedJSONIQTestCases.contains(currentTestCase))
+        ) {
             allTests.add(
-                    new CollectedTestCase(
-                            new TestCase(null, null, "Testcase/set on skiplist", null, null),
-                            currentTestSet,
-                            currentTestCase));
+                new CollectedTestCase(
+                        new TestCase(null, null, "Testcase/set on skiplist", null, null),
+                        currentTestSet,
+                        currentTestCase
+                )
+            );
             return;
         }
 
@@ -196,10 +199,12 @@ public class CaseCollector {
         String testString = testCase.select(Steps.child("test")).asNode().getStringValue();
 
         allTests.add(
-                new CollectedTestCase(
-                        new TestCase(testString, assertion, skipReason, environment, xmlVersion),
-                        currentTestSet,
-                        currentTestCase));
+            new CollectedTestCase(
+                    new TestCase(testString, assertion, skipReason, environment, xmlVersion),
+                    currentTestSet,
+                    currentTestCase
+            )
+        );
     }
 
     /**
@@ -280,12 +285,14 @@ public class CaseCollector {
                     // schema-location-hint (XML specific)
                     // Only three below are supported by Rumble. Included staticTyping myself as +20
                     // pass, 30 fail, 20 unsupported types but no crashes!
-                    if (!(value.contains("higherOrderFunctions")
+                    if (
+                        !(value.contains("higherOrderFunctions")
                             || value.contains("moduleImport")
                             ||
                             value.contains("arbitraryPrecisionDecimal")
                             || value.contains("staticTyping")
-                            || value.contains("serialization"))) {
+                            || value.contains("serialization"))
+                    ) {
                         return type + " " + value;
                     }
                     break;
@@ -333,7 +340,8 @@ public class CaseCollector {
                 }
                 default: {
                     System.out.println(
-                            "WARNING: unconsidered dependency " + type + " in " + testCaseName + "; removing testcase");
+                        "WARNING: unconsidered dependency " + type + " in " + testCaseName + "; removing testcase"
+                    );
                     return type + " " + value;
                 }
             }

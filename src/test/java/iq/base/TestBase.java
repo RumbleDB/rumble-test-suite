@@ -89,7 +89,7 @@ public class TestBase {
         }
 
         String testString = testCase.testString;
-
+        
         XdmNode assertion = testCase.assertion;
         Environment environment = testCase.environment;
         try {
@@ -204,7 +204,8 @@ public class TestBase {
                             errors.add(e);
                         }
                     } catch (TestAbortedException e) {
-                        // specific assertion has skip reason, we want to pass that on and skip the whole test
+                        // specific assertion has skip reason, we want to pass that on and skip the
+                        // whole test
                         throw e;
                     } catch (AssertionError | Exception e) {
                         // specific assertion has failed
@@ -319,7 +320,8 @@ public class TestBase {
     }
 
     /**
-     * Runs the given query and returns the concatenated serialization of all items in the result.
+     * Runs the given query and returns the concatenated serialization of all items
+     * in the result.
      */
     private String serializeQueryResult(AssertionContext context) {
         return context.getPrimaryResult().stream().map(Item::serialize).collect(Collectors.joining());
@@ -330,29 +332,28 @@ public class TestBase {
             XdmNode assertion,
             AssertionContext context
     ) {
-        String assertExpression =
-            "declare function allpermutations($sequence as item*) as array* {\n"
-                + " if(count($sequence) le 1)\n"
-                + " then\n"
-                + "   [ $sequence ]\n"
-                + " else\n"
-                + "   for $i in 1 to count($sequence)\n"
-                + "   let $first := $sequence[$i]\n"
-                + "   let $others :=\n"
-                + "     for $s in $sequence\n"
-                + "     count $c\n"
-                + "     where $c ne $i\n"
-                + "     return $s\n"
-                + "   for $recursive in allpermutations($others)\n"
-                + "   return [ $first, $recursive[]]\n"
-                + "};\n"
-                + "\n"
-                + "some $a in allpermutations("
-                + context.getTestString()
-                + ")"
-                + "satisfies deep-equal($a[], (("
-                + assertion.getStringValue()
-                + ")))";
+        String assertExpression = "declare function allpermutations($sequence as item*) as array* {\n"
+            + " if(count($sequence) le 1)\n"
+            + " then\n"
+            + "   [ $sequence ]\n"
+            + " else\n"
+            + "   for $i in 1 to count($sequence)\n"
+            + "   let $first := $sequence[$i]\n"
+            + "   let $others :=\n"
+            + "     for $s in $sequence\n"
+            + "     count $c\n"
+            + "     where $c ne $i\n"
+            + "     return $s\n"
+            + "   for $recursive in allpermutations($others)\n"
+            + "   return [ $first, $recursive[]]\n"
+            + "};\n"
+            + "\n"
+            + "some $a in allpermutations("
+            + context.getTestString()
+            + ")"
+            + "satisfies deep-equal($a[], (("
+            + assertion.getStringValue()
+            + ")))";
         List<Item> results = context.runQuery(assertExpression);
         assertTrueSingleElement(results);
     }
