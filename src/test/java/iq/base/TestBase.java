@@ -2,7 +2,7 @@ package iq.base;
 
 import evaluation.*;
 import net.sf.saxon.s9api.XdmNode;
-import org.junit.AssumptionViolatedException;
+import org.opentest4j.TestAbortedException;
 import org.rumbledb.api.Item;
 import org.rumbledb.config.RumbleRuntimeConfiguration;
 import org.rumbledb.exceptions.RumbleException;
@@ -15,24 +15,18 @@ import java.util.stream.Collectors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static org.junit.Assert.*;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class TestBase {
-    protected final TestCase testCase;
-    protected final String testSetName;
-    protected final String testCaseName;
     private final boolean useXQueryParser;
     /** The configuration for the Rumble runtimes spinned up for this test case. */
     private final RumbleRuntimeConfiguration rumbleConfig;
 
-    public TestBase(TestCase testCase, String testSetName, String testCaseName, boolean useXQueryParser) {
-        this.testCase = testCase;
-        this.testSetName = testSetName;
-        this.testCaseName = testCaseName;
-        this.useXQueryParser = useXQueryParser;
+    protected TestBase() {
+        this.useXQueryParser = useXQueryParserFromConfiguration();
         this.rumbleConfig = new RumbleRuntimeConfiguration(
-                useXQueryParser
+                this.useXQueryParser
                     ? new String[] {
                         "--output-format",
                         "json",
@@ -50,7 +44,11 @@ public class TestBase {
         );
     }
 
-    public static Iterable<Object[]> getData(String testSuite) throws Exception {
+    public static List<CollectedTestCase> getData(String testSuite) throws Exception {
+        return getData(testSuite, useXQueryParserFromConfiguration());
+    }
+
+    public static List<CollectedTestCase> getData(String testSuite, boolean useXQueryParser) throws Exception {
         CaseCollector testDriver = new CaseCollector(
                 useXQueryParserFromConfiguration(),
                 TestCaseSelection.fromSystemProperties()
@@ -79,18 +77,16 @@ public class TestBase {
         }
     }
 
-    public void testCase() {
-        if (this.testCase.skipReason != null) {
-            System.out.println("[[category|SKIP]]");
-            assumeTrue(this.testCase.skipReason, false);
+    protected void testCase(CollectedTestCase collectedTestCase) {
+        TestCase testCase = collectedTestCase.testCase();
+        if (testCase.skipReason != null) {
+            assumeTrue(false, testCase.skipReason);
         }
 
-        String testString = this.testCase.testString;
-        System.out.println("[[originalTest|" + testString + "]]");
+        String testString = testCase.testString;
 
-        XdmNode assertion = this.testCase.assertion;
-        Environment environment = this.testCase.environment;
-        System.out.println("[[originalAssertion|" + assertion + "]]");
+        XdmNode assertion = testCase.assertion;
+        Environment environment = testCase.environment;
         try {
             checkAssertion(
                 assertion,
@@ -102,20 +98,15 @@ public class TestBase {
                         testCase.xmlVersion
                 )
             );
-            System.out.println("[[category|PASS]]");
         } catch (RumbleException e) {
             if (isSkipErrorCode(e.getErrorCode().toString())) {
-                System.out.println("[[category|SKIP]]");
-                assumeTrue("Skip errorcode: " + e.getErrorCode().toString(), false);
+                assumeTrue(false, "Skip errorcode: " + e.getErrorCode().toString());
             } else {
-                System.out.println("[[category|ERROR]]");
                 throw e;
             }
         } catch (AssertionError e) {
-            System.out.println("[[category|FAIL]]");
             throw e;
         } catch (Exception e) {
-            System.out.println("[[category|ERROR]]");
             throw e;
         }
     }
@@ -180,7 +171,7 @@ public class TestBase {
                     expected = normalizeSpace(expected);
                 }
 
-                assertEquals("Wrong string value", expected, actual);
+                assertEquals(expected, actual, "Wrong string value");
                 break;
             case "all-of":
                 for (XdmNode individualAssertion : assertion.children("*")) {
@@ -201,16 +192,16 @@ public class TestBase {
                         } else {
                             errors.add(e);
                         }
-                    } catch (AssumptionViolatedException e) {
-                        // specific assertion has skip reason, we want to pass that on and skip the whole test
+                    } catch (TestAbortedException e) {
+                        // specific assertion has skip reason, we want to pass that on and skip the
+                        // whole test
                         throw e;
                     } catch (AssertionError | Exception e) {
                         // specific assertion has failed
                         errors.add(e);
                     }
                 }
-                System.out.println("[[ERRORS|" + errors + "]]");
-                assertTrue("All assertions in any-of failed", success);
+                assertTrue(success, "All assertions in any-of failed");
                 break;
             case "assert-type":
                 secondQuery = "("
@@ -222,7 +213,7 @@ public class TestBase {
             case "assert-count":
                 results = context.getPrimaryResult();
                 int count = Integer.parseInt(assertion.getStringValue());
-                assertEquals("Wrong count", results.size(), count);
+                assertEquals(count, results.size(), "Wrong count");
                 break;
             case "assert-permutation":
                 assertPermutation(assertion, context);
@@ -242,12 +233,12 @@ public class TestBase {
                     .ignoreWhitespace()
                     .build();
 
-                assertFalse("Expected vs actual XML are different:\n" + diff.toString(), diff.hasDifferences());
+                assertFalse(diff.hasDifferences(), "Expected vs actual XML are different:\n" + diff.toString());
                 break;
             case "assert-serialization":
                 String actualSerialization = serializeQueryResult(context);
                 String expectedSerialization = assertion.getStringValue();
-                assertEquals("Wrong serialization", expectedSerialization, actualSerialization);
+                assertEquals(expectedSerialization, actualSerialization, "Wrong serialization");
                 break;
             case "serialization-matches":
                 String serializedResult = serializeQueryResult(context);
@@ -276,15 +267,14 @@ public class TestBase {
 
                 Pattern regex = Pattern.compile(patternString, patternFlags);
                 Matcher matcher = regex.matcher(serializedResult);
-                assertTrue("Serialization does not match regex", matcher.find());
+                assertTrue(matcher.find(), "Serialization does not match regex");
                 break;
             case "assert-serialization-error":
                 assertExpectedError(assertion, context.getPrimaryEvaluation());
                 break;
             default:
                 // should never happen unless they add a new assertion type
-                System.out.println("[[category|SKIP]]");
-                assumeTrue(tag + " assertion is new and not implemented", false);
+                assumeTrue(false, tag + " assertion is new and not implemented");
                 break;
         }
     }
@@ -302,24 +292,25 @@ public class TestBase {
 
         String expectedErrorCode = assertion.attribute("code");
         if (!expectedErrorCode.equals("*")) {
-            assertEquals("Wrong error code", expectedErrorCode, error.getErrorCode().toString());
+            assertEquals(expectedErrorCode, error.getErrorCode().toString(), "Wrong error code");
         }
     }
 
     private void assertTrueSingleElement(List<Item> results) {
-        assertEquals("Not exactly one result", 1, results.size());
-        assertTrue("Result is not boolean", results.get(0).isBoolean());
-        assertTrue("Result is false", results.get(0).getBooleanValue());
+        assertEquals(1, results.size(), "Not exactly one result");
+        assertTrue(results.get(0).isBoolean(), "Result is not boolean");
+        assertTrue(results.get(0).getBooleanValue(), "Result is false");
     }
 
     private void assertFalseSingleElement(List<Item> results) {
-        assertEquals("Not exactly one result", 1, results.size());
-        assertTrue("Result is not boolean", results.get(0).isBoolean());
-        assertFalse("Result is true", results.get(0).getBooleanValue());
+        assertEquals(1, results.size(), "Not exactly one result");
+        assertTrue(results.get(0).isBoolean(), "Result is not boolean");
+        assertFalse(results.get(0).getBooleanValue(), "Result is true");
     }
 
     /**
-     * Runs the given query and returns the concatenated serialization of all items in the result.
+     * Runs the given query and returns the concatenated serialization of all items
+     * in the result.
      */
     private String serializeQueryResult(AssertionContext context) {
         return context.getPrimaryResult().stream().map(Item::serialize).collect(Collectors.joining());
@@ -330,36 +321,35 @@ public class TestBase {
             XdmNode assertion,
             AssertionContext context
     ) {
-        String assertExpression =
-            "declare function allpermutations($sequence as item*) as array* {\n"
-                + " if(count($sequence) le 1)\n"
-                + " then\n"
-                + "   [ $sequence ]\n"
-                + " else\n"
-                + "   for $i in 1 to count($sequence)\n"
-                + "   let $first := $sequence[$i]\n"
-                + "   let $others :=\n"
-                + "     for $s in $sequence\n"
-                + "     count $c\n"
-                + "     where $c ne $i\n"
-                + "     return $s\n"
-                + "   for $recursive in allpermutations($others)\n"
-                + "   return [ $first, $recursive[]]\n"
-                + "};\n"
-                + "\n"
-                + "some $a in allpermutations("
-                + context.getTestString()
-                + ")"
-                + "satisfies deep-equal($a[], (("
-                + assertion.getStringValue()
-                + ")))";
+        String assertExpression = "declare function allpermutations($sequence as item*) as array* {\n"
+            + " if(count($sequence) le 1)\n"
+            + " then\n"
+            + "   [ $sequence ]\n"
+            + " else\n"
+            + "   for $i in 1 to count($sequence)\n"
+            + "   let $first := $sequence[$i]\n"
+            + "   let $others :=\n"
+            + "     for $s in $sequence\n"
+            + "     count $c\n"
+            + "     where $c ne $i\n"
+            + "     return $s\n"
+            + "   for $recursive in allpermutations($others)\n"
+            + "   return [ $first, $recursive[]]\n"
+            + "};\n"
+            + "\n"
+            + "some $a in allpermutations("
+            + context.getTestString()
+            + ")"
+            + "satisfies deep-equal($a[], (("
+            + assertion.getStringValue()
+            + ")))";
         List<Item> results = context.runQuery(assertExpression);
         assertTrueSingleElement(results);
     }
 
     /**
      * Returns true if the error code is a skip error code.
-     * 
+     *
      * @param errorCode The error code to check.
      * @return True if the error code is a skip error code, false otherwise.
      */
