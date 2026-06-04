@@ -54,9 +54,9 @@ public class CaseCollector {
     public void getTestsRepository() throws IOException {
         if (!Files.isDirectory(TESTS_REPOSITORY_PATH)) {
             throw new IOException(
-                "Missing QT3 test repository at "
-                    + TESTS_REPOSITORY_PATH
-                    + ". Run ./get-tests-repository.sh before executing tests."
+                    "Missing QT3 test repository at "
+                        + TESTS_REPOSITORY_PATH
+                        + ". Run ./get-tests-repository.sh before executing tests."
             );
         }
 

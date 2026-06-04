@@ -76,7 +76,7 @@ class AssertionContext {
         }
 
         applyXmlVersionDependencyToConfig();
-        SequenceOfItems queryResult = new Rumble(SparkTestSession.getSession(), this.rumbleConfig).runQuery(query);
+        SequenceOfItems queryResult = new Rumble(this.rumbleConfig).runQuery(query);
         List<Item> resultAsList = new ArrayList<>();
         queryResult.populateList(resultAsList, 0);
         return resultAsList;

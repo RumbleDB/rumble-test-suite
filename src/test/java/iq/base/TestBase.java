@@ -2,6 +2,8 @@ package iq.base;
 
 import evaluation.*;
 import net.sf.saxon.s9api.XdmNode;
+import sparksoniq.spark.SparkSessionManager;
+
 import org.junit.jupiter.api.BeforeAll;
 import org.opentest4j.TestAbortedException;
 import org.rumbledb.api.Item;
@@ -46,7 +48,7 @@ public class TestBase {
 
     @BeforeAll
     static void initializeSparkSession() {
-        SparkTestSession.ensureInitialized();
+        SparkSessionManager.getInstance().getOrCreateSession();
     }
 
     public static List<CollectedTestCase> getData(String testSuite) throws Exception {
@@ -89,7 +91,7 @@ public class TestBase {
         }
 
         String testString = testCase.testString;
-        
+
         XdmNode assertion = testCase.assertion;
         Environment environment = testCase.environment;
         try {
