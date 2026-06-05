@@ -1,25 +1,13 @@
-import { Show, createMemo, createSignal, For, onMount, createEffect } from "solid-js";
-import type { AnalysisPayload, ParserMode, StatusFilter, ViewModel, IssueRow, SuiteSummary, Status } from "./lib/analysis";
-import { buildViewModel, formatPercent, formatDuration, getParserCommand, getSingleTestCaseCommand } from "./lib/analysis";
-import { 
-  ChevronLeft, 
-  ChevronRight, 
-  Copy, 
-  Check, 
-  Search, 
-  AlertCircle, 
-  CheckCircle,
-  Play, 
-  Terminal, 
-  ShieldAlert,
-  LayoutDashboard,
-  FolderOpen,
-  AlertOctagon,
-  RefreshCw
-} from "./components/Icons";
-import { PassRateGauge, SuitesBarChart, IssueDistributionChart } from "./components/DashboardCharts";
-import { SuiteTable } from "./components/SuiteTable";
-import { SuiteDetailsPanel } from "./components/SuiteDetailsPanel";
+import { Show, createSignal, onMount } from "solid-js";
+import type { AnalysisPayload, ParserMode, StatusFilter, ViewModel } from "./lib/analysis";
+import { buildViewModel } from "./lib/analysis";
+import { ShieldAlert } from "./components/Icons";
+import type { TabType } from "./components/Sidebar";
+import { Sidebar } from "./components/Sidebar";
+import { OverviewTab } from "./components/OverviewTab";
+import { SuitesTab } from "./components/SuitesTab";
+import { IssuesTab } from "./components/IssuesTab";
+import { ChangesTab } from "./components/ChangesTab";
 
 function readEmbeddedAnalysis(): AnalysisPayload {
   const payload = document.getElementById("initial-analysis-data");
@@ -27,39 +15,6 @@ function readEmbeddedAnalysis(): AnalysisPayload {
     throw new Error("This report does not contain embedded analysis data.");
   }
   return JSON.parse(payload.textContent) as AnalysisPayload;
-}
-
-type TabType = "overview" | "suites" | "issues" | "changes";
-
-function escapeRegExp(str: string) {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-function HighlightText(props: { text?: string; query: string }) {
-  if (!props.text) {
-    return null;
-  }
-  if (!props.query.trim()) {
-    return <span>{props.text}</span>;
-  }
-  try {
-    const parts = props.text.split(new RegExp(`(${escapeRegExp(props.query.trim())})`, "gi"));
-    return (
-      <span>
-        <For each={parts}>
-          {(part) => 
-            part.toLowerCase() === props.query.trim().toLowerCase() ? (
-              <mark class="text-highlight">{part}</mark>
-            ) : (
-              part
-            )
-          }
-        </For>
-      </span>
-    );
-  } catch (e) {
-    return <span>{props.text}</span>;
-  }
 }
 
 export default function App() {
@@ -73,13 +28,10 @@ export default function App() {
   const [searchQuery, setSearchQuery] = createSignal("");
   const [sortBy, setSortBy] = createSignal<"count" | "count-asc" | "suite" | "message">("count");
   
-  // Issue explorer states
+  // Issue explorer / diagnostic states
   const [selectedIssueKey, setSelectedIssueKey] = createSignal<string | null>(null);
   const [parserMode, setParserMode] = createSignal<ParserMode>("jsoniq");
-  const [issuePage, setIssuePage] = createSignal(1);
-  const [issueSearch, setIssueSearch] = createSignal("");
   const [copiedKey, setCopiedKey] = createSignal<string | null>(null);
-  const [expandedRegressionId, setExpandedRegressionId] = createSignal<string | null>(null);
 
   onMount(async () => {
     try {
@@ -109,112 +61,30 @@ export default function App() {
     }
   });
 
-  // Derived filter options
-  const suiteOptions = createMemo<string[]>(() => [
-    "ALL", 
-    ...(viewModel()?.suites.map((suite) => suite.name) ?? [])
-  ]);
-
-  // Handle active suite selection
+  // Handle active suite selection (navigate to suites tab)
   const handleSelectSuite = (suite: string) => {
     setActiveSuite(suite);
     setActiveTab("suites");
   };
 
-  // Handle active issue selection
+  // Handle active issue selection (navigate to issues tab)
   const handleSelectIssue = (key: string) => {
     setSelectedIssueKey(key);
     setActiveTab("issues");
   };
 
-  // Filtered issue rows
-  const filteredIssues = createMemo(() => {
-    const query = searchQuery().trim().toLowerCase();
-    const list = (viewModel()?.issueRows ?? []).filter((item) => {
-      if (activeStatus() !== "ALL" && item.status !== activeStatus()) {
-        return false;
-      }
-      if (activeSuite() !== "ALL" && item.suite !== activeSuite()) {
-        return false;
-      }
-      if (!query) {
-        return true;
-      }
-      const casesSearchText = item.cases.map(c => [c.id, c.description, c.query].filter(Boolean).join("\n")).join("\n");
-      return [item.suite, item.status, item.message, casesSearchText].join("\n").toLowerCase().includes(query);
-    });
+  // Handle active status selection from health legend (navigate to issues tab)
+  const handleSelectStatus = (status: StatusFilter) => {
+    setActiveStatus(status);
+    setActiveTab("issues");
+  };
 
-    return [...list].sort((a, b) => {
-      const mode = sortBy();
-      if (mode === "count") {
-        return b.count - a.count;
-      } else if (mode === "count-asc") {
-        return a.count - b.count;
-      } else if (mode === "suite") {
-        return a.suite.localeCompare(b.suite);
-      } else if (mode === "message") {
-        return a.message.localeCompare(b.message);
-      }
-      return 0;
-    });
-  });
-
-  // Selected issue details
-  const selectedIssue = createMemo(() => {
-    const issues = filteredIssues();
-    if (issues.length === 0) return null;
-    return issues.find((item) => item.key === selectedIssueKey()) ?? issues[0];
-  });
-
-  // Filtered regressions & improvements
-  const filteredRegressions = createMemo(() => {
-    const query = searchQuery().trim().toLowerCase();
-    return (viewModel()?.regressions ?? []).filter((item) => {
-      if (activeStatus() !== "ALL" && item.status !== activeStatus()) {
-        return false;
-      }
-      if (activeSuite() !== "ALL" && item.suite !== activeSuite()) {
-        return false;
-      }
-      if (!query) {
-        return true;
-      }
-      const matchText = [item.suite, item.status, item.id, item.message, item.description, item.query, item.expected].filter(Boolean).join("\n").toLowerCase();
-      return matchText.includes(query);
-    });
-  });
-
-  const filteredImprovements = createMemo(() => {
-    const query = searchQuery().trim().toLowerCase();
-    return (viewModel()?.improvements ?? []).filter((item) => {
-      if (activeSuite() !== "ALL" && item.suite !== activeSuite()) {
-        return false;
-      }
-      if (!query) {
-        return true;
-      }
-      const matchText = [item.suite, item.id].filter(Boolean).join("\n").toLowerCase();
-      return matchText.includes(query);
-    });
-  });
-
-  // Copy command helpers
+  // Copy command helper
   const handleCopyCommand = async (command: string, key: string) => {
     await navigator.clipboard.writeText(command);
     setCopiedKey(key);
     setTimeout(() => setCopiedKey(null), 2000);
   };
-
-  const handleClearFilters = () => {
-    setActiveSuite("ALL");
-    setActiveStatus("ALL");
-    setSearchQuery("");
-    setSortBy("count");
-  };
-
-  const hasActiveFilters = createMemo(() => {
-    return activeSuite() !== "ALL" || activeStatus() !== "ALL" || searchQuery().trim() !== "" || sortBy() !== "count";
-  });
 
   return (
     <div class="page-shell">
@@ -233,69 +103,15 @@ export default function App() {
       >
         {(modelAccessor) => {
           const model = modelAccessor();
-          const openProblems = () => model.totals.fail + model.totals.error;
 
           return (
             <>
               {/* SIDEBAR NAVIGATION */}
-              <aside class="sidebar">
-                <div class="sidebar-brand">
-                  <Terminal size={18} />
-                  <span>Rumble Analytics</span>
-                </div>
-
-                <nav class="sidebar-nav">
-                  <button
-                    class={`sidebar-nav-btn ${activeTab() === "overview" ? "sidebar-nav-btn-active" : ""}`}
-                    onClick={() => setActiveTab("overview")}
-                  >
-                    <LayoutDashboard size={18} />
-                    <span>Overview</span>
-                  </button>
-
-                  <button
-                    class={`sidebar-nav-btn ${activeTab() === "suites" ? "sidebar-nav-btn-active" : ""}`}
-                    onClick={() => setActiveTab("suites")}
-                  >
-                    <FolderOpen size={18} />
-                    <span>Test Suites</span>
-                    <span class="sidebar-badge">{model.suites.length}</span>
-                  </button>
-
-                  <button
-                    class={`sidebar-nav-btn ${activeTab() === "issues" ? "sidebar-nav-btn-active" : ""}`}
-                    onClick={() => setActiveTab("issues")}
-                  >
-                    <AlertOctagon size={18} />
-                    <span>Failure Issues</span>
-                    <span class="sidebar-badge">{model.issueRows.length}</span>
-                  </button>
-
-                  <button
-                    class={`sidebar-nav-btn ${activeTab() === "changes" ? "sidebar-nav-btn-active" : ""}`}
-                    onClick={() => setActiveTab("changes")}
-                  >
-                    <RefreshCw size={18} />
-                    <span>Changes</span>
-                    <span class="sidebar-badge">{model.regressions.length + model.improvements.length}</span>
-                  </button>
-                </nav>
-
-                <div class="sidebar-footer">
-                  <div style={{ display: "flex", "justify-content": "space-between", "font-size": "0.72rem", color: "#64748b" }}>
-                    <span>Overall Pass Rate</span>
-                    <span style={{ "font-weight": "700", color: model.totals.passRate > 85 ? "var(--pass)" : "var(--fail)" }}>
-                      {formatPercent(model.totals.passRate)}
-                    </span>
-                  </div>
-                  <div style={{ height: "4px", width: "100%", background: "#1e293b", "border-radius": "2px", overflow: "hidden", "margin-top": "4px" }}>
-                    <div style={{ height: "100%", width: `${model.totals.passRate}%`, background: "var(--pass)" }} />
-                  </div>
-                  <span style={{ "font-size": "0.68rem", color: "#475569", "margin-top": "4px" }}>
-                    {openProblems()} problems / {model.totals.total} tests
-                  </span>
-                </div>
-              </aside>
+              <Sidebar
+                viewModel={model}
+                activeTab={activeTab()}
+                setActiveTab={setActiveTab}
+              />
 
               {/* MAIN CONTENT AREA */}
               <main class="main-content">
@@ -307,788 +123,62 @@ export default function App() {
                     <Show when={activeTab() === "issues"}>Failure Groups</Show>
                     <Show when={activeTab() === "changes"}>Baseline Changes</Show>
                   </div>
-
-                  <div class="top-header-actions">
-                  </div>
                 </header>
 
                 {/* PAGE BODY */}
                 <div class="page-body">
-                  {/* TAB CONTENTS */}
                   <Show when={activeTab() === "overview"}>
-                    <div class="tab-content-animate" style={{ display: "flex", "flex-direction": "column", gap: "24px" }}>
-                      {/* STAT CARDS IN OVERVIEW */}
-                      <section class="stat-grid">
-                      <div class="panel stat-card stat-card-total">
-                        <span class="stat-label">Total Tests</span>
-                        <strong class="stat-value">{model.totals.total}</strong>
-                        <span class="stat-hint">{model.totals.pass} passing tests</span>
-                      </div>
-                      <div class="panel stat-card stat-card-pass">
-                        <span class="stat-label">Pass Rate</span>
-                        <strong class="stat-value" style={{ color: model.totals.passRate > 85 ? "var(--pass)" : "var(--fail)" }}>
-                          {formatPercent(model.totals.passRate)}
-                        </strong>
-                        <span class="stat-hint">{openProblems()} outstanding issues</span>
-                      </div>
-                      <div class="panel stat-card stat-card-fail">
-                        <span class="stat-label">Failures</span>
-                        <strong class="stat-value" style={{ color: model.totals.fail > 0 ? "var(--fail)" : "var(--muted)" }}>
-                          {model.totals.fail}
-                        </strong>
-                        <span class="stat-hint">Unmet assertions</span>
-                      </div>
-                      <div class="panel stat-card stat-card-error">
-                        <span class="stat-label">Errors</span>
-                        <strong class="stat-value" style={{ color: model.totals.error > 0 ? "var(--error)" : "var(--muted)" }}>
-                          {model.totals.error}
-                        </strong>
-                        <span class="stat-hint">Exceptions occurred</span>
-                      </div>
-                      <div class="panel stat-card stat-card-skip">
-                        <span class="stat-label">Skips</span>
-                        <strong class="stat-value" style={{ color: "var(--skip)" }}>
-                          {model.totals.skip}
-                        </strong>
-                        <span class="stat-hint">Omitted test cases</span>
-                      </div>
-                      <div class="panel stat-card stat-card-time">
-                        <span class="stat-label">Total Runtime</span>
-                        <strong class="stat-value" style={{ color: "var(--accent)" }}>
-                          {formatDuration(model.totals.time)}
-                        </strong>
-                        <span class="stat-hint">Suite execution duration</span>
-                      </div>
-                    </section>
-
-                    <div class="dashboard-grid">
-                      <div class="column">
-                        {/* Left: Overall Health & Status Split */}
-                        <section class="panel">
-                          <div class="section-header">
-                            <div>
-                              <h2>Overall Health</h2>
-                              <p class="section-subtitle">Pass/fail composition of the entire test suite</p>
-                            </div>
-                          </div>
-                          
-                          <div class="status-bar-wrapper">
-                            <PassRateGauge 
-                              passRate={model.totals.passRate} 
-                              total={model.totals.total}
-                              pass={model.totals.pass}
-                            />
-                            
-                            <div class="status-bar-bar">
-                              <div 
-                                class="status-bar-segment" 
-                                style={{ width: `${(model.totals.pass / model.totals.total) * 100}%`, background: "var(--pass)" }} 
-                                title={`Pass: ${model.totals.pass}`}
-                              />
-                              <div 
-                                class="status-bar-segment" 
-                                style={{ width: `${(model.totals.fail / model.totals.total) * 100}%`, background: "var(--fail)" }} 
-                                title={`Fail: ${model.totals.fail}`}
-                              />
-                              <div 
-                                class="status-bar-segment" 
-                                style={{ width: `${(model.totals.error / model.totals.total) * 100}%`, background: "var(--error)" }} 
-                                title={`Error: ${model.totals.error}`}
-                              />
-                              <div 
-                                class="status-bar-segment" 
-                                style={{ width: `${(model.totals.skip / model.totals.total) * 100}%`, background: "var(--skip)" }} 
-                                title={`Skip: ${model.totals.skip}`}
-                              />
-                            </div>
-
-                            <div class="chart-legend-grid">
-                              <div class="chart-legend-item" onClick={() => { setActiveTab("issues"); setActiveStatus("PASS"); }}>
-                                <span class="legend-dot" style={{ background: "var(--pass)" }} />
-                                <span>Pass ({model.totals.pass})</span>
-                              </div>
-                              <div class="chart-legend-item" onClick={() => { setActiveTab("issues"); setActiveStatus("FAIL"); }}>
-                                <span class="legend-dot" style={{ background: "var(--fail)" }} />
-                                <span>Fail ({model.totals.fail})</span>
-                              </div>
-                              <div class="chart-legend-item" onClick={() => { setActiveTab("issues"); setActiveStatus("ERROR"); }}>
-                                <span class="legend-dot" style={{ background: "var(--error)" }} />
-                                <span>Error ({model.totals.error})</span>
-                              </div>
-                              <div class="chart-legend-item" onClick={() => { setActiveTab("issues"); setActiveStatus("SKIP"); }}>
-                                <span class="legend-dot" style={{ background: "var(--skip)" }} />
-                                <span>Skip ({model.totals.skip})</span>
-                              </div>
-                            </div>
-                          </div>
-                        </section>
-                        
-                        {/* Left: Change Digest Summary */}
-                        <section class="panel">
-                          <div class="section-header">
-                            <div>
-                              <h2>Baseline Shifts</h2>
-                              <p class="section-subtitle">Comparison against reference test run</p>
-                            </div>
-                            <div class="section-metric">
-                              <span>Net Shift</span>
-                              <strong style={{ color: model.regressions.length > model.improvements.length ? "var(--fail)" : "var(--pass)" }}>
-                                {model.improvements.length - model.regressions.length > 0 ? "+" : ""}
-                                {model.improvements.length - model.regressions.length}
-                              </strong>
-                            </div>
-                          </div>
-
-                          <div class="change-digest-grid">
-                            <div>
-                              <span class="kicker" style={{ color: "var(--fail)", "margin-bottom": "8px" }}>
-                                Regressions ({model.regressions.length})
-                              </span>
-                              <Show 
-                                when={model.regressions.length > 0}
-                                fallback={<div class="empty-state" style={{ padding: "16px" }}>No new regressions detected.</div>}
-                              >
-                                <div style={{ display: "flex", "flex-direction": "column", gap: "8px" }}>
-                                  <For each={model.regressions.slice(0, 3)}>{(item) => (
-                                    <div class="change-item" style={{ padding: "10px", "border-radius": "8px" }}>
-                                      <div style={{ display: "flex", "justify-content": "space-between", "font-size": "0.78rem" }}>
-                                        <span class="pill pill-fail">{item.status}</span>
-                                        <span class="change-item-suite">{item.suite}</span>
-                                      </div>
-                                      <span class="change-item-id" style={{ "font-size": "0.8rem" }}>{item.id}</span>
-                                    </div>
-                                  )}</For>
-                                  <Show when={model.regressions.length > 3}>
-                                    <button class="tab-btn" style={{ padding: "4px", "font-size": "0.8rem" }} onClick={() => setActiveTab("changes")}>
-                                      View all regressions
-                                    </button>
-                                  </Show>
-                                </div>
-                              </Show>
-                            </div>
-
-                            <div>
-                              <span class="kicker" style={{ color: "var(--pass)", "margin-bottom": "8px" }}>
-                                Improvements ({model.improvements.length})
-                              </span>
-                              <Show 
-                                when={model.improvements.length > 0}
-                                fallback={<div class="empty-state" style={{ padding: "16px" }}>No improvements vs baseline.</div>}
-                              >
-                                <div style={{ display: "flex", "flex-direction": "column", gap: "8px" }}>
-                                  <For each={model.improvements.slice(0, 3)}>{(item) => (
-                                    <div class="change-item" style={{ padding: "10px", "border-radius": "8px" }}>
-                                      <div style={{ display: "flex", "justify-content": "space-between", "font-size": "0.78rem" }}>
-                                        <span class="pill pill-pass">FIXED</span>
-                                        <span class="change-item-suite">{item.suite}</span>
-                                      </div>
-                                      <span class="change-item-id" style={{ "font-size": "0.8rem" }}>{item.id}</span>
-                                    </div>
-                                  )}</For>
-                                  <Show when={model.improvements.length > 3}>
-                                    <button class="tab-btn" style={{ padding: "4px", "font-size": "0.8rem" }} onClick={() => setActiveTab("changes")}>
-                                      View all improvements
-                                    </button>
-                                  </Show>
-                                </div>
-                              </Show>
-                            </div>
-                          </div>
-                        </section>
-                      </div>
-
-                      <div class="column">
-                        {/* Right: Suite Breakdown stacked bars */}
-                        <section class="panel" style={{ "max-height": "430px", "overflow-y": "auto" }}>
-                          <div class="section-header">
-                            <div>
-                              <h2>Suite Breakdown</h2>
-                              <p class="section-subtitle">Test metrics parsed per sub-suite</p>
-                            </div>
-                          </div>
-                          <SuitesBarChart 
-                            suites={model.suites}
-                            activeSuite={activeSuite()}
-                            onSelectSuite={handleSelectSuite}
-                          />
-                        </section>
-
-                        {/* Right: Top Failure distribution */}
-                        <section class="panel">
-                          <div class="section-header">
-                            <div>
-                              <h2>Top Failure Areas</h2>
-                              <p class="section-subtitle">Highest volume issue signatures</p>
-                            </div>
-                          </div>
-                          <IssueDistributionChart 
-                            issueRows={model.issueRows}
-                            onSelectIssue={handleSelectIssue}
-                          />
-                        </section>
-                      </div>
-                    </div>
-                  </div>
-                </Show>
+                    <OverviewTab
+                      viewModel={model}
+                      activeSuite={activeSuite()}
+                      onSelectSuite={handleSelectSuite}
+                      onSelectIssue={handleSelectIssue}
+                      onSelectStatus={handleSelectStatus}
+                      onViewAllChanges={() => setActiveTab("changes")}
+                    />
+                  </Show>
 
                   <Show when={activeTab() === "suites"}>
-                    <div class="tab-content-animate">
-                      <div class="dashboard-grid">
-                      <div class="column" style={{ flex: "1.4" }}>
-                        <section class="panel">
-                          <div class="section-header">
-                            <div>
-                              <h2>Test Suites</h2>
-                              <p class="section-subtitle">Execution performance and composition per suite</p>
-                            </div>
-                          </div>
-                          <SuiteTable 
-                            suites={model.suites} 
-                            activeSuite={activeSuite()}
-                            onSelectSuite={(name) => {
-                              handleSelectSuite(name);
-                            }}
-                          />
-                        </section>
-                      </div>
-
-                      <div class="column" style={{ flex: "1" }}>
-                        <SuiteDetailsPanel
-                          suite={model.suites.find(s => s.name === (activeSuite() === "ALL" && model.suites.length > 0 ? model.suites[0].name : activeSuite()))}
-                          onViewIssues={() => {
-                            setActiveTab("issues");
-                          }}
-                        />
-                      </div>
-                      </div>
-                    </div>
+                    <SuitesTab
+                      viewModel={model}
+                      activeSuite={activeSuite()}
+                      onSelectSuite={handleSelectSuite}
+                      onViewIssues={() => setActiveTab("issues")}
+                    />
                   </Show>
 
                   <Show when={activeTab() === "issues"}>
-                    <div class="issues-view-wrapper tab-content-animate">
-                      {/* Search & Filters Toolbar */}
-                      <div class="toolbar">
-                        <div class="search-input-wrapper">
-                          <Search size={14} />
-                          <input 
-                            type="text" 
-                            class="search-input" 
-                            placeholder="Search issues, messages..."
-                            value={searchQuery()}
-                            onInput={(e) => setSearchQuery(e.currentTarget.value)}
-                          />
-                        </div>
-
-                        <select 
-                          class="select-filter"
-                          value={activeSuite()} 
-                          onChange={(e) => setActiveSuite(e.currentTarget.value)}
-                        >
-                          <For each={suiteOptions()}>
-                            {(option) => <option value={option}>{option === "ALL" ? "All Suites" : option}</option>}
-                          </For>
-                        </select>
-
-                        <select 
-                          class="select-filter"
-                          value={activeStatus()} 
-                          onChange={(e) => setActiveStatus(e.currentTarget.value as StatusFilter)}
-                        >
-                          <option value="ALL">All Statuses</option>
-                          <option value="PASS">Pass</option>
-                          <option value="FAIL">Fail</option>
-                          <option value="ERROR">Error</option>
-                          <option value="SKIP">Skip</option>
-                        </select>
-
-                        <select 
-                          class="select-filter"
-                          value={sortBy()} 
-                          onChange={(e) => setSortBy(e.currentTarget.value as any)}
-                        >
-                          <option value="count">Sort: Cases (High → Low)</option>
-                          <option value="count-asc">Sort: Cases (Low → High)</option>
-                          <option value="suite">Sort: Suite Name</option>
-                          <option value="message">Sort: Exception Message</option>
-                        </select>
-
-                        <button 
-                          class="btn-clear" 
-                          disabled={!hasActiveFilters()}
-                          onClick={handleClearFilters}
-                        >
-                          Clear Filters
-                        </button>
-                      </div>
-
-                      {/* Split Layout Container */}
-                      <div class="issues-layout">
-                        {/* Left Column: Issues Card List */}
-                        <div class="issues-column-left">
-                          <div class="detail-section-title" style={{ "margin-bottom": "8px" }}>
-                            <span>Issues Matches</span>
-                            <span class="sidebar-badge" style={{ background: "var(--border)", color: "var(--ink)", "font-weight": "700" }}>
-                              {filteredIssues().length}
-                            </span>
-                          </div>
-                          
-                          <div class="issues-list-container">
-                            <Show 
-                              when={filteredIssues().length > 0}
-                              fallback={
-                                <div class="panel empty-state">
-                                  <AlertCircle size={32} />
-                                  <h3>No issues match current filter</h3>
-                                  <p>Try clearing active search or selection filters.</p>
-                                </div>
-                              }
-                            >
-                              <For each={filteredIssues()}>
-                                {(issue) => (
-                                  <button 
-                                    onClick={() => setSelectedIssueKey(issue.key)}
-                                    class={`issue-card ${selectedIssue()?.key === issue.key ? "issue-card-active" : ""}`}
-                                  >
-                                    <div class="issue-card-header">
-                                      <div class="issue-card-meta">
-                                        <span class={`pill pill-${issue.status.toLowerCase()}`}>{issue.status}</span>
-                                        <span class="pill pill-parser">{issue.parser}</span>
-                                        <span class="issue-card-suite">
-                                          <HighlightText text={issue.suite} query={searchQuery()} />
-                                        </span>
-                                      </div>
-                                      <span class="issue-card-count">{issue.count} cases</span>
-                                    </div>
-                                    <div class="issue-card-msg">
-                                      <HighlightText text={issue.message} query={searchQuery()} />
-                                    </div>
-                                  </button>
-                                )}
-                              </For>
-                            </Show>
-                          </div>
-                        </div>
-
-                        {/* Right Column: Diagnostics details */}
-                        <div class="issues-column-right">
-                          <div class="detail-section-title" style={{ "margin-bottom": "8px" }}>
-                            <span>Issue Diagnostics</span>
-                          </div>
-
-                          <Show 
-                            when={selectedIssue()} 
-                            keyed
-                            fallback={
-                              <div class="panel empty-state" style={{ height: "100%", display: "flex", "flex-direction": "column", "justify-content": "center", "align-items": "center" }}>
-                                <AlertCircle size={32} />
-                                <h3>No Issue Selected</h3>
-                                <p>Select an issue group from the left panel to begin diagnostic analysis.</p>
-                              </div>
-                            }
-                          >
-                            {(issue) => {
-                              
-                              // Interactive local search inside the affected test cases list
-                              // Smart Search Synchronization: Check if query matches any testcase-specific data.
-                              // If it doesn't match any testcase, initialize to empty ("") to show all cases.
-                              const initialLocalSearch = () => {
-                                const q = searchQuery().trim().toLowerCase();
-                                if (!q) return "";
-                                const matchesAny = issue.cases.some(c => 
-                                  c.id.toLowerCase().includes(q) || 
-                                  (c.description && c.description.toLowerCase().includes(q)) || 
-                                  (c.query && c.query.toLowerCase().includes(q))
-                                );
-                                return matchesAny ? searchQuery() : "";
-                              };
-
-                              const [affectedSearch, setAffectedSearch] = createSignal(initialLocalSearch());
-                              createEffect(() => {
-                                setAffectedSearch(initialLocalSearch());
-                              });
-
-                              const [page, setPage] = createSignal(1);
-                              const [expandedCaseId, setExpandedCaseId] = createSignal<string | null>(null);
-                              const itemsPerPage = 20;
-
-                              const matchingTestCases = createMemo(() => {
-                                const q = affectedSearch().trim().toLowerCase();
-                                if (!q) return issue.cases;
-                                return issue.cases.filter(c => 
-                                  c.id.toLowerCase().includes(q) || 
-                                  (c.description && c.description.toLowerCase().includes(q)) || 
-                                  (c.query && c.query.toLowerCase().includes(q))
-                                );
-                              });
-
-                              const totalPages = createMemo(() => Math.max(Math.ceil(matchingTestCases().length / itemsPerPage), 1));
-                              
-                              const paginatedTestCases = createMemo(() => {
-                                const start = (page() - 1) * itemsPerPage;
-                                  return matchingTestCases().slice(start, start + itemsPerPage);
-                              });
-
-                              const rerunCommand = createMemo(() => getParserCommand(issue, parserMode()));
-
-                              return (
-                                <div class="panel" style={{ display: "flex", "flex-direction": "column", gap: "18px", padding: "18px" }}>
-                                  {/* Error Signature Card header */}
-                                  <div style={{ display: "flex", "flex-direction": "column", gap: "8px" }}>
-                                    <div style={{ display: "flex", "justify-content": "space-between", "align-items": "center" }}>
-                                      <div style={{ display: "flex", gap: "8px", "align-items": "center" }}>
-                                        <span style={{ "font-size": "0.72rem", "font-weight": "800", "text-transform": "uppercase", "letter-spacing": "0.05em", color: "var(--muted)" }}>
-                                          Error Signature
-                                        </span>
-                                        <span class="pill pill-parser" style={{ "font-size": "0.62rem", padding: "1px 6px" }}>{issue.parser}</span>
-                                      </div>
-                                      <span style={{ "font-family": "var(--font-mono)", "font-size": "0.78rem", color: "var(--muted)" }}>{issue.suite}</span>
-                                    </div>
-                                    <div class="detail-msg-box" style={{ "font-family": "var(--font-mono)", "font-size": "0.82rem", color: "#f8fafc", "word-break": "break-all", "white-space": "pre-wrap" }}>
-                                      {issue.message}
-                                    </div>
-                                  </div>
-
-                                  {/* Rerun suite command card */}
-                                  <div style={{ display: "flex", "flex-direction": "column", gap: "8px" }}>
-                                    <div style={{ display: "flex", "justify-content": "space-between", "align-items": "center" }}>
-                                      <span style={{ "font-size": "0.72rem", "font-weight": "800", "text-transform": "uppercase", "letter-spacing": "0.05em", color: "var(--muted)" }}>
-                                        Rerun Entire Suite
-                                      </span>
-                                      <div class="parser-selector" style={{ display: "flex", gap: "2px", background: "rgba(0,0,0,0.03)", padding: "2px", "border-radius": "6px", border: "1px solid var(--border)" }}>
-                                        <button 
-                                          class={`parser-btn ${parserMode() === "jsoniq" ? "parser-btn-active" : ""}`}
-                                          onClick={() => setParserMode("jsoniq")}
-                                        >
-                                          JSONiq
-                                        </button>
-                                        <button 
-                                          class={`parser-btn ${parserMode() === "xquery" ? "parser-btn-active" : ""}`}
-                                          onClick={() => setParserMode("xquery")}
-                                        >
-                                          XQuery
-                                        </button>
-                                        <button 
-                                          class={`parser-btn ${parserMode() === "default" ? "parser-btn-active" : ""}`}
-                                          onClick={() => setParserMode("default")}
-                                        >
-                                          Default
-                                        </button>
-                                      </div>
-                                    </div>
-                                    <div class="code-snippet-box">
-                                      <div class="code-snippet-text">
-                                        {rerunCommand()}
-                                      </div>
-                                      <button
-                                        onClick={() => handleCopyCommand(rerunCommand(), issue.key)}
-                                        class="code-snippet-btn"
-                                        style={{
-                                          color: copiedKey() === issue.key ? "var(--pass)" : ""
-                                        }}
-                                        title="Copy command"
-                                      >
-                                        <Show when={copiedKey() === issue.key} fallback={<Copy size={14} />}>
-                                          <Check size={14} />
-                                        </Show>
-                                      </button>
-                                    </div>
-                                  </div>
-
-                                  {/* Affected Testcases list */}
-                                  <div style={{ display: "flex", "flex-direction": "column", gap: "10px" }}>
-                                    <div style={{ display: "flex", "justify-content": "space-between", "align-items": "center" }}>
-                                      <span class="kicker">Impacted Tests ({matchingTestCases().length})</span>
-                                      <div class="search-input-wrapper" style={{ width: "160px" }}>
-                                        <Search size={12} />
-                                        <input 
-                                          type="text" 
-                                          class="search-input" 
-                                          style={{ padding: "6px 10px 6px 30px", "font-size": "0.78rem" }}
-                                          placeholder="Filter list..."
-                                          value={affectedSearch()}
-                                          onInput={(e) => {
-                                            setAffectedSearch(e.currentTarget.value);
-                                            setPage(1);
-                                            setExpandedCaseId(null);
-                                          }}
-                                        />
-                                      </div>
-                                    </div>
-
-                                    <div class="affected-list">
-                                      <For 
-                                        each={paginatedTestCases()}
-                                        fallback={
-                                          <div class="empty-state" style={{ padding: "20px" }}>
-                                            <h3>No Matching Testcases</h3>
-                                            <p style={{ "font-size": "0.78rem" }}>Try clearing or widening the filter query.</p>
-                                          </div>
-                                        }
-                                      >
-                                        {(c) => {
-                                          const singleTestRerun = () => getSingleTestCaseCommand(issue.suite, c.id, parserMode());
-                                          const isSingleCopied = () => copiedKey() === c.id;
-
-                                          return (
-                                            <div class="affected-list-item" style={{ "flex-direction": "column", "align-items": "stretch", gap: "6px" }}>
-                                              <div 
-                                                style={{ display: "flex", "justify-content": "space-between", "align-items": "center", cursor: "pointer" }}
-                                                onClick={() => setExpandedCaseId(expandedCaseId() === c.id ? null : c.id)}
-                                              >
-                                                <div style={{ display: "flex", "align-items": "center", gap: "8px", overflow: "hidden" }}>
-                                                  <span style={{ color: "var(--muted)", "font-size": "0.7rem", width: "12px", "text-align": "center", "user-select": "none" }}>
-                                                    {expandedCaseId() === c.id ? "▼" : "▶"}
-                                                  </span>
-                                                  <span style={{ overflow: "hidden", "text-overflow": "ellipsis", "white-space": "nowrap", "font-weight": "600", color: "var(--ink)" }} title={c.id}>
-                                                    <HighlightText text={c.id} query={affectedSearch()} />
-                                                  </span>
-                                                </div>
-                                                <button 
-                                                  class="affected-rerun-btn"
-                                                  onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleCopyCommand(singleTestRerun(), c.id);
-                                                  }}
-                                                  title="Copy command to run just this test"
-                                                >
-                                                  <Show when={isSingleCopied()} fallback={<><Play size={10} style={{ "margin-right": "4px" }} /> Rerun</>}>
-                                                    Copied
-                                                  </Show>
-                                                </button>
-                                              </div>
-                                              
-                                              <Show when={expandedCaseId() === c.id}>
-                                                <div style={{ "padding-left": "20px", "padding-bottom": "4px", "display": "flex", "flex-direction": "column", gap: "6px" }}>
-                                                  <Show when={c.description}>
-                                                    <p style={{ margin: "4px 0 8px 0", "font-size": "0.78rem", color: "var(--muted)", "line-height": "1.4", "font-style": "italic" }}>
-                                                      <HighlightText text={c.description} query={affectedSearch()} />
-                                                    </p>
-                                                  </Show>
-                                                  <Show when={c.query} fallback={<p style={{ margin: "4px 0 0 0", "font-size": "0.75rem", color: "var(--muted)" }}>No query text available</p>}>
-                                                     <div style={{ display: "flex", "flex-direction": "column", gap: "6px", width: "100%" }}>
-                                                       <div style={{ background: "#0f172a", border: "1px solid #1e293b", padding: "10px", "border-radius": "6px", overflow: "auto" }}>
-                                                         <pre style={{ margin: "0", "font-family": "var(--font-mono)", "font-size": "0.78rem", color: "#a5b4fc", "white-space": "pre-wrap", "word-break": "break-all" }}>
-                                                           <HighlightText text={c.query} query={affectedSearch()} />
-                                                         </pre>
-                                                       </div>
-                                                       <Show when={c.expected}>
-                                                         <div style={{ display: "flex", "flex-direction": "column", gap: "2px" }}>
-                                                           <span style={{ "font-size": "0.7rem", color: "var(--muted)", "font-weight": "600", "text-transform": "uppercase", "letter-spacing": "0.05em" }}>Expected Result:</span>
-                                                           <div style={{ background: "#1e293b", border: "1px solid #334155", padding: "8px 10px", "border-radius": "6px", overflow: "auto" }}>
-                                                             <pre style={{ margin: "0", "font-family": "var(--font-mono)", "font-size": "0.78rem", color: "#cbd5e1", "white-space": "pre-wrap", "word-break": "break-all" }}>
-                                                               <HighlightText text={c.expected} query={affectedSearch()} />
-                                                             </pre>
-                                                           </div>
-                                                         </div>
-                                                       </Show>
-                                                     </div>
-                                                  </Show>
-                                                </div>
-                                              </Show>
-                                            </div>
-                                          );
-                                        }}
-                                      </For>
-                                    </div>
-
-                                    {/* Pagination controls */}
-                                    <Show when={totalPages() > 1}>
-                                      <div class="pagination">
-                                        <span>Page {page()} of {totalPages()}</span>
-                                        <div class="pagination-buttons">
-                                          <button 
-                                            class="pagination-btn" 
-                                            disabled={page() === 1}
-                                            onClick={() => setPage(p => p - 1)}
-                                          >
-                                            <ChevronLeft size={12} />
-                                          </button>
-                                          <button 
-                                            class="pagination-btn" 
-                                            disabled={page() === totalPages()}
-                                            onClick={() => setPage(p => p + 1)}
-                                          >
-                                            <ChevronRight size={12} />
-                                          </button>
-                                        </div>
-                                      </div>
-                                    </Show>
-                                  </div>
-                                </div>
-                              );
-                            }}
-                          </Show>
-                        </div>
-                      </div>
-                    </div>
+                    <IssuesTab
+                      viewModel={model}
+                      activeSuite={activeSuite()}
+                      setActiveSuite={setActiveSuite}
+                      activeStatus={activeStatus()}
+                      setActiveStatus={setActiveStatus}
+                      searchQuery={searchQuery()}
+                      setSearchQuery={setSearchQuery}
+                      sortBy={sortBy()}
+                      setSortBy={setSortBy}
+                      selectedIssueKey={selectedIssueKey()}
+                      setSelectedIssueKey={setSelectedIssueKey}
+                      parserMode={parserMode()}
+                      setParserMode={setParserMode}
+                      copiedKey={copiedKey()}
+                      handleCopyCommand={handleCopyCommand}
+                    />
                   </Show>
 
                   <Show when={activeTab() === "changes"}>
-                    <div class="tab-content-animate" style={{ display: "flex", "flex-direction": "column", gap: "16px" }}>
-                      {/* Search & Filters Toolbar */}
-                      <div class="toolbar">
-                        <div class="search-input-wrapper">
-                          <Search size={14} />
-                          <input 
-                            type="text" 
-                            class="search-input" 
-                            placeholder="Search regressions, improvements..."
-                            value={searchQuery()}
-                            onInput={(e) => setSearchQuery(e.currentTarget.value)}
-                          />
-                        </div>
-                        <button 
-                          class="btn-clear" 
-                          disabled={searchQuery().trim() === ""}
-                          onClick={() => setSearchQuery("")}
-                        >
-                          Clear Search
-                        </button>
-                      </div>
-
-                      <div class="change-digest-grid">
-                      {/* Regressions list */}
-                      <div class="panel">
-                        <div class="change-panel-header">
-                          <h3>New Regressions</h3>
-                          <span class="change-panel-count change-panel-count-regression">
-                            {filteredRegressions().length}
-                          </span>
-                        </div>
-
-                        <Show 
-                          when={filteredRegressions().length > 0}
-                          fallback={
-                            <div class="empty-state">
-                              <CheckCircle size={32} stroke="var(--pass)" />
-                              <h3>No Regressions Found</h3>
-                              <p>All previously failing/erroring baselines are clean in this run scope.</p>
-                            </div>
-                          }
-                        >
-                          <div class="change-list">
-                            <For each={filteredRegressions()}>
-                              {(item) => {
-                                const singleTestRerun = () => getSingleTestCaseCommand(item.suite, item.id, parserMode());
-                                const isCopied = () => copiedKey() === item.id;
-
-                                return (
-                                  <div 
-                                      class="change-item"
-                                      style={{ cursor: "pointer", display: "flex", "flex-direction": "column", gap: "6px" }}
-                                      onClick={() => setExpandedRegressionId(expandedRegressionId() === item.id ? null : item.id)}
-                                    >
-                                      <div class="change-item-top">
-                                        <div style={{ display: "flex", gap: "8px", "align-items": "center" }}>
-                                          <span style={{ color: "var(--muted)", "font-size": "0.7rem", "user-select": "none" }}>
-                                            {expandedRegressionId() === item.id ? "▼" : "▶"}
-                                          </span>
-                                          <span class={`pill pill-${item.status.toLowerCase()}`}>{item.status}</span>
-                                        </div>
-                                        <span class="change-item-suite">
-                                          <HighlightText text={item.suite} query={searchQuery()} />
-                                        </span>
-                                      </div>
-                                      <span class="change-item-id" style={{ "font-weight": "700" }}>
-                                        <HighlightText text={item.id} query={searchQuery()} />
-                                      </span>
-                                      
-                                      <Show when={item.message}>
-                                        <div class="change-item-msg">
-                                          <HighlightText text={item.message} query={searchQuery()} />
-                                        </div>
-                                      </Show>
-
-                                      <Show when={expandedRegressionId() === item.id}>
-                                        <div style={{ "margin-top": "4px", "border-top": "1px solid rgba(255,255,255,0.06)", "padding-top": "8px", "display": "flex", "flex-direction": "column", gap: "6px" }}>
-                                          <Show when={item.description}>
-                                            <p style={{ margin: "0", "font-size": "0.78rem", color: "var(--muted)", "line-height": "1.4", "font-style": "italic" }}>
-                                              <HighlightText text={item.description} query={searchQuery()} />
-                                            </p>
-                                          </Show>
-                                          <Show when={item.query} fallback={<p style={{ margin: "0", "font-size": "0.75rem", color: "var(--muted)" }}>No query text available</p>}>
-                                            <div style={{ display: "flex", "flex-direction": "column", gap: "6px", width: "100%" }}>
-                                              <div style={{ background: "#0f172a", border: "1px solid #1e293b", padding: "10px", "border-radius": "6px", overflow: "auto" }}>
-                                                <pre style={{ margin: "0", "font-family": "var(--font-mono)", "font-size": "0.78rem", color: "#a5b4fc", "white-space": "pre-wrap", "word-break": "break-all" }}>
-                                                  <HighlightText text={item.query} query={searchQuery()} />
-                                                </pre>
-                                              </div>
-                                              <Show when={item.expected}>
-                                                <div style={{ display: "flex", "flex-direction": "column", gap: "2px" }}>
-                                                  <span style={{ "font-size": "0.7rem", color: "var(--muted)", "font-weight": "600", "text-transform": "uppercase", "letter-spacing": "0.05em" }}>Expected Result:</span>
-                                                  <div style={{ background: "#1e293b", border: "1px solid #334155", padding: "8px 10px", "border-radius": "6px", overflow: "auto" }}>
-                                                    <pre style={{ margin: "0", "font-family": "var(--font-mono)", "font-size": "0.78rem", color: "#cbd5e1", "white-space": "pre-wrap", "word-break": "break-all" }}>
-                                                      <HighlightText text={item.expected} query={searchQuery()} />
-                                                    </pre>
-                                                  </div>
-                                                </div>
-                                              </Show>
-                                            </div>
-                                          </Show>
-                                        </div>
-                                      </Show>
-                                      
-                                      <button 
-                                        class="btn-clear" 
-                                        style={{ padding: "6px 12px", "font-size": "0.78rem", "align-self": "flex-end", "margin-top": "4px" }}
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleCopyCommand(singleTestRerun(), item.id);
-                                        }}
-                                      >
-                                        <Show when={isCopied()} fallback={<><Play size={10} /> Copy Rerun Command</>}>
-                                          <Check size={10} /> Copied Rerun Command
-                                        </Show>
-                                      </button>
-                                    </div>
-                                );
-                              }}
-                            </For>
-                          </div>
-                        </Show>
-                      </div>
-
-                      {/* Improvements list */}
-                      <div class="panel">
-                        <div class="change-panel-header">
-                          <h3>Newly Fixed Cases</h3>
-                          <span class="change-panel-count change-panel-count-improvement">
-                            {filteredImprovements().length}
-                          </span>
-                        </div>
-
-                        <Show 
-                          when={filteredImprovements().length > 0}
-                          fallback={
-                            <div class="empty-state">
-                              <AlertCircle size={32} />
-                              <h3>No Improvements Registered</h3>
-                              <p>No tests regressed but none were newly resolved vs baseline either.</p>
-                            </div>
-                          }
-                        >
-                          <div class="change-list">
-                            <For each={filteredImprovements()}>
-                              {(item) => (
-                                <div class="change-item">
-                                  <div class="change-item-top">
-                                    <span class="pill pill-pass">FIXED</span>
-                                    <span class="change-item-suite">
-                                      <HighlightText text={item.suite} query={searchQuery()} />
-                                    </span>
-                                  </div>
-                                  <span class="change-item-id">
-                                    <HighlightText text={item.id} query={searchQuery()} />
-                                  </span>
-                                </div>
-                              )}
-                            </For>
-                          </div>
-                        </Show>
-                      </div>
-                    </div>
-                  </div>
-                </Show>
+                    <ChangesTab
+                      viewModel={model}
+                      activeSuite={activeSuite()}
+                      activeStatus={activeStatus()}
+                      searchQuery={searchQuery()}
+                      setSearchQuery={setSearchQuery}
+                      parserMode={parserMode()}
+                      copiedKey={copiedKey()}
+                      handleCopyCommand={handleCopyCommand}
+                    />
+                  </Show>
                 </div>
               </main>
             </>
