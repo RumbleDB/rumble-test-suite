@@ -85,6 +85,7 @@ jobs:
         with:
           distribution: temurin
           java-version: ${{ env.JAVA_VERSION }}
+          cache: maven
 
       - name: Run Maven tests
         shell: bash
@@ -124,6 +125,7 @@ jobs:
         with:
           distribution: temurin
           java-version: ${{ env.JAVA_VERSION }}
+          cache: maven
 
       - name: Download Surefire artifacts
         uses: actions/download-artifact@v8
