@@ -43,6 +43,7 @@ export default function App() {
   const [issuePage, setIssuePage] = createSignal(1);
   const [issueSearch, setIssueSearch] = createSignal("");
   const [copiedKey, setCopiedKey] = createSignal<string | null>(null);
+  const [expandedRegressionId, setExpandedRegressionId] = createSignal<string | null>(null);
 
   onMount(async () => {
     try {
@@ -103,7 +104,8 @@ export default function App() {
       if (!query) {
         return true;
       }
-      return [item.suite, item.status, item.message, ...item.cases].join("\n").toLowerCase().includes(query);
+      const casesSearchText = item.cases.map(c => [c.id, c.description, c.query].filter(Boolean).join("\n")).join("\n");
+      return [item.suite, item.status, item.message, casesSearchText].join("\n").toLowerCase().includes(query);
     });
   });
 
@@ -572,12 +574,17 @@ export default function App() {
                             // Interactive local search inside the affected test cases list
                             const [affectedSearch, setAffectedSearch] = createSignal("");
                             const [page, setPage] = createSignal(1);
+                            const [expandedCaseId, setExpandedCaseId] = createSignal<string | null>(null);
                             const itemsPerPage = 8;
 
                             const matchingTestCases = createMemo(() => {
                               const q = affectedSearch().trim().toLowerCase();
                               if (!q) return issue.cases;
-                              return issue.cases.filter(id => id.toLowerCase().includes(q));
+                              return issue.cases.filter(c => 
+                                c.id.toLowerCase().includes(q) || 
+                                (c.description && c.description.toLowerCase().includes(q)) || 
+                                (c.query && c.query.toLowerCase().includes(q))
+                              );
                             });
 
                             const totalPages = createMemo(() => Math.max(Math.ceil(matchingTestCases().length / itemsPerPage), 1));
@@ -661,6 +668,7 @@ export default function App() {
                                         onInput={(e) => {
                                           setAffectedSearch(e.currentTarget.value);
                                           setPage(1);
+                                          setExpandedCaseId(null);
                                         }}
                                       />
                                     </div>
@@ -671,26 +679,66 @@ export default function App() {
                                       each={paginatedTestCases()}
                                       fallback={<div class="empty-state" style={{ padding: "20px" }}>No matching testcase IDs.</div>}
                                     >
-                                      {(id) => {
-                                        const singleTestRerun = () => getSingleTestCaseCommand(issue.suite, id, parserMode());
-                                        const isSingleCopied = () => copiedKey() === id;
+                                      {(c) => {
+                                        const singleTestRerun = () => getSingleTestCaseCommand(issue.suite, c.id, parserMode());
+                                        const isSingleCopied = () => copiedKey() === c.id;
 
                                         return (
-                                          <div class="affected-list-item">
-                                            <div style={{ display: "flex", "align-items": "center", gap: "8px", overflow: "hidden" }}>
-                                              <span style={{ overflow: "hidden", "text-overflow": "ellipsis", "white-space": "nowrap" }} title={id}>
-                                                {id}
-                                              </span>
-                                            </div>
-                                            <button 
-                                              class="affected-rerun-btn"
-                                              onClick={() => handleCopyCommand(singleTestRerun(), id)}
-                                              title="Copy command to run just this test"
+                                          <div class="affected-list-item" style={{ "flex-direction": "column", "align-items": "stretch", gap: "6px" }}>
+                                            <div 
+                                              style={{ display: "flex", "justify-content": "space-between", "align-items": "center", cursor: "pointer" }}
+                                              onClick={() => setExpandedCaseId(expandedCaseId() === c.id ? null : c.id)}
                                             >
-                                              <Show when={isSingleCopied()} fallback={<><Play size={10} style={{ "margin-right": "4px" }} /> Rerun</>}>
-                                                Copied
-                                              </Show>
-                                            </button>
+                                              <div style={{ display: "flex", "align-items": "center", gap: "8px", overflow: "hidden" }}>
+                                                <span style={{ color: "var(--muted)", "font-size": "0.7rem", width: "12px", "text-align": "center", "user-select": "none" }}>
+                                                  {expandedCaseId() === c.id ? "▼" : "▶"}
+                                                </span>
+                                                <span style={{ overflow: "hidden", "text-overflow": "ellipsis", "white-space": "nowrap", "font-weight": "600", color: "var(--ink)" }} title={c.id}>
+                                                  {c.id}
+                                                </span>
+                                              </div>
+                                              <button 
+                                                class="affected-rerun-btn"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  handleCopyCommand(singleTestRerun(), c.id);
+                                                }}
+                                                title="Copy command to run just this test"
+                                              >
+                                                <Show when={isSingleCopied()} fallback={<><Play size={10} style={{ "margin-right": "4px" }} /> Rerun</>}>
+                                                  Copied
+                                                </Show>
+                                              </button>
+                                            </div>
+                                            
+                                            <Show when={expandedCaseId() === c.id}>
+                                              <div style={{ "padding-left": "20px", "padding-bottom": "4px", "display": "flex", "flex-direction": "column", gap: "6px" }}>
+                                                <Show when={c.description}>
+                                                  <p style={{ margin: "4px 0 8px 0", "font-size": "0.78rem", color: "var(--muted)", "line-height": "1.4", "font-style": "italic" }}>
+                                                    {c.description}
+                                                  </p>
+                                                </Show>
+                                                <Show when={c.query} fallback={<p style={{ margin: "4px 0 0 0", "font-size": "0.75rem", color: "var(--muted)" }}>No query text available</p>}>
+                                                   <div style={{ display: "flex", "flex-direction": "column", gap: "6px", width: "100%" }}>
+                                                     <div style={{ background: "#0f172a", border: "1px solid #1e293b", padding: "10px", "border-radius": "6px", overflow: "auto" }}>
+                                                       <pre style={{ margin: "0", "font-family": "var(--font-mono)", "font-size": "0.78rem", color: "#a5b4fc", "white-space": "pre-wrap", "word-break": "break-all" }}>
+                                                         {c.query}
+                                                       </pre>
+                                                     </div>
+                                                     <Show when={c.expected}>
+                                                       <div style={{ display: "flex", "flex-direction": "column", gap: "2px" }}>
+                                                         <span style={{ "font-size": "0.7rem", color: "var(--muted)", "font-weight": "600", "text-transform": "uppercase", "letter-spacing": "0.05em" }}>Expected Result:</span>
+                                                         <div style={{ background: "#1e293b", border: "1px solid #334155", padding: "8px 10px", "border-radius": "6px", overflow: "auto" }}>
+                                                           <pre style={{ margin: "0", "font-family": "var(--font-mono)", "font-size": "0.78rem", color: "#cbd5e1", "white-space": "pre-wrap", "word-break": "break-all" }}>
+                                                             {c.expected}
+                                                           </pre>
+                                                         </div>
+                                                       </div>
+                                                     </Show>
+                                                   </div>
+                                                </Show>
+                                              </div>
+                                            </Show>
                                           </div>
                                         );
                                       }}
@@ -757,27 +805,68 @@ export default function App() {
                               const isCopied = () => copiedKey() === item.id;
 
                               return (
-                                <div class="change-item">
-                                  <div class="change-item-top">
-                                    <span class={`pill pill-${item.status.toLowerCase()}`}>{item.status}</span>
-                                    <span class="change-item-suite">{item.suite}</span>
-                                  </div>
-                                  <span class="change-item-id">{item.id}</span>
-                                  
-                                  <Show when={item.message}>
-                                    <div class="change-item-msg">{item.message}</div>
-                                  </Show>
-                                  
-                                  <button 
-                                    class="btn-clear" 
-                                    style={{ padding: "6px 12px", "font-size": "0.78rem", "align-self": "flex-end", "margin-top": "4px" }}
-                                    onClick={() => handleCopyCommand(singleTestRerun(), item.id)}
+                                <div 
+                                    class="change-item"
+                                    style={{ cursor: "pointer", display: "flex", "flex-direction": "column", gap: "6px" }}
+                                    onClick={() => setExpandedRegressionId(expandedRegressionId() === item.id ? null : item.id)}
                                   >
-                                    <Show when={isCopied()} fallback={<><Play size={10} /> Copy Rerun Command</>}>
-                                      <Check size={10} /> Copied Rerun Command
+                                    <div class="change-item-top">
+                                      <div style={{ display: "flex", gap: "8px", "align-items": "center" }}>
+                                        <span style={{ color: "var(--muted)", "font-size": "0.7rem", "user-select": "none" }}>
+                                          {expandedRegressionId() === item.id ? "▼" : "▶"}
+                                        </span>
+                                        <span class={`pill pill-${item.status.toLowerCase()}`}>{item.status}</span>
+                                      </div>
+                                      <span class="change-item-suite">{item.suite}</span>
+                                    </div>
+                                    <span class="change-item-id" style={{ "font-weight": "700" }}>{item.id}</span>
+                                    
+                                    <Show when={item.message}>
+                                      <div class="change-item-msg">{item.message}</div>
                                     </Show>
-                                  </button>
-                                </div>
+
+                                    <Show when={expandedRegressionId() === item.id}>
+                                      <div style={{ "margin-top": "4px", "border-top": "1px solid rgba(255,255,255,0.06)", "padding-top": "8px", "display": "flex", "flex-direction": "column", gap: "6px" }}>
+                                        <Show when={item.description}>
+                                          <p style={{ margin: "0", "font-size": "0.78rem", color: "var(--muted)", "line-height": "1.4", "font-style": "italic" }}>
+                                            {item.description}
+                                          </p>
+                                        </Show>
+                                        <Show when={item.query} fallback={<p style={{ margin: "0", "font-size": "0.75rem", color: "var(--muted)" }}>No query text available</p>}>
+                                          <div style={{ display: "flex", "flex-direction": "column", gap: "6px", width: "100%" }}>
+                                            <div style={{ background: "#0f172a", border: "1px solid #1e293b", padding: "10px", "border-radius": "6px", overflow: "auto" }}>
+                                              <pre style={{ margin: "0", "font-family": "var(--font-mono)", "font-size": "0.78rem", color: "#a5b4fc", "white-space": "pre-wrap", "word-break": "break-all" }}>
+                                                {item.query}
+                                              </pre>
+                                            </div>
+                                            <Show when={item.expected}>
+                                              <div style={{ display: "flex", "flex-direction": "column", gap: "2px" }}>
+                                                <span style={{ "font-size": "0.7rem", color: "var(--muted)", "font-weight": "600", "text-transform": "uppercase", "letter-spacing": "0.05em" }}>Expected Result:</span>
+                                                <div style={{ background: "#1e293b", border: "1px solid #334155", padding: "8px 10px", "border-radius": "6px", overflow: "auto" }}>
+                                                  <pre style={{ margin: "0", "font-family": "var(--font-mono)", "font-size": "0.78rem", color: "#cbd5e1", "white-space": "pre-wrap", "word-break": "break-all" }}>
+                                                    {item.expected}
+                                                  </pre>
+                                                </div>
+                                              </div>
+                                            </Show>
+                                          </div>
+                                        </Show>
+                                      </div>
+                                    </Show>
+                                    
+                                    <button 
+                                      class="btn-clear" 
+                                      style={{ padding: "6px 12px", "font-size": "0.78rem", "align-self": "flex-end", "margin-top": "4px" }}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleCopyCommand(singleTestRerun(), item.id);
+                                      }}
+                                    >
+                                      <Show when={isCopied()} fallback={<><Play size={10} /> Copy Rerun Command</>}>
+                                        <Check size={10} /> Copied Rerun Command
+                                      </Show>
+                                    </button>
+                                  </div>
                               );
                             }}
                           </For>

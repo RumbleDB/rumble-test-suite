@@ -19,10 +19,37 @@ declare function cases:normalize-id($raw-name as xs:string) as xs:string {
 };
 
 declare function cases:suite($id as xs:string) as xs:string {
-    if (matches($id, "^\[[^/]+/")) then
-        replace($id, "^\[([^/]+).*$", "$1")
+    if (matches($id, "^[^/]+/")) then
+        replace($id, "^([^/]+).*$", "$1")
     else
         "unknown"
+};
+
+declare function cases:lookup-testcase($id as xs:string) as map(*)? {
+    if (contains($id, ":")) then
+        let $file-path := substring-before($id, ":")
+        let $test-name := substring-after($id, ":")
+        let $doc-uri := "../../qt3tests/" || $file-path
+        return
+            if (doc-available($doc-uri)) then
+                let $test-case := doc($doc-uri)//*:test-case[@name = $test-name]
+                return
+                    if (exists($test-case)) then
+                        map {
+                            "description": normalize-space(string($test-case/*:description)),
+                            "query": string($test-case/*:test),
+                            "expected": string-join(
+                                for $child in $test-case/*:result/*
+                                return replace(fn:serialize($child), '\s*xmlns="[^"]*"', ''),
+                                codepoints-to-string(10)
+                            )
+                        }
+                    else
+                        ()
+            else
+                ()
+    else
+        ()
 };
 
 declare function cases:case-data($case as element(testcase)) as map(*) {
@@ -30,16 +57,21 @@ declare function cases:case-data($case as element(testcase)) as map(*) {
     let $parser-prop := $case/../properties/property[@name = 'parser']/@value/string()
     let $parser := if (empty($parser-prop)) then "jsoniq" else $parser-prop
     let $time := if (exists($case/@time)) then xs:double($case/@time) else 0.0
-    return map {
-        "id": $id,
-        "suite": cases:suite($id),
-        "status": cases:status($case),
-        "parser": $parser,
-        "time": $time,
-        "errorMessage": normalize-space(string($case/error/@type)),
-        "failureMessage": normalize-space(string($case/failure/@message)),
-        "skipMessage": normalize-space(string($case/skipped/@message))
-    }
+    let $status := cases:status($case)
+    let $details := if ($status eq "PASS") then () else cases:lookup-testcase($id)
+    return map:merge((
+        map {
+            "id": $id,
+            "suite": cases:suite($id),
+            "status": $status,
+            "parser": $parser,
+            "time": $time,
+            "errorMessage": normalize-space(string($case/error/@type)),
+            "failureMessage": normalize-space(string($case/failure/@message)),
+            "skipMessage": normalize-space(string($case/skipped/@message))
+        },
+        if (exists($details)) then $details else map {}
+    ))
 };
 
 declare function cases:cases-by-id($dir as xs:string?) as map(*) {

@@ -36,6 +36,7 @@ export type AnalysisPayload = {
   issues?: Record<string, Partial<Record<string, RawIssueItem[]>>>;
   regressions?: Record<string, RawRegressionItem[]>;
   improvements?: Record<string, string[]>;
+  cases?: Record<string, { query?: string; description?: string; expected?: string }>;
 };
 
 export type SuiteSummary = {
@@ -61,12 +62,19 @@ export type Totals = {
   time: number;
 };
 
+export type TestCaseInfo = {
+  id: string;
+  query?: string;
+  description?: string;
+  expected?: string;
+};
+
 export type IssueRow = {
   suite: string;
   status: Status;
   message: string;
   count: number;
-  cases: string[];
+  cases: TestCaseInfo[];
   key: string;
   parser: string;
 };
@@ -76,6 +84,9 @@ export type RegressionRow = {
   id: string;
   status: Status;
   message: string;
+  query?: string;
+  description?: string;
+  expected?: string;
 };
 
 export type ImprovementRow = {
@@ -136,8 +147,8 @@ export function buildViewModel(analysis: AnalysisPayload, sourceName: string): V
       ...totals,
       passRate: percentNumber(totals.pass, totals.total),
     },
-    issueRows: flattenIssues(analysis.issues || {}),
-    regressions: flattenRegressions(analysis.regressions || {}),
+    issueRows: flattenIssues(analysis.issues || {}, analysis.cases || {}),
+    regressions: flattenRegressions(analysis.regressions || {}, analysis.cases || {}),
     improvements: flattenImprovements(analysis.improvements || {}),
   };
 }
@@ -183,12 +194,12 @@ export function getSingleTestCaseCommand(suiteName: string, caseId: string, pars
   if (!suiteName || !caseId) return "";
   const suiteClass = getSuiteClassName(suiteName);
   
-  // Extract test name (the part after the brackets)
-  // Example caseId: "[ser/method-json.xml] Serialization-json-59" -> "Serialization-json-59"
+  // Extract test name (the part after the colon)
+  // Example caseId: "ser/method-json.xml:Serialization-json-59" -> "Serialization-json-59"
   let testCaseName = caseId;
-  const bracketIndex = caseId.lastIndexOf("]");
-  if (bracketIndex !== -1) {
-    testCaseName = caseId.slice(bracketIndex + 1).trim();
+  const colonIndex = caseId.indexOf(":");
+  if (colonIndex !== -1) {
+    testCaseName = caseId.slice(colonIndex + 1);
   }
   
   // Clean up any characters that might interfere with Maven matching
@@ -199,7 +210,10 @@ export function getSingleTestCaseCommand(suiteName: string, caseId: string, pars
 }
 
 
-function flattenIssues(issuesBySuite: AnalysisPayload["issues"]): IssueRow[] {
+function flattenIssues(
+  issuesBySuite: AnalysisPayload["issues"],
+  casesMap: Record<string, { query?: string; description?: string; expected?: string }>
+): IssueRow[] {
   const rows: IssueRow[] = [];
   for (const [suiteName, statuses] of Object.entries(issuesBySuite || {})) {
     for (const [statusKey, items] of Object.entries(statuses || {})) {
@@ -208,7 +222,16 @@ function flattenIssues(issuesBySuite: AnalysisPayload["issues"]): IssueRow[] {
         continue;
       }
       for (const item of items || []) {
-        const cases = Array.isArray(item.cases) ? item.cases : [];
+        const caseIds = Array.isArray(item.cases) ? item.cases : [];
+        const cases: TestCaseInfo[] = caseIds.map((id) => {
+          const details = casesMap[id] || {};
+          return {
+            id,
+            query: details.query,
+            description: details.description,
+            expected: details.expected,
+          };
+        });
         const message = item.message || "(no message)";
         const parser = (item as any).parser || "jsoniq";
         rows.push({
@@ -233,16 +256,24 @@ function flattenIssues(issuesBySuite: AnalysisPayload["issues"]): IssueRow[] {
   return rows;
 }
 
-function flattenRegressions(regressionsBySuite: AnalysisPayload["regressions"]): RegressionRow[] {
+function flattenRegressions(
+  regressionsBySuite: AnalysisPayload["regressions"],
+  casesMap: Record<string, { query?: string; description?: string; expected?: string }>
+): RegressionRow[] {
   const rows: RegressionRow[] = [];
   for (const [suiteName, cases] of Object.entries(regressionsBySuite || {})) {
     for (const item of cases || []) {
       const status = toStatus(item.status) || "FAIL";
+      const id = item.id || "";
+      const details = casesMap[id] || {};
       rows.push({
         suite: suiteName,
-        id: item.id || "",
+        id,
         status,
         message: item.message || "",
+        query: details.query,
+        description: details.description,
+        expected: details.expected,
       });
     }
   }
