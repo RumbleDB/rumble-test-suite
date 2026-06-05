@@ -147,41 +147,43 @@ export function IssuesTab(props: IssuesTabProps) {
             </span>
           </div>
 
-          <div class="issues-list-container">
-            <Show
-              when={filteredIssues().length > 0}
-              fallback={
-                <div class="panel empty-state">
-                  <AlertCircle size={32} />
-                  <h3>No issues match current filter</h3>
-                  <p>Try clearing active search or selection filters.</p>
-                </div>
-              }
-            >
-              <For each={filteredIssues()}>
-                {(issue) => (
-                  <button
-                    onClick={() => props.setSelectedIssueKey(issue.key)}
-                    class="issue-card"
-                    classList={{ "issue-card-active": selectedIssue()?.key === issue.key }}
-                  >
-                    <div class="issue-card-header">
-                      <div class="issue-card-meta">
-                        <span class={`pill pill-${issue.status.toLowerCase()}`}>{issue.status}</span>
-                        <span class="pill pill-parser">{issue.parser}</span>
-                        <span class="issue-card-suite">
-                          <HighlightText text={issue.suite} query={props.searchQuery} />
-                        </span>
+          <div class="panel" style={{ display: "flex", "flex-direction": "column", flex: 1, "min-height": 0, padding: "18px" }}>
+            <div class="issues-list-container">
+              <Show
+                when={filteredIssues().length > 0}
+                fallback={
+                  <div class="panel empty-state">
+                    <AlertCircle size={32} />
+                    <h3>No issues match current filter</h3>
+                    <p>Try clearing active search or selection filters.</p>
+                  </div>
+                }
+              >
+                <For each={filteredIssues()}>
+                  {(issue) => (
+                    <button
+                      onClick={() => props.setSelectedIssueKey(issue.key)}
+                      class="issue-card"
+                      classList={{ "issue-card-active": selectedIssue()?.key === issue.key }}
+                    >
+                      <div class="issue-card-header">
+                        <div class="issue-card-meta">
+                          <span class={`pill pill-${issue.status.toLowerCase()}`}>{issue.status}</span>
+                          <span class="pill pill-parser">{issue.parser}</span>
+                          <span class="issue-card-suite">
+                            <HighlightText text={issue.suite} query={props.searchQuery} />
+                          </span>
+                        </div>
+                        <span class="issue-card-count">{issue.count} cases</span>
                       </div>
-                      <span class="issue-card-count">{issue.count} cases</span>
-                    </div>
-                    <div class="issue-card-msg">
-                      <HighlightText text={issue.message} query={props.searchQuery} />
-                    </div>
-                  </button>
-                )}
-              </For>
-            </Show>
+                      <div class="issue-card-msg">
+                        <HighlightText text={issue.message} query={props.searchQuery} />
+                      </div>
+                    </button>
+                  )}
+                </For>
+              </Show>
+            </div>
           </div>
         </div>
 
