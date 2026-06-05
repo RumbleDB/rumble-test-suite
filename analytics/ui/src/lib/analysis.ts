@@ -23,6 +23,7 @@ export type TestCaseRuntime = {
 export type RawIssueItem = {
   cases?: string[];
   message?: string;
+  parser?: string;
 };
 
 type RawRegressionItem = {
@@ -36,7 +37,7 @@ export type AnalysisPayload = {
   issues?: Record<string, Partial<Record<string, RawIssueItem[]>>>;
   regressions?: Record<string, RawRegressionItem[]>;
   improvements?: Record<string, string[]>;
-  cases?: Record<string, { query?: string; description?: string; expected?: string }>;
+  cases?: Record<string, TestCaseInfo>;
 };
 
 export type SuiteSummary = {
@@ -67,6 +68,10 @@ export type TestCaseInfo = {
   query?: string;
   description?: string;
   expected?: string;
+  status?: Status;
+  type?: string;
+  message?: string;
+  detail?: string;
 };
 
 export type IssueRow = {
@@ -212,7 +217,7 @@ export function getSingleTestCaseCommand(suiteName: string, caseId: string, pars
 
 function flattenIssues(
   issuesBySuite: AnalysisPayload["issues"],
-  casesMap: Record<string, { query?: string; description?: string; expected?: string }>
+  casesMap: Record<string, TestCaseInfo>
 ): IssueRow[] {
   const rows: IssueRow[] = [];
   for (const [suiteName, statuses] of Object.entries(issuesBySuite || {})) {
@@ -230,10 +235,14 @@ function flattenIssues(
             query: details.query,
             description: details.description,
             expected: details.expected,
+            status: details.status,
+            type: details.type,
+            message: details.message,
+            detail: details.detail,
           };
         });
         const message = item.message || "(no message)";
-        const parser = (item as any).parser || "jsoniq";
+        const parser = item.parser || "jsoniq";
         rows.push({
           suite: suiteName,
           status,
@@ -258,7 +267,7 @@ function flattenIssues(
 
 function flattenRegressions(
   regressionsBySuite: AnalysisPayload["regressions"],
-  casesMap: Record<string, { query?: string; description?: string; expected?: string }>
+  casesMap: Record<string, TestCaseInfo>
 ): RegressionRow[] {
   const rows: RegressionRow[] = [];
   for (const [suiteName, cases] of Object.entries(regressionsBySuite || {})) {

@@ -382,6 +382,54 @@ export function IssuesTab(props: IssuesTabProps) {
                                       <HighlightText text={c.description} query={affectedSearch()} />
                                     </p>
                                   </Show>
+
+                                  <Show when={c.status === "FAIL" && (c.message || c.detail)}>
+                                    <div style={{ display: "flex", "flex-direction": "column", gap: "2px", "margin-bottom": "4px" }}>
+                                      <span style={{ "font-size": "0.68rem", color: "var(--fail)", "font-weight": "800", "text-transform": "uppercase", "letter-spacing": "0.05em" }}>Failure Message:</span>
+                                      <div style={{ background: "var(--fail-light)", border: "1px solid rgba(198, 40, 40, 0.15)", padding: "8px 10px", "border-radius": "6px", overflow: "auto" }}>
+                                        <Show when={c.message}>
+                                          <div style={{ "font-weight": "700", "font-size": "0.78rem", color: "var(--fail)", "margin-bottom": c.detail ? "4px" : "0", "white-space": "pre-wrap" }}>
+                                            {c.message}
+                                          </div>
+                                        </Show>
+                                        <Show when={c.detail}>
+                                          <pre style={{ margin: "0", "font-family": "var(--font-mono)", "font-size": "0.75rem", color: "var(--fail)", "white-space": "pre-wrap", "word-break": "break-all" }}>
+                                            {c.detail}
+                                          </pre>
+                                        </Show>
+                                      </div>
+                                    </div>
+                                  </Show>
+
+                                  <Show when={c.status === "ERROR" && (c.type || c.message || c.detail)}>
+                                    <div style={{ display: "flex", "flex-direction": "column", gap: "2px", "margin-bottom": "4px" }}>
+                                      <span style={{ "font-size": "0.68rem", color: "var(--error)", "font-weight": "800", "text-transform": "uppercase", "letter-spacing": "0.05em" }}>Error Details:</span>
+                                      <div style={{ background: "var(--error-light)", border: "1px solid rgba(239, 108, 0, 0.15)", padding: "8px 10px", "border-radius": "6px", overflow: "auto" }}>
+                                        <Show when={c.type || c.message}>
+                                          <div style={{ "font-weight": "700", "font-size": "0.78rem", color: "var(--error)", "margin-bottom": c.detail ? "4px" : "0", "white-space": "pre-wrap" }}>
+                                            {c.type}{c.message ? `: ${c.message}` : ""}
+                                          </div>
+                                        </Show>
+                                        <Show when={c.detail}>
+                                          <pre style={{ margin: "0", "font-family": "var(--font-mono)", "font-size": "0.75rem", color: "var(--error)", "white-space": "pre-wrap", "word-break": "break-all" }}>
+                                            {c.detail}
+                                          </pre>
+                                        </Show>
+                                      </div>
+                                    </div>
+                                  </Show>
+
+                                  <Show when={c.status === "SKIP" && c.message}>
+                                    <div style={{ display: "flex", "flex-direction": "column", gap: "2px", "margin-bottom": "4px" }}>
+                                      <span style={{ "font-size": "0.68rem", color: "var(--skip)", "font-weight": "800", "text-transform": "uppercase", "letter-spacing": "0.05em" }}>Skip Reason:</span>
+                                      <div style={{ background: "var(--skip-light)", border: "1px solid rgba(120, 144, 156, 0.15)", padding: "8px 10px", "border-radius": "6px", overflow: "auto" }}>
+                                        <div style={{ "font-family": "var(--font-mono)", "font-size": "0.78rem", color: "var(--skip)", "white-space": "pre-wrap" }}>
+                                          {c.message}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </Show>
+
                                   <Show when={c.query} fallback={<p style={{ margin: "4px 0 0 0", "font-size": "0.75rem", color: "var(--muted)" }}>No query text available</p>}>
                                     <div style={{ display: "flex", "flex-direction": "column", gap: "6px", width: "100%" }}>
                                       <div style={{ background: "#0f172a", border: "1px solid #1e293b", padding: "10px", "border-radius": "6px", overflow: "auto" }}>

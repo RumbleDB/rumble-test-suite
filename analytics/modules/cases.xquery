@@ -66,9 +66,19 @@ declare function cases:case-data($case as element(testcase)) as map(*) {
             "status": $status,
             "parser": $parser,
             "time": $time,
-            "errorMessage": normalize-space(string($case/error/@type)),
-            "failureMessage": normalize-space(string($case/failure/@message)),
-            "skipMessage": normalize-space(string($case/skipped/@message))
+            "type": if ($status eq "ERROR") then normalize-space(string($case/error/@type))
+                    else if ($status eq "FAIL") then normalize-space(string($case/failure/@type))
+                    else (),
+            "message": if ($status eq "ERROR") then normalize-space(string($case/error/@message))
+                       else if ($status eq "FAIL") then normalize-space(string($case/failure/@message))
+                       else if ($status eq "SKIP") then
+                           let $skip-message := normalize-space(string($case/skipped/@message))
+                           return if ($skip-message ne "") then $skip-message else normalize-space(string($case/skipped))
+                       else (),
+            "detail": if ($status eq "ERROR") then string($case/error)
+                      else if ($status eq "FAIL") then string($case/failure)
+                      else if ($status eq "SKIP") then string($case/skipped)
+                      else ()
         },
         if (exists($details)) then $details else map {}
     ))

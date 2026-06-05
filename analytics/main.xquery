@@ -19,11 +19,14 @@ return map:merge((
         "cases": map:merge(
             for $key in map:keys($candidate-cases)
             let $c := $candidate-cases($key)
-            where map:contains($c, "query")
             return map:entry($key, map { 
                 "query": $c?query, 
                 "description": $c?description,
-                "expected": $c?expected
+                "expected": $c?expected,
+                "status": $c?status,
+                "type": $c?type,
+                "message": $c?message,
+                "detail": $c?detail
             })
         )
     },
