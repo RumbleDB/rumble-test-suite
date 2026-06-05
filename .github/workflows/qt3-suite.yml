@@ -150,6 +150,10 @@ jobs:
           name: ${{ inputs.rumble_artifact_name }}
           path: rumble/target
 
+      - name: Download QT3 test suite
+        shell: bash
+        run: ./get-tests-repository.sh
+
       - name: Generate analysis
         shell: bash
         run: |
