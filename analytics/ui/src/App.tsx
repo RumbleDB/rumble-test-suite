@@ -316,8 +316,9 @@ export default function App() {
                 <div class="page-body">
                   {/* TAB CONTENTS */}
                   <Show when={activeTab() === "overview"}>
-                    {/* STAT CARDS IN OVERVIEW */}
-                    <section class="stat-grid" style={{ "margin-bottom": "24px" }}>
+                    <div class="tab-content-animate" style={{ display: "flex", "flex-direction": "column", gap: "24px" }}>
+                      {/* STAT CARDS IN OVERVIEW */}
+                      <section class="stat-grid">
                       <div class="panel stat-card stat-card-total">
                         <span class="stat-label">Total Tests</span>
                         <strong class="stat-value">{model.totals.total}</strong>
@@ -527,10 +528,12 @@ export default function App() {
                         </section>
                       </div>
                     </div>
-                  </Show>
+                  </div>
+                </Show>
 
                   <Show when={activeTab() === "suites"}>
-                    <div class="dashboard-grid">
+                    <div class="tab-content-animate">
+                      <div class="dashboard-grid">
                       <div class="column" style={{ flex: "1.4" }}>
                         <section class="panel">
                           <div class="section-header">
@@ -557,11 +560,12 @@ export default function App() {
                           }}
                         />
                       </div>
+                      </div>
                     </div>
                   </Show>
 
                   <Show when={activeTab() === "issues"}>
-                    <div class="issues-view-wrapper">
+                    <div class="issues-view-wrapper tab-content-animate">
                       {/* Search & Filters Toolbar */}
                       <div class="toolbar">
                         <div class="search-input-wrapper">
@@ -771,22 +775,15 @@ export default function App() {
                                         </button>
                                       </div>
                                     </div>
-                                    <div style={{ display: "flex", background: "#0f172a", border: "1px solid #1e293b", "border-radius": "var(--radius-md)", overflow: "hidden" }}>
-                                      <div style={{ flex: 1, padding: "10px 12px", "font-family": "var(--font-mono)", "font-size": "0.75rem", color: "#cbd5e1", "white-space": "nowrap", "overflow-x": "auto" }}>
+                                    <div class="code-snippet-box">
+                                      <div class="code-snippet-text">
                                         {rerunCommand()}
                                       </div>
                                       <button
                                         onClick={() => handleCopyCommand(rerunCommand(), issue.key)}
+                                        class="code-snippet-btn"
                                         style={{
-                                          background: "rgba(255,255,255,0.06)",
-                                          border: "none",
-                                          "border-left": "1px solid rgba(255,255,255,0.1)",
-                                          color: copiedKey() === issue.key ? "var(--pass)" : "#94a3b8",
-                                          padding: "0 14px",
-                                          cursor: "pointer",
-                                          display: "flex",
-                                          "align-items": "center",
-                                          transition: "all 150ms"
+                                          color: copiedKey() === issue.key ? "var(--pass)" : ""
                                         }}
                                         title="Copy command"
                                       >
@@ -927,7 +924,7 @@ export default function App() {
                   </Show>
 
                   <Show when={activeTab() === "changes"}>
-                    <div style={{ display: "flex", "flex-direction": "column", gap: "16px" }}>
+                    <div class="tab-content-animate" style={{ display: "flex", "flex-direction": "column", gap: "16px" }}>
                       {/* Search & Filters Toolbar */}
                       <div class="toolbar">
                         <div class="search-input-wrapper">

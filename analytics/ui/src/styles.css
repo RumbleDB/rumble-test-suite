@@ -1281,7 +1281,6 @@ body {
   border-radius: 2px;
   padding: 0 1px;
 }
-
 /* Accented Stat Cards styling */
 .stat-card-total { border-top: 4px solid var(--accent); }
 .stat-card-pass { border-top: 4px solid var(--pass); }
@@ -1290,5 +1289,55 @@ body {
 .stat-card-skip { border-top: 4px solid var(--skip); }
 .stat-card-time { border-top: 4px solid var(--accent); }
 
+/* Animation classes for tab transitions */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 
+.tab-content-animate {
+  animation: fadeInUp 240ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
 
+/* Code snippet component */
+.code-snippet-box {
+  display: flex;
+  background: #0f172a;
+  border: 1px solid #1e293b;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.code-snippet-text {
+  flex: 1;
+  padding: 10px 12px;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: #cbd5e1;
+  white-space: nowrap;
+  overflow-x: auto;
+}
+
+.code-snippet-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: none;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+  padding: 0 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: all 120ms ease;
+}
+
+.code-snippet-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
