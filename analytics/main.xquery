@@ -19,6 +19,7 @@ return map:merge((
         "cases": map:merge(
             for $key in map:keys($candidate-cases)
             let $c := $candidate-cases($key)
+            where $c?status ne "PASS"
             return map:entry($key, map { 
                 "query": $c?query, 
                 "description": $c?description,
