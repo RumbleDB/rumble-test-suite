@@ -63,17 +63,16 @@ type SuitesBarChartProps = {
 export function SuitesBarChart(props: SuitesBarChartProps) {
   // Sort suites by total test count descending
   const sortedSuites = () => [...props.suites].slice(0, 10);
-  const maxTotal = () => Math.max(...props.suites.map(s => s.total), 1);
 
   return (
     <div class="suites-container" style={{ "margin-top": "10px" }}>
       <For each={sortedSuites()}>
         {(suite) => {
-          const passPct = (suite.pass / maxTotal()) * 100;
-          const failPct = (suite.fail / maxTotal()) * 100;
-          const errPct = (suite.error / maxTotal()) * 100;
-          const skipPct = (suite.skip / maxTotal()) * 100;
-          const totalPct = (suite.total / maxTotal()) * 100;
+          const total = Math.max(suite.total, 1);
+          const passPct = (suite.pass / total) * 100;
+          const failPct = (suite.fail / total) * 100;
+          const errPct = (suite.error / total) * 100;
+          const skipPct = (suite.skip / total) * 100;
 
           const isActive = () => props.activeSuite === suite.name;
 
@@ -95,9 +94,9 @@ export function SuitesBarChart(props: SuitesBarChartProps) {
                 </span>
               </div>
               
-              {/* Stacked bar relative to max suite size */}
+              {/* Stacked bar showing suite breakdown */}
               <div style={{ display: "flex", "flex-direction": "column", gap: "4px" }}>
-                <div class="mini-progress" style={{ height: "8px", background: "rgba(255, 255, 255, 0.02)" }}>
+                <div class="mini-progress" style={{ height: "8px" }}>
                   <div 
                     class="mini-progress-segment" 
                     style={{ 
