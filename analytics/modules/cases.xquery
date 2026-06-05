@@ -73,11 +73,15 @@ declare function cases:lookup-testcase($id as xs:string) as map(*)? {
 
 declare function cases:case-data($case as element(testcase)) as map(*) {
     let $id := cases:normalize-id(string($case/@name))
-    let $parser-prop := $case/../properties/property[@name = 'parser']/@value/string()
-    let $parser := if (empty($parser-prop)) then "jsoniq" else $parser-prop
-    let $time := if (exists($case/@time)) then xs:double($case/@time) else 0.0
+    let $parser := ($case/../properties/property[@name = 'parser']/@value/string(), "jsoniq")[1]
+    let $time := (xs:double($case/@time), 0.0)[1]
     let $status := cases:status($case)
     let $details := if ($status eq "PASS") then () else cases:lookup-testcase($id)
+    
+    let $error-fail-msg := ($case/error/@message, $case/failure/@message)[1] ! string(.) ! cases:safe-string(.) ! normalize-space(.)
+    let $skip-msg := ($case/skipped/@message ! string(.) ! cases:safe-string(.) ! normalize-space(.))[. ne ""]
+    let $skip-text := $case/skipped ! cases:node-text(.) ! normalize-space(.)
+    
     return map:merge((
         map {
             "id": $id,
@@ -85,19 +89,9 @@ declare function cases:case-data($case as element(testcase)) as map(*) {
             "status": $status,
             "parser": $parser,
             "time": $time,
-            "type": if ($status eq "ERROR") then normalize-space(cases:safe-string(string($case/error/@type)))
-                    else if ($status eq "FAIL") then normalize-space(cases:safe-string(string($case/failure/@type)))
-                    else (),
-            "message": if ($status eq "ERROR") then normalize-space(cases:safe-string(string($case/error/@message)))
-                       else if ($status eq "FAIL") then normalize-space(cases:safe-string(string($case/failure/@message)))
-                       else if ($status eq "SKIP") then
-                           let $skip-message := normalize-space(cases:safe-string(string($case/skipped/@message)))
-                           return if ($skip-message ne "") then $skip-message else normalize-space(cases:node-text($case/skipped))
-                       else (),
-            "detail": if ($status eq "ERROR") then cases:node-text($case/error)
-                      else if ($status eq "FAIL") then cases:node-text($case/failure)
-                      else if ($status eq "SKIP") then cases:node-text($case/skipped)
-                      else ()
+            "type": ($case/error/@type, $case/failure/@type)[1] ! string(.) ! cases:safe-string(.) ! normalize-space(.),
+            "message": ($error-fail-msg, $skip-msg, $skip-text)[1],
+            "detail": ($case/error, $case/failure, $case/skipped)[1] ! cases:node-text(.)
         },
         if (exists($details)) then $details else map {}
     ))
