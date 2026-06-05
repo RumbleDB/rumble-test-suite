@@ -1,7 +1,7 @@
 import { Show, createMemo, createSignal, For } from "solid-js";
 import { Search, CheckCircle, AlertCircle, Play, Check } from "./Icons";
 import { HighlightText } from "./HighlightText";
-import { getSingleTestCaseCommand } from "../lib/analysis";
+import { decodeExpectedResult, getSingleTestCaseCommand } from "../lib/analysis";
 import type { ViewModel, StatusFilter, ParserMode } from "../lib/analysis";
 
 type ChangesTabProps = {
@@ -145,7 +145,7 @@ export function ChangesTab(props: ChangesTabProps) {
                                   <span style={{ "font-size": "0.7rem", color: "var(--muted)", "font-weight": "600", "text-transform": "uppercase", "letter-spacing": "0.05em" }}>Expected Result:</span>
                                   <div style={{ background: "#1e293b", border: "1px solid #334155", padding: "8px 10px", "border-radius": "6px", overflow: "auto" }}>
                                     <pre style={{ margin: "0", "font-family": "var(--font-mono)", "font-size": "0.78rem", color: "#cbd5e1", "white-space": "pre-wrap", "word-break": "break-all" }}>
-                                      <HighlightText text={item.expected} query={props.searchQuery} />
+                                      <HighlightText text={decodeExpectedResult(item.expected) || ""} query={props.searchQuery} />
                                     </pre>
                                   </div>
                                 </div>

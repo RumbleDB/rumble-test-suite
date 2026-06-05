@@ -214,6 +214,37 @@ export function getSingleTestCaseCommand(suiteName: string, caseId: string, pars
   return `mvn -Dtest=${suiteClass} -Dtest.case=${testCaseName}${parserArg} test`;
 }
 
+export function decodeExpectedResult(value: string | undefined): string | undefined {
+  if (!value) {
+    return value;
+  }
+
+  return value.replace(/&(#x?[0-9a-fA-F]+|amp|lt|gt|quot|apos);/g, (match, entity) => {
+    switch (entity) {
+      case "amp":
+        return "&";
+      case "lt":
+        return "<";
+      case "gt":
+        return ">";
+      case "quot":
+        return '"';
+      case "apos":
+        return "'";
+      default:
+        if (entity.startsWith("#x")) {
+          const codePoint = Number.parseInt(entity.slice(2), 16);
+          return Number.isNaN(codePoint) ? match : String.fromCodePoint(codePoint);
+        }
+        if (entity.startsWith("#")) {
+          const codePoint = Number.parseInt(entity.slice(1), 10);
+          return Number.isNaN(codePoint) ? match : String.fromCodePoint(codePoint);
+        }
+        return match;
+    }
+  });
+}
+
 
 function flattenIssues(
   issuesBySuite: AnalysisPayload["issues"],
@@ -234,7 +265,7 @@ function flattenIssues(
             id,
             query: details.query,
             description: details.description,
-            expected: details.expected,
+            expected: decodeExpectedResult(details.expected),
             status: details.status,
             type: details.type,
             message: details.message,
@@ -282,7 +313,7 @@ function flattenRegressions(
         message: item.message || "",
         query: details.query,
         description: details.description,
-        expected: details.expected,
+        expected: decodeExpectedResult(details.expected),
       });
     }
   }
