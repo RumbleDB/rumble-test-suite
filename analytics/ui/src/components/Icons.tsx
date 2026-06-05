@@ -111,3 +111,45 @@ export function Play(props: IconProps) {
     </BaseIcon>
   );
 }
+
+export function LayoutDashboard(props: IconProps) {
+  return (
+    <BaseIcon {...props}>
+      <rect width="7" height="9" x="3" y="3" rx="1" />
+      <rect width="7" height="5" x="14" y="3" rx="1" />
+      <rect width="7" height="9" x="14" y="12" rx="1" />
+      <rect width="7" height="5" x="3" y="14" rx="1" />
+    </BaseIcon>
+  );
+}
+
+export function FolderOpen(props: IconProps) {
+  return (
+    <BaseIcon {...props}>
+      <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" />
+      <path d="M2 10h20" />
+    </BaseIcon>
+  );
+}
+
+export function AlertOctagon(props: IconProps) {
+  return (
+    <BaseIcon {...props}>
+      <polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2" />
+      <path d="M12 8v4" />
+      <path d="M12 16h.01" />
+    </BaseIcon>
+  );
+}
+
+export function RefreshCw(props: IconProps) {
+  return (
+    <BaseIcon {...props}>
+      <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+      <path d="M3 3v5h5" />
+      <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
+      <path d="M16 16h5v5" />
+    </BaseIcon>
+  );
+}
+
