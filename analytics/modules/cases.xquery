@@ -3,6 +3,25 @@ module namespace cases = "urn:analytics:analysis:cases";
 
 declare namespace map = "http://www.w3.org/2005/xpath-functions/map";
 
+declare function cases:safe-string($value as xs:string?) as xs:string? {
+    if (empty($value)) then
+        $value
+    else
+        codepoints-to-string(
+            for $cp in string-to-codepoints($value)
+            where $cp = 9
+               or $cp = 10
+               or $cp = 13
+               or ($cp ge 32 and $cp le 55295)
+               or ($cp ge 57344 and $cp le 65535)
+            return $cp
+        )
+};
+
+declare function cases:node-text($nodes as node()*) as xs:string? {
+    cases:safe-string(string-join($nodes/text(), ""))
+};
+
 declare function cases:status($case as element(testcase)) as xs:string {
     if (exists($case/skipped)) then
         "SKIP"
@@ -36,13 +55,13 @@ declare function cases:lookup-testcase($id as xs:string) as map(*)? {
                 return
                     if (exists($test-case)) then
                         map {
-                            "description": normalize-space(string($test-case/*:description)),
-                            "query": string($test-case/*:test),
-                            "expected": string-join(
+                            "description": normalize-space(cases:safe-string(string($test-case/*:description))),
+                            "query": cases:safe-string(string($test-case/*:test)),
+                            "expected": cases:safe-string(string-join(
                                 for $child in $test-case/*:result/*
                                 return replace(fn:serialize($child), '\s*xmlns="[^"]*"', ''),
                                 codepoints-to-string(10)
-                            )
+                            ))
                         }
                     else
                         ()
@@ -66,18 +85,18 @@ declare function cases:case-data($case as element(testcase)) as map(*) {
             "status": $status,
             "parser": $parser,
             "time": $time,
-            "type": if ($status eq "ERROR") then normalize-space(string($case/error/@type))
-                    else if ($status eq "FAIL") then normalize-space(string($case/failure/@type))
+            "type": if ($status eq "ERROR") then normalize-space(cases:safe-string(string($case/error/@type)))
+                    else if ($status eq "FAIL") then normalize-space(cases:safe-string(string($case/failure/@type)))
                     else (),
-            "message": if ($status eq "ERROR") then normalize-space(string($case/error/@message))
-                       else if ($status eq "FAIL") then normalize-space(string($case/failure/@message))
+            "message": if ($status eq "ERROR") then normalize-space(cases:safe-string(string($case/error/@message)))
+                       else if ($status eq "FAIL") then normalize-space(cases:safe-string(string($case/failure/@message)))
                        else if ($status eq "SKIP") then
-                           let $skip-message := normalize-space(string($case/skipped/@message))
-                           return if ($skip-message ne "") then $skip-message else normalize-space(string($case/skipped))
+                           let $skip-message := normalize-space(cases:safe-string(string($case/skipped/@message)))
+                           return if ($skip-message ne "") then $skip-message else normalize-space(cases:node-text($case/skipped))
                        else (),
-            "detail": if ($status eq "ERROR") then string($case/error)
-                      else if ($status eq "FAIL") then string($case/failure)
-                      else if ($status eq "SKIP") then string($case/skipped)
+            "detail": if ($status eq "ERROR") then cases:node-text($case/error)
+                      else if ($status eq "FAIL") then cases:node-text($case/failure)
+                      else if ($status eq "SKIP") then cases:node-text($case/skipped)
                       else ()
         },
         if (exists($details)) then $details else map {}
