@@ -40,6 +40,6 @@ if (!indexHtml.includes("</body>")) {
     throw new Error("Expected </body> in built index.html");
 }
 
-indexHtml = indexHtml.replace("</body>", `  ${embeddedPayload}\n</body>`);
+indexHtml = indexHtml.replace("</body>", () => `  ${embeddedPayload}\n</body>`);
 fs.writeFileSync(indexPath, indexHtml, "utf8");
 fs.rmSync(path.join(outDir, "assets"), { recursive: true, force: true });

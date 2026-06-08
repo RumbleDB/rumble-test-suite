@@ -84,9 +84,9 @@ declare function summary:issues($cases as array(*)) as map(*) {
         return map:entry(
             $suite,
             map {
-                "error": summary:issue-cases($cases, $suite, "ERROR", "errorMessage"),
-                "fail": summary:issue-cases($cases, $suite, "FAIL", "failureMessage"),
-                "skip": summary:issue-cases($cases, $suite, "SKIP", "skipMessage")
+                "error": summary:issue-cases($cases, $suite, "ERROR", "type"),
+                "fail": summary:issue-cases($cases, $suite, "FAIL", "message"),
+                "skip": summary:issue-cases($cases, $suite, "SKIP", "message")
             }
         ),
         map { "duplicates": "use-last" }

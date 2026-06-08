@@ -15,7 +15,21 @@ let $candidate-values := cases:values($candidate-cases)
 return map:merge((
     map {
         "summary": summary:run($candidate-values),
-        "issues": summary:issues($candidate-values)
+        "issues": summary:issues($candidate-values),
+        "cases": map:merge(
+            for $key in map:keys($candidate-cases)
+            let $c := $candidate-cases($key)
+            where $c?status ne "PASS"
+            return map:entry($key, map { 
+                "query": $c?query, 
+                "description": $c?description,
+                "expected": $c?expected,
+                "status": $c?status,
+                "type": $c?type,
+                "message": $c?message,
+                "detail": $c?detail
+            })
+        )
     },
     if (empty($baseline)) then
         ()
