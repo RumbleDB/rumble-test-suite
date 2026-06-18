@@ -8,6 +8,7 @@ import java.util.List;
 public final class Converter {
 
     private static final List<ConversionPass> CONVERSION_PASSES = List.of(
+        new StringLiteralConversion(),
         new SimpleReplacementConversion()
     );
 
