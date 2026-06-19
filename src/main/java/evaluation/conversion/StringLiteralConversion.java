@@ -151,7 +151,7 @@ final class StringLiteralConversion implements ConversionPass {
             position++;
         }
 
-        throw new IllegalArgumentException("Unterminated XQuery comment starting at position " + start);
+        return input.length();
     }
 
     private static boolean startsWith(String input, int offset, String prefix) {
