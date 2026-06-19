@@ -95,7 +95,8 @@ public class TestBase {
                         environment,
                         useXQueryParser,
                         rumbleConfig,
-                        testCase.xmlVersion
+                        testCase.xmlVersion,
+                        testCase.stringLiteralSemantics
                 )
             );
         } catch (RumbleException e) {

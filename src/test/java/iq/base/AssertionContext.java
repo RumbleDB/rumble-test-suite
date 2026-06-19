@@ -2,6 +2,7 @@ package iq.base;
 
 import evaluation.Environment;
 import evaluation.conversion.Converter;
+import evaluation.conversion.Converter.StringLiteralSemantics;
 import org.rumbledb.api.Item;
 import org.rumbledb.api.Rumble;
 import org.rumbledb.api.SequenceOfItems;
@@ -23,6 +24,7 @@ class AssertionContext {
     private final boolean useXQueryParser;
     private final RumbleRuntimeConfiguration rumbleConfig;
     private final String xmlVersion;
+    private final StringLiteralSemantics stringLiteralSemantics;
     private QueryEvaluation primaryEvaluation;
 
     AssertionContext(
@@ -30,7 +32,8 @@ class AssertionContext {
             Environment environment,
             boolean useXQueryParser,
             RumbleRuntimeConfiguration rumbleConfig,
-            String xmlVersion
+            String xmlVersion,
+            StringLiteralSemantics stringLiteralSemantics
     ) {
         /// This is the test
         this.testString = testString;
@@ -38,6 +41,7 @@ class AssertionContext {
         this.useXQueryParser = useXQueryParser;
         this.rumbleConfig = rumbleConfig;
         this.xmlVersion = xmlVersion;
+        this.stringLiteralSemantics = stringLiteralSemantics;
     }
 
     String getTestString() {
@@ -73,7 +77,7 @@ class AssertionContext {
         }
 
         if (!this.useXQueryParser) {
-            query = Converter.convert(query);
+            query = Converter.convert(query, this.stringLiteralSemantics);
         }
 
         applyXmlVersionDependencyToConfig();
@@ -98,4 +102,3 @@ class AssertionContext {
         }
     }
 }
-

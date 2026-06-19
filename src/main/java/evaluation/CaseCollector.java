@@ -2,6 +2,7 @@ package evaluation;
 
 import net.sf.saxon.s9api.*;
 import net.sf.saxon.s9api.streams.Steps;
+import evaluation.conversion.Converter.StringLiteralSemantics;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -167,7 +168,14 @@ public class CaseCollector {
         ) {
             allTests.add(
                 new CollectedTestCase(
-                        new TestCase(null, null, "Testcase/set on skiplist", null, null),
+                        new TestCase(
+                                null,
+                                null,
+                                "Testcase/set on skiplist",
+                                null,
+                                null,
+                                StringLiteralSemantics.DEFAULT
+                        ),
                         currentTestSet,
                         currentTestCase
                 )
@@ -208,17 +216,50 @@ public class CaseCollector {
             skipReason = "dependency " + caseDependency;
         }
         String xmlVersion = extractXmlVersion(testCase);
+        StringLiteralSemantics stringLiteralSemantics = extractStringLiteralSemantics(testCase);
 
         XdmNode assertion = (XdmNode) xpc.evaluateSingle("result/*[1]", testCase);
         String testString = testCase.select(Steps.child("test")).asNode().getStringValue();
 
         allTests.add(
             new CollectedTestCase(
-                    new TestCase(testString, assertion, skipReason, environment, xmlVersion),
+                    new TestCase(
+                            testString,
+                            assertion,
+                            skipReason,
+                            environment,
+                            xmlVersion,
+                            stringLiteralSemantics
+                    ),
                     currentTestSet,
                     currentTestCase
             )
         );
+    }
+
+    private StringLiteralSemantics extractStringLiteralSemantics(XdmNode testCase) {
+        boolean xquery = false;
+        boolean xpath = false;
+        List<XdmNode> dependencies = new ArrayList<>(testCase.select(Steps.child("dependency")).asList());
+        dependencies.addAll(testCase.getParent().select(Steps.child("dependency")).asList());
+
+        for (XdmNode dependency : dependencies) {
+            if (!"spec".equals(dependency.attribute("type"))) {
+                continue;
+            }
+            for (String spec : dependency.attribute("value").trim().split("\\s+")) {
+                xquery |= spec.startsWith("XQ");
+                xpath |= spec.startsWith("XP");
+            }
+        }
+
+        if (xquery && !xpath) {
+            return StringLiteralSemantics.XQUERY;
+        }
+        if (xpath && !xquery) {
+            return StringLiteralSemantics.XPATH;
+        }
+        return StringLiteralSemantics.DEFAULT;
     }
 
     /**
