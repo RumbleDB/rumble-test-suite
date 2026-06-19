@@ -1,29 +1,23 @@
 package evaluation.conversion;
 
 import org.apache.commons.text.StringEscapeUtils;
+
 /**
- * Converts XQuery string literals to JSONiq-compatible string literals.
- *
- * <p>
- * XQuery treats backslashes as literal characters, while JSONiq treats them as escape characters.
- * Therefore, we escape all backslashes globally to ensure the JSONiq parser evaluates them correctly.
- * </p>
- * <p>
- * Other conversions (like XML entities and doubled-quote escaping) have been removed,
- * as the JSONiq grammar has been updated to natively support them.
- * </p>
+ * Converts XPath and XQuery string literals to JSONiq string literals.
  */
 final class StringLiteralConversion implements ConversionPass {
 
     private static final String COMMENT_START = "(:";
     private static final String COMMENT_END = ":)";
 
+    private final Converter.StringLiteralSemantics semantics;
+
+    StringLiteralConversion(Converter.StringLiteralSemantics semantics) {
+        this.semantics = semantics;
+    }
+
     @Override
     public String convert(String input) {
-        if (!containsQuote(input)) {
-            return input;
-        }
-
         StringBuilder output = new StringBuilder(input.length());
 
         int position = 0;
@@ -36,25 +30,8 @@ final class StringLiteralConversion implements ConversionPass {
             }
 
             if (isQuote(input.charAt(position))) {
-                char quote = input.charAt(position);
                 ParsedStringLiteral literal = parseXQueryStringLiteral(input, position);
-                
-                // Handle the XPath entity expansion exception:
-                // Test suite expects "&amp;" to evaluate to "&amp;" in XPath tests, but
-                // JSONiq natively expands it. We pre-escape it so JSONiq evaluates it to "&amp;".
-                boolean isAmp = literal.value.equals("&amp;");
-                
-                String unescaped = StringEscapeUtils.unescapeXml(literal.value);
-                String converted = StringEscapeUtils.escapeJson(unescaped);
-                
-                if (isAmp) {
-                    converted = "&amp;amp;";
-                }
-                
-                output.append(quote);
-                output.append(converted);
-                output.append(quote);
-                
+                output.append(convertLiteral(literal.value));
                 position = literal.end;
                 continue;
             }
@@ -66,11 +43,65 @@ final class StringLiteralConversion implements ConversionPass {
         return output.toString();
     }
 
+    private String convertLiteral(String value) {
+        switch (this.semantics) {
+            case XQUERY:
+                value = StringEscapeUtils.unescapeXml(value);
+                break;
+            case XPATH:
+                // RumbleDB accepts XML references in JSONiq strings. Protect XPath
+                // literals so that references remain lexical text after parsing.
+                value = value.replace("&", "&amp;");
+                break;
+            case DEFAULT:
+                break;
+        }
+        return "\"" + escapeJSONiqStringContent(value) + "\"";
+    }
+
+    private static String escapeJSONiqStringContent(String value) {
+        StringBuilder escaped = new StringBuilder(value.length());
+        for (int position = 0; position < value.length(); position++) {
+            char character = value.charAt(position);
+            switch (character) {
+                case '\\':
+                    escaped.append("\\\\");
+                    break;
+                case '"':
+                    escaped.append("\\\"");
+                    break;
+                case '\b':
+                    escaped.append("\\b");
+                    break;
+                case '\f':
+                    escaped.append("\\f");
+                    break;
+                case '\n':
+                    escaped.append("\\n");
+                    break;
+                case '\r':
+                    escaped.append("\\r");
+                    break;
+                case '\t':
+                    escaped.append("\\t");
+                    break;
+                default:
+                    if (character < 0x20) {
+                        escaped.append(String.format("\\u%04x", (int) character));
+                    } else {
+                        escaped.append(character);
+                    }
+                    break;
+            }
+        }
+        return escaped.toString();
+    }
+
     private static ParsedStringLiteral parseXQueryStringLiteral(String input, int start) {
         char quote = input.charAt(start);
         StringBuilder value = new StringBuilder();
         int position = start + 1;
-        
+
         while (position < input.length()) {
             char currentChar = input.charAt(position);
 
@@ -88,12 +119,7 @@ final class StringLiteralConversion implements ConversionPass {
             position++;
         }
 
-        // Return what we have to prevent test suite crashes on malformed queries
-        return new ParsedStringLiteral(value.toString(), position);
-    }
-
-    private static boolean containsQuote(String input) {
-        return input.indexOf('"') >= 0 || input.indexOf('\'') >= 0;
+        throw new IllegalArgumentException("Unterminated string literal starting at position " + start);
     }
 
     private static boolean isQuote(char character) {
