@@ -16,10 +16,12 @@ public class CaseCollector {
     private Path testsRepositoryDirectoryPath;
     private String currentTestSet;
     private final boolean useXQueryParser;
-    private final List<Object[]> allTests = new ArrayList<>();
+    private final List<CollectedTestCase> allTests = new ArrayList<>();
+    private final TestCaseSelection testCaseSelection;
 
-    public CaseCollector(boolean useXQueryParser) {
+    public CaseCollector(boolean useXQueryParser, TestCaseSelection testCaseSelection) {
         this.useXQueryParser = useXQueryParser;
+        this.testCaseSelection = testCaseSelection;
     }
 
     // environments in current testset
@@ -29,26 +31,30 @@ public class CaseCollector {
     private final Map<String, Environment> catalogEnvironments = new HashMap<>();
 
     /**
-     * method that collects all the testcases into a local variable allowing getAllTests() to be called later
+     * method that collects all the testcases into a local variable allowing
+     * getAllTests() to be called later
      */
     public void execute(String testFolder) throws IOException, SaxonApiException, InterruptedException {
         getTestsRepository();
         processCatalog(testFolder);
+
+        /// Check if the selected test case was resolved to at least one test. If not, throw an exception.
+        this.testCaseSelection.verifyResolved();
     }
 
     /**
-     * method that returns all collected testcases. execute() needs to be called beforehand
+     * method that returns all collected testcases. execute() needs to be called
+     * beforehand
      */
-    public List<Object[]> getAllTests() {
+    public List<CollectedTestCase> getAllTests() {
         return this.allTests;
     }
 
     /**
-     * method that clones the git repository containing the tests and assigns testsRepositoryScriptFileName
+     * method that clones the git repository containing the tests and assigns
+     * testsRepositoryScriptFileName
      */
     public void getTestsRepository() throws IOException, InterruptedException {
-        System.out.println("Running sh script to obtain the required tests repository!");
-
         String testsRepositoryScriptFileName = "get-tests-repository.sh";
         ProcessBuilder pb = new ProcessBuilder(
                 Constants.WORKING_DIRECTORY_PATH.resolve(testsRepositoryScriptFileName).toString()
@@ -59,7 +65,6 @@ public class CaseCollector {
 
         if (exitValue == 0) {
             testsRepositoryDirectoryPath = Constants.WORKING_DIRECTORY_PATH.resolve("qt3tests");
-            System.out.println("Tests repository obtained!");
         } else {
             BufferedReader stderr = new BufferedReader(new InputStreamReader(p.getErrorStream()));
             String line;
@@ -91,7 +96,8 @@ public class CaseCollector {
             catalogEnvironments.put(envName, env);
         }
 
-        // testsets are defined with regex, allowing for example the split of fn into two
+        // testsets are defined with regex, allowing for example the split of fn into
+        // two
         // most are just substring matching
         Pattern pattern = Pattern.compile("^" + testFolder);
         for (XdmNode testSet : catalogNode.select(Steps.descendant("test-set")).asList()) {
@@ -132,11 +138,13 @@ public class CaseCollector {
             testSetEnvironments.put(envName, env);
         }
 
-
     }
 
     private void processTestCase(XdmNode testCase, XPathCompiler xpc) throws SaxonApiException {
         String currentTestCase = testCase.attribute("name");
+        if (!this.testCaseSelection.shouldRun(currentTestCase)) {
+            return;
+        }
 
         // check if testcase is skipped
         if (
@@ -145,10 +153,11 @@ public class CaseCollector {
                 || (!useXQueryParser && Constants.skippedJSONIQTestCases.contains(currentTestCase))
         ) {
             allTests.add(
-                new Object[] {
-                    new TestCase(null, null, "Testcase/set on skiplist", null, null, null),
-                    currentTestSet,
-                    currentTestCase }
+                new CollectedTestCase(
+                        new TestCase(null, null, "Testcase/set on skiplist", null, null, null),
+                        currentTestSet,
+                        currentTestCase
+                )
             );
             return;
         }
@@ -190,7 +199,7 @@ public class CaseCollector {
         String testString = testCase.select(Steps.child("test")).asNode().getStringValue();
 
         allTests.add(
-            new Object[] {
+            new CollectedTestCase(
                 new TestCase(
                         testString,
                         assertion,
@@ -201,6 +210,7 @@ public class CaseCollector {
                 ),
                 currentTestSet,
                 currentTestCase }
+            )
         );
     }
 
@@ -228,7 +238,8 @@ public class CaseCollector {
                     break;
                 }
                 case "unicode-version": {
-                    // 7.0,3.1.1,5.2,6.0,6.2 - We will need to look at the tests. I am not sure which
+                    // 7.0,3.1.1,5.2,6.0,6.2 - We will need to look at the tests. I am not sure
+                    // which
                     // unicode Java 8 supports. For now you can keep them all.
                     break;
                 }
@@ -323,7 +334,8 @@ public class CaseCollector {
                         }
                     }
 
-                    // We can think about adding this because some tests have two versions and we generally only try to
+                    // We can think about adding this because some tests have two versions and we
+                    // generally only try to
                     // support 3.1. But it removes a lot of tests so for now I think its overkill
                     // if (value.equals("XQ10+")) {
                     // return type + " " + value;

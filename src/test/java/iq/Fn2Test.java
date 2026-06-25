@@ -1,24 +1,22 @@
 package iq;
 
-import evaluation.TestCase;
+import evaluation.CollectedTestCase;
+import org.junit.jupiter.api.DisplayName;
 import iq.base.TestBase;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
-@RunWith(Parameterized.class)
+import java.util.stream.Stream;
+
 public class Fn2Test extends TestBase {
-    public Fn2Test(TestCase testCase, String testSetName, String testCaseName) {
-        super(testCase, testSetName, testCaseName, false);
+    public static Stream<CollectedTestCase> data() throws Exception {
+        return getData("fn/[k-zK-Z]").stream();
     }
 
-    @Parameterized.Parameters(name = "[{1}] {2}")
-    public static Iterable<Object[]> data() throws Exception {
-        return getData("fn/[k-zK-Z]");
-    }
-
-    @Test(timeout = 1000000)
-    public void test() {
-        testCase();
+    @DisplayName("test")
+    @ParameterizedTest(name = "[{0}]")
+    @MethodSource("data")
+    public void test(CollectedTestCase testCase) {
+        testCase(testCase);
     }
 }

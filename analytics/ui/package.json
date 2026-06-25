@@ -1,0 +1,21 @@
+{
+    "name": "rumble-test-dashboard-ui",
+    "private": true,
+    "version": "0.1.0",
+    "type": "module",
+    "scripts": {
+        "dev": "vite",
+        "build": "vite build",
+        "build:report": "node ./scripts/build-report.mjs",
+        "typecheck": "tsc --noEmit",
+        "preview": "vite preview"
+    },
+    "dependencies": {
+        "solid-js": "^1.9.9"
+    },
+    "devDependencies": {
+        "typescript": "^5.9.3",
+        "vite-plugin-solid": "^2.11.8",
+        "vite": "^8.0.14"
+    }
+}
