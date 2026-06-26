@@ -1,12 +1,9 @@
 package iq.base;
 
 import evaluation.*;
-import evaluation.conversion.Converter;
 import net.sf.saxon.s9api.XdmNode;
-import org.junit.AssumptionViolatedException;
+import org.opentest4j.TestAbortedException;
 import org.rumbledb.api.Item;
-import org.rumbledb.api.Rumble;
-import org.rumbledb.api.SequenceOfItems;
 import org.rumbledb.config.RumbleRuntimeConfiguration;
 import org.rumbledb.exceptions.RumbleException;
 import org.xmlunit.builder.DiffBuilder;
@@ -18,104 +15,104 @@ import java.util.stream.Collectors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static org.junit.Assert.*;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class TestBase {
-    protected final TestCase testCase;
-    protected final String testSetName;
-    protected final String testCaseName;
     private final boolean useXQueryParser;
     /** The configuration for the Rumble runtimes spinned up for this test case. */
-    private RumbleRuntimeConfiguration rumbleConfig;
+    private final RumbleRuntimeConfiguration rumbleConfig;
 
-    public TestBase(TestCase testCase, String testSetName, String testCaseName, boolean useXQueryParser) {
-        this.testCase = testCase;
-        this.testSetName = testSetName;
-        this.testCaseName = testCaseName;
-        this.useXQueryParser = useXQueryParser;
-        this.rumbleConfig = new RumbleRuntimeConfiguration(createConfigurationArguments(useXQueryParser));
+    protected TestBase() {
+        this.useXQueryParser = useXQueryParserFromConfiguration();
+        this.rumbleConfig = new RumbleRuntimeConfiguration(
+                this.useXQueryParser
+                    ? new String[] {
+                        "--output-format",
+                        "json",
+                        "--materialization-cap",
+                        "1000000000",
+                        "--default-language",
+                        "xquery31" }
+                    : new String[] {
+                        "--output-format",
+                        "json",
+                        "--materialization-cap",
+                        "1000000000",
+                        "--default-language",
+                        "jsoniq40" }
+        );
     }
 
-    private static String[] createConfigurationArguments(boolean useXQueryParser) {
-        return new String[] {
-            "--output-format",
-            "json",
-            "--materialization-cap",
-            "1000000000",
-            "--default-language",
-            useXQueryParser ? "xquery31" : "jsoniq40"
-        };
+    public static List<CollectedTestCase> getData(String testSuite) throws Exception {
+        return getData(testSuite, useXQueryParserFromConfiguration());
     }
 
-    public static Iterable<Object[]> getData(String testSuite) throws Exception {
-        return getData(testSuite, false);
-    }
-
-    public static Iterable<Object[]> getData(String testSuite, boolean useXQueryParser) throws Exception {
-        CaseCollector testDriver = new CaseCollector(useXQueryParser);
+    public static List<CollectedTestCase> getData(String testSuite, boolean useXQueryParser) throws Exception {
+        CaseCollector testDriver = new CaseCollector(
+                useXQueryParserFromConfiguration(),
+                TestCaseSelection.fromSystemProperties()
+        );
         testDriver.execute(testSuite);
         return testDriver.getAllTests();
     }
 
-    public void testCase() {
-        if (this.testCase.skipReason != null) {
-            System.out.println("[[category|SKIP]]");
-            assumeTrue(this.testCase.skipReason, false);
+    protected static boolean useXQueryParserFromConfiguration() {
+        String configuredParser = System.getProperty("parser");
+        if (configuredParser == null || configuredParser.isBlank()) {
+            return false;
         }
 
-        String testString = this.testCase.testString;
-        System.out.println("[[originalTest|" + testString + "]]");
+        switch (configuredParser.toLowerCase()) {
+            case "jsoniq":
+                return false;
+            case "xquery":
+                return true;
+            default:
+                throw new IllegalArgumentException(
+                        "Unsupported parser selection '"
+                            + configuredParser
+                            + "'. Use jsoniq or xquery."
+                );
+        }
+    }
 
-        XdmNode assertion = this.testCase.assertion;
-        Environment environment = this.testCase.environment;
-        this.testCase.applyDependenciesTo(this.rumbleConfig);
-        Rumble rumble = new Rumble(rumbleConfig);
-        System.out.println("[[originalAssertion|" + assertion + "]]");
+    protected void testCase(CollectedTestCase collectedTestCase) {
+        TestCase testCase = collectedTestCase.testCase();
+        if (testCase.skipReason != null) {
+            assumeTrue(false, testCase.skipReason);
+        }
+
+        String testString = testCase.testString;
+
+        XdmNode assertion = testCase.assertion;
+        Environment environment = testCase.environment;
         try {
-            if (checkAssertion(testString, assertion, rumble, environment)) {
-                System.out.println("[[category|PASS]]");
-            } else {
-                System.out.println("VERYBAD");
-            }
+            checkAssertion(
+                assertion,
+                new AssertionContext(
+                        testString,
+                        environment,
+                        useXQueryParser,
+                        rumbleConfig,
+                        testCase.xmlVersion,
+                        testCase.defaultFormattingLanguage
+                )
+            );
         } catch (RumbleException e) {
             if (isSkipErrorCode(e.getErrorCode().toString())) {
-                System.out.println("[[category|SKIP]]");
-                assumeTrue("Skip errorcode: " + e.getErrorCode().toString(), false);
+                assumeTrue(false, "Skip errorcode: " + e.getErrorCode().toString());
             } else {
-                System.out.println("[[category|ERROR]]");
                 throw e;
             }
         } catch (AssertionError e) {
-            System.out.println("[[category|FAIL]]");
             throw e;
         } catch (Exception e) {
-            System.out.println("[[category|ERROR]]");
             throw e;
         }
     }
 
-    private List<Item> runQuery(String query, Rumble rumble, Environment environment) {
-        if (environment != null) {
-            query = environment.applyToQuery(query);
-        }
-
-        if (!useXQueryParser) {
-            query = Converter.convert(query);
-        }
-
-        SequenceOfItems queryResult = rumble.runQuery(query);
-        List<Item> resultAsList = new ArrayList<>();
-        queryResult.populateList(resultAsList, 0);
-        return resultAsList;
-    }
-
-    public boolean checkAssertion(
-            String convertedTestString,
-            XdmNode assertion,
-            Rumble rumble,
-            Environment environment
-    ) {
+    private void checkAssertion(XdmNode assertion, AssertionContext context) {
         String tag = assertion.getNodeName().getLocalName();
         String secondQuery;
         List<Item> results;
@@ -123,50 +120,50 @@ public class TestBase {
 
         switch (tag) {
             case "assert-empty":
-                results = runQuery(convertedTestString, rumble, environment);
+                results = context.getPrimaryResult();
                 assertTrue(results.isEmpty());
                 break;
             case "assert":
                 secondQuery = declareResultVariableFromTestExpression(
-                    convertedTestString,
+                    context.getTestString(),
                     assertion.getStringValue()
                 );
-                assertTrueSingleElement(runQuery(secondQuery, rumble, environment));
+                assertTrueSingleElement(context.runQuery(secondQuery));
                 break;
             case "not":
                 secondQuery = declareResultVariableFromTestExpression(
-                    convertedTestString,
+                    context.getTestString(),
                     assertion.getStringValue()
                 );
-                assertFalseSingleElement(runQuery(secondQuery, rumble, environment));
+                assertFalseSingleElement(context.runQuery(secondQuery));
                 break;
             case "assert-eq":
                 String assertionQuery = "(" + assertion.getStringValue() + ")";
-                List<Item> testCaseResult = runQuery(convertedTestString, rumble, environment);
-                List<Item> assertionResult = runQuery(assertionQuery, rumble, environment);
+                List<Item> testCaseResult = context.getPrimaryResult();
+                List<Item> assertionResult = context.runQuery(assertionQuery);
 
                 assertEquals(testCaseResult, assertionResult);
                 break;
             case "assert-deep-eq":
-                parts = splitLeadingDeclarations(convertedTestString);
+                parts = splitLeadingDeclarations(context.getTestString());
                 secondQuery = parts.prolog
                     + "\ndeep-equal(("
                     + parts.body
                     + "), ("
                     + assertion.getStringValue()
                     + "))";
-                assertTrueSingleElement(runQuery(secondQuery, rumble, environment));
+                assertTrueSingleElement(context.runQuery(secondQuery));
                 break;
             case "assert-true":
-                results = runQuery(convertedTestString, rumble, environment);
+                results = context.getPrimaryResult();
                 assertTrueSingleElement(results);
                 break;
             case "assert-false":
-                results = runQuery(convertedTestString, rumble, environment);
+                results = context.getPrimaryResult();
                 assertFalseSingleElement(results);
                 break;
             case "assert-string-value":
-                results = runQuery(convertedTestString, rumble, environment);
+                results = context.getPrimaryResult();
                 String actual = results.stream().map(Item::serialize).collect(Collectors.joining(" "));
 
                 String expected = assertion.getStringValue();
@@ -178,23 +175,19 @@ public class TestBase {
                     expected = normalizeSpace(expected);
                 }
 
-                assertEquals("Wrong string value", expected, actual);
+                assertEquals(expected, actual, "Wrong string value");
                 break;
             case "all-of":
                 for (XdmNode individualAssertion : assertion.children("*")) {
-                    this.testCase.applyDependenciesTo(this.rumbleConfig);
-                    Rumble subRumble = new Rumble(rumbleConfig);
-                    checkAssertion(convertedTestString, individualAssertion, subRumble, environment);
+                    checkAssertion(individualAssertion, context);
                 }
                 break;
             case "any-of":
                 boolean success = false;
                 List<Throwable> errors = new ArrayList<>();
                 for (XdmNode individualAssertion : assertion.children("*")) {
-                    this.testCase.applyDependenciesTo(this.rumbleConfig);
-                    Rumble subRumble = new Rumble(rumbleConfig);
                     try {
-                        checkAssertion(convertedTestString, individualAssertion, subRumble, environment);
+                        checkAssertion(individualAssertion, context);
                         success = true;
                     } catch (RumbleException e) {
                         if (isSkipErrorCode(e.getErrorCode().toString())) {
@@ -203,59 +196,39 @@ public class TestBase {
                         } else {
                             errors.add(e);
                         }
-                    } catch (AssumptionViolatedException e) {
-                        // specific assertion has skip reason, we want to pass that on and skip the whole test
+                    } catch (TestAbortedException e) {
+                        // specific assertion has skip reason, we want to pass that on and skip the
+                        // whole test
                         throw e;
                     } catch (AssertionError | Exception e) {
                         // specific assertion has failed
                         errors.add(e);
                     }
                 }
-                System.out.println("[[ERRORS|" + errors + "]]");
-                assertTrue("All assertions in any-of failed", success);
+                assertTrue(success, "All assertions in any-of failed");
                 break;
             case "assert-type":
-                parts = splitLeadingDeclarations(convertedTestString);
+                parts = splitLeadingDeclarations(context.getTestString());
                 secondQuery = parts.prolog
                     + "\n("
                     + parts.body
                     + ") instance of "
                     + assertion.getStringValue();
-                assertTrueSingleElement(runQuery(secondQuery, rumble, environment));
+                assertTrueSingleElement(context.runQuery(secondQuery));
                 break;
             case "assert-count":
-                results = runQuery(convertedTestString, rumble, environment);
+                results = context.getPrimaryResult();
                 int count = Integer.parseInt(assertion.getStringValue());
-                assertEquals("Wrong count", results.size(), count);
+                assertEquals(count, results.size(), "Wrong count");
                 break;
             case "assert-permutation":
-                assertPermutation(convertedTestString, assertion, rumble, environment);
+                assertPermutation(assertion, context);
                 break;
             case "error":
-                try {
-                    runQuery(convertedTestString, rumble, environment);
-                    fail("Expected to throw error but ran without error");
-                } catch (RumbleException re) {
-                    if (isSkipErrorCode(re.getErrorCode().toString())) {
-                        // we want these to be caught outside so we skip the testcase
-                        throw re;
-                    }
-
-                    String expectedErrorCode = assertion.attribute("code");
-                    if (expectedErrorCode.equals("*")) {
-                        // any error code is fine, we just wanted to check that an error is thrown
-                        return true;
-                    }
-
-                    assertEquals(
-                        "Wrong error code",
-                        expectedErrorCode,
-                        re.getErrorCode().toString()
-                    );
-                }
+                assertExpectedError(assertion, context.getPrimaryEvaluation());
                 break;
             case "assert-xml":
-                results = runQuery(convertedTestString, rumble, environment);
+                results = context.getPrimaryResult();
                 String actualXml = "<assert-xml>"
                     + results.stream().map(Item::serialize).collect(Collectors.joining(""))
                     + "</assert-xml>";
@@ -266,15 +239,15 @@ public class TestBase {
                     .ignoreWhitespace()
                     .build();
 
-                assertFalse("Expected vs actual XML are different:\n" + diff.toString(), diff.hasDifferences());
+                assertFalse(diff.hasDifferences(), "Expected vs actual XML are different:\n" + diff.toString());
                 break;
             case "assert-serialization":
-                String actualSerialization = serializeQueryResult(convertedTestString, rumble, environment);
+                String actualSerialization = serializeQueryResult(context);
                 String expectedSerialization = assertion.getStringValue();
-                assertEquals("Wrong serialization", expectedSerialization, actualSerialization);
+                assertEquals(expectedSerialization, actualSerialization, "Wrong serialization");
                 break;
             case "serialization-matches":
-                String serializedResult = serializeQueryResult(convertedTestString, rumble, environment);
+                String serializedResult = serializeQueryResult(context);
                 String patternString = assertion.getStringValue();
                 String flags = assertion.attribute("flags");
 
@@ -300,91 +273,89 @@ public class TestBase {
 
                 Pattern regex = Pattern.compile(patternString, patternFlags);
                 Matcher matcher = regex.matcher(serializedResult);
-                assertTrue("Serialization does not match regex", matcher.find());
+                assertTrue(matcher.find(), "Serialization does not match regex");
                 break;
             case "assert-serialization-error":
-                try {
-                    runQuery(convertedTestString, rumble, environment);
-                    fail("Expected to throw error but ran without error");
-                } catch (RumbleException re) {
-                    if (isSkipErrorCode(re.getErrorCode().toString())) {
-                        // we want these to be caught outside so we skip the testcase
-                        throw re;
-                    }
-
-                    assertEquals(
-                        "Wrong error code",
-                        assertion.attribute("code"),
-                        re.getErrorCode().toString()
-                    );
-                }
+                assertExpectedError(assertion, context.getPrimaryEvaluation());
                 break;
             default:
                 // should never happen unless they add a new assertion type
-                System.out.println("[[category|SKIP]]");
-                assumeTrue(tag + " assertion is new and not implemented", false);
+                assumeTrue(false, tag + " assertion is new and not implemented");
                 break;
         }
-        return true;
+    }
+
+    private void assertExpectedError(XdmNode assertion, QueryEvaluation evaluation) {
+        RumbleException error = evaluation.getError();
+        if (error == null) {
+            fail("Expected to throw error but ran without error");
+        }
+
+        if (isSkipErrorCode(error.getErrorCode().toString())) {
+            // we want these to be caught outside so we skip the testcase
+            throw error;
+        }
+
+        String expectedErrorCode = assertion.attribute("code");
+        if (!expectedErrorCode.equals("*")) {
+            assertEquals(expectedErrorCode, error.getErrorCode().toString(), "Wrong error code");
+        }
     }
 
     private void assertTrueSingleElement(List<Item> results) {
-        assertEquals("Not exactly one result", 1, results.size());
-        assertTrue("Result is not boolean", results.get(0).isBoolean());
-        assertTrue("Result is false", results.get(0).getBooleanValue());
+        assertEquals(1, results.size(), "Not exactly one result");
+        assertTrue(results.get(0).isBoolean(), "Result is not boolean");
+        assertTrue(results.get(0).getBooleanValue(), "Result is false");
     }
 
     private void assertFalseSingleElement(List<Item> results) {
-        assertEquals("Not exactly one result", 1, results.size());
-        assertTrue("Result is not boolean", results.get(0).isBoolean());
-        assertFalse("Result is true", results.get(0).getBooleanValue());
+        assertEquals(1, results.size(), "Not exactly one result");
+        assertTrue(results.get(0).isBoolean(), "Result is not boolean");
+        assertFalse(results.get(0).getBooleanValue(), "Result is true");
     }
 
     /**
-     * Runs the given query and returns the concatenated serialization of all items in the result.
+     * Runs the given query and returns the concatenated serialization of all items
+     * in the result.
      */
-    private String serializeQueryResult(String convertedTestString, Rumble rumble, Environment environment) {
-        List<Item> results = runQuery(convertedTestString, rumble, environment);
-        return results.stream().map(Item::serialize).collect(Collectors.joining());
+    private String serializeQueryResult(AssertionContext context) {
+        return context.getPrimaryResult().stream().map(Item::serialize).collect(Collectors.joining());
     }
 
     // TODO check this, I just took it over for now
     private void assertPermutation(
-            String convertedTestString,
             XdmNode assertion,
-            Rumble rumble,
-            Environment environment
+            AssertionContext context
     ) {
-        String assertExpression =
-            "declare function allpermutations($sequence as item*) as array* {\n"
-                + " if(count($sequence) le 1)\n"
-                + " then\n"
-                + "   [ $sequence ]\n"
-                + " else\n"
-                + "   for $i in 1 to count($sequence)\n"
-                + "   let $first := $sequence[$i]\n"
-                + "   let $others :=\n"
-                + "     for $s in $sequence\n"
-                + "     count $c\n"
-                + "     where $c ne $i\n"
-                + "     return $s\n"
-                + "   for $recursive in allpermutations($others)\n"
-                + "   return [ $first, $recursive[]]\n"
-                + "};\n"
-                + "\n"
-                + "some $a in allpermutations("
-                + convertedTestString
-                + ")"
-                + "satisfies deep-equal($a[], (("
-                + assertion.getStringValue()
-                + ")))";
-        List<Item> results = runQuery(assertExpression, rumble, environment);
+        String assertExpression = "declare function allpermutations($sequence as item*) as array* {\n"
+            + " if(count($sequence) le 1)\n"
+            + " then\n"
+            + "   [ $sequence ]\n"
+            + " else\n"
+            + "   for $i in 1 to count($sequence)\n"
+            + "   let $first := $sequence[$i]\n"
+            + "   let $others :=\n"
+            + "     for $s in $sequence\n"
+            + "     count $c\n"
+            + "     where $c ne $i\n"
+            + "     return $s\n"
+            + "   for $recursive in allpermutations($others)\n"
+            + "   return [ $first, $recursive[]]\n"
+            + "};\n"
+            + "\n"
+            + "some $a in allpermutations("
+            + context.getTestString()
+            + ")"
+            + "satisfies deep-equal($a[], (("
+            + assertion.getStringValue()
+            + ")))";
+        List<Item> results = context.runQuery(assertExpression);
         assertTrueSingleElement(results);
     }
 
     /**
      * Returns true if the error code is a skip error code.
-     * 
+     *
      * @param errorCode The error code to check.
      * @return True if the error code is a skip error code, false otherwise.
      */
