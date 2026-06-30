@@ -11,6 +11,7 @@ public class TestCase {
     public XdmNode assertion;
     public String skipReason;
     public final String xmlVersion;
+    public final String defaultFormattingLanguage;
     public Environment environment;
 
     public TestCase(
@@ -18,12 +19,14 @@ public class TestCase {
             XdmNode assertion,
             String skipReason,
             Environment environment,
-            String xmlVersion
+            String xmlVersion,
+            String defaultFormattingLanguage
     ) {
         this.testString = testString;
         this.assertion = assertion;
         this.skipReason = skipReason;
         this.environment = environment;
         this.xmlVersion = xmlVersion;
+        this.defaultFormattingLanguage = defaultFormattingLanguage;
     }
 }

@@ -10,11 +10,14 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.nio.file.Path;
 
 public class Environment {
     private final Map<String, String> resourceLookup = new HashMap<>();
     private final Map<String, String> paramLookup = new HashMap<>();
+    private final Map<String, String> externalParamLookup = new HashMap<>();
     private final Map<String, String> roleLookup = new HashMap<>();
 
     private final Map<String, String> namespaceLookup = new HashMap<>();
@@ -46,9 +49,12 @@ public class Environment {
         for (XdmNode param : environmentNode.children("param")) {
             String name = param.attribute("name");
             String select = param.attribute("select");
-            String type = param.attribute("as"); // TODO: implement if needed
-            String declared = param.attribute("declared"); // TODO: implement if needed
-            paramLookup.put(name, select);
+            String declared = param.attribute("declared");
+            if ("true".equals(declared)) {
+                externalParamLookup.put(name, select);
+            } else {
+                paramLookup.put(name, select);
+            }
         }
     }
 
@@ -166,6 +172,9 @@ public class Environment {
      * @return a String containing the updated query with the context-item, params and resources set.
      */
     public String applyToQuery(String query) {
+        // Variables marked declared="true" are declared as external in the test case itself;
+        query = bindExternalParams(query);
+
         StringBuilder declarations = new StringBuilder();
         declarations.append(createDecimalFormatAndNamespaceProlog());
         for (Map.Entry<String, String> r : roleLookup.entrySet()) {
@@ -193,6 +202,30 @@ public class Environment {
         return newQueryString;
     }
 
+
+    private String bindExternalParams(String query) {
+        String result = query;
+        for (Map.Entry<String, String> param : externalParamLookup.entrySet()) {
+            result = injectExternalDefault(result, param.getKey(), param.getValue());
+        }
+        return result;
+    }
+
+    private String injectExternalDefault(String query, String name, String select) {
+        Pattern pattern = Pattern.compile(
+            "(declare\\s+variable\\s+\\$" + Pattern.quote(name) + "(?![\\w.-])[^;]*?\\bexternal\\b)(\\s*:=)?"
+        );
+        Matcher matcher = pattern.matcher(query);
+        StringBuilder sb = new StringBuilder();
+        while (matcher.find()) {
+            String replacement = matcher.group(2) != null
+                ? matcher.group()
+                : matcher.group(1) + " := (" + select + ")";
+            matcher.appendReplacement(sb, Matcher.quoteReplacement(replacement));
+        }
+        matcher.appendTail(sb);
+        return sb.toString();
+    }
 
     public String createDecimalFormatAndNamespaceProlog() {
         if (namespaceLookup.isEmpty() && decimalFormatDeclarations.isEmpty()) {

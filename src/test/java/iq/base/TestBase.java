@@ -95,7 +95,8 @@ public class TestBase {
                         environment,
                         useXQueryParser,
                         rumbleConfig,
-                        testCase.xmlVersion
+                        testCase.xmlVersion,
+                        testCase.defaultFormattingLanguage
                 )
             );
         } catch (RumbleException e) {
@@ -115,6 +116,7 @@ public class TestBase {
         String tag = assertion.getNodeName().getLocalName();
         String secondQuery;
         List<Item> results;
+        QueryParts parts = null;
 
         switch (tag) {
             case "assert-empty":
@@ -122,17 +124,17 @@ public class TestBase {
                 assertTrue(results.isEmpty());
                 break;
             case "assert":
-                secondQuery = "declare variable $result := ("
-                    + context.getTestString()
-                    + "); "
-                    + assertion.getStringValue();
+                secondQuery = declareResultVariableFromTestExpression(
+                    context.getTestString(),
+                    assertion.getStringValue()
+                );
                 assertTrueSingleElement(context.runQuery(secondQuery));
                 break;
             case "not":
-                secondQuery = "declare variable $result := ("
-                    + context.getTestString()
-                    + "); "
-                    + assertion.getStringValue();
+                secondQuery = declareResultVariableFromTestExpression(
+                    context.getTestString(),
+                    assertion.getStringValue()
+                );
                 assertFalseSingleElement(context.runQuery(secondQuery));
                 break;
             case "assert-eq":
@@ -143,8 +145,10 @@ public class TestBase {
                 assertEquals(testCaseResult, assertionResult);
                 break;
             case "assert-deep-eq":
-                secondQuery = "deep-equal(("
-                    + context.getTestString()
+                parts = splitLeadingDeclarations(context.getTestString());
+                secondQuery = parts.prolog
+                    + "\ndeep-equal(("
+                    + parts.body
                     + "), ("
                     + assertion.getStringValue()
                     + "))";
@@ -204,8 +208,10 @@ public class TestBase {
                 assertTrue(success, "All assertions in any-of failed");
                 break;
             case "assert-type":
-                secondQuery = "("
-                    + context.getTestString()
+                parts = splitLeadingDeclarations(context.getTestString());
+                secondQuery = parts.prolog
+                    + "\n("
+                    + parts.body
                     + ") instance of "
                     + assertion.getStringValue();
                 assertTrueSingleElement(context.runQuery(secondQuery));
@@ -365,6 +371,43 @@ public class TestBase {
             return "";
         }
         return s.replaceAll("\\s+", " ").trim();
+    }
+
+
+    private static class QueryParts {
+        final String prolog;
+        final String body;
+
+        QueryParts(String prolog, String body) {
+            this.prolog = prolog;
+            this.body = body;
+        }
+    }
+
+    private static final Pattern LEADING_DECLARATION =
+        Pattern.compile("\\G\\s*declare\\s+[^;]*;\\s*", Pattern.DOTALL);
+
+    private static QueryParts splitLeadingDeclarations(String query) {
+        Matcher matcher = LEADING_DECLARATION.matcher(query);
+
+        int end = 0;
+        while (matcher.find()) {
+            end = matcher.end();
+        }
+
+        return new QueryParts(
+                query.substring(0, end),
+                query.substring(end)
+        );
+    }
+
+    private static String declareResultVariableFromTestExpression(String query, String assertionExpression) {
+        QueryParts parts = splitLeadingDeclarations(query);
+        return parts.prolog
+            + "\ndeclare variable $result := ("
+            + parts.body
+            + ");\n"
+            + assertionExpression;
     }
 
 }

@@ -23,6 +23,7 @@ class AssertionContext {
     private final boolean useXQueryParser;
     private final RumbleRuntimeConfiguration rumbleConfig;
     private final String xmlVersion;
+    private final String defaultFormattingLanguage;
     private QueryEvaluation primaryEvaluation;
 
     AssertionContext(
@@ -30,7 +31,8 @@ class AssertionContext {
             Environment environment,
             boolean useXQueryParser,
             RumbleRuntimeConfiguration rumbleConfig,
-            String xmlVersion
+            String xmlVersion,
+            String defaultFormattingLanguage
     ) {
         /// This is the test
         this.testString = testString;
@@ -38,6 +40,7 @@ class AssertionContext {
         this.useXQueryParser = useXQueryParser;
         this.rumbleConfig = rumbleConfig;
         this.xmlVersion = xmlVersion;
+        this.defaultFormattingLanguage = defaultFormattingLanguage;
     }
 
     String getTestString() {
@@ -76,14 +79,14 @@ class AssertionContext {
             query = Converter.convert(query);
         }
 
-        applyXmlVersionDependencyToConfig();
+        applyDependenciesToConfig();
         SequenceOfItems queryResult = new Rumble(this.rumbleConfig).runQuery(query);
         List<Item> resultAsList = new ArrayList<>();
         queryResult.populateList(resultAsList, 0);
         return resultAsList;
     }
 
-    private void applyXmlVersionDependencyToConfig() {
+    private void applyDependenciesToConfig() {
         this.rumbleConfig.setXmlVersion("1.0");
 
         String v = this.xmlVersion;
@@ -95,6 +98,10 @@ class AssertionContext {
             this.rumbleConfig.setXmlVersion("1.1");
         } else if ("1.0".equals(v)) {
             this.rumbleConfig.setXmlVersion("1.0");
+        }
+
+        if (this.defaultFormattingLanguage != null) {
+            this.rumbleConfig.setDefaultFormattingLanguage(this.defaultFormattingLanguage);
         }
     }
 }
