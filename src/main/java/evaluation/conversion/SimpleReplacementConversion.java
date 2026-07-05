@@ -8,9 +8,6 @@ final class SimpleReplacementConversion implements ConversionPass {
     private static final Map<String, String> CONVERSIONS = new LinkedHashMap<>();
 
     static {
-        // Also array(+), array(?), array()*, array()+, array()? do not exist
-        CONVERSIONS.put("array(*)", "array");
-
         // Will cover all the subclasses - item()+, item()* and item()+. item(anything here) does not exist
         CONVERSIONS.put("item()", "item");
 
@@ -22,7 +19,6 @@ final class SimpleReplacementConversion implements ConversionPass {
         CONVERSIONS.put("not()", "fn:not()");
         CONVERSIONS.put("fn:fn:not()", "fn:not()");
 
-        CONVERSIONS.put("map(*)", "object");
         CONVERSIONS.put("map{", "{");
         CONVERSIONS.put("map {", " {");
 
