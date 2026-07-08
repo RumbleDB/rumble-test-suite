@@ -5,7 +5,7 @@ import evaluation.conversion.Converter;
 import org.rumbledb.api.Item;
 import org.rumbledb.api.Rumble;
 import org.rumbledb.api.SequenceOfItems;
-import org.rumbledb.config.RumbleRuntimeConfiguration;
+import org.rumbledb.config.RumbleConfiguration;
 import org.rumbledb.exceptions.RumbleException;
 
 import java.util.ArrayList;
@@ -21,7 +21,7 @@ class AssertionContext {
     private final String testString;
     private final Environment environment;
     private final boolean useXQueryParser;
-    private final RumbleRuntimeConfiguration rumbleConfig;
+    private final RumbleConfiguration rumbleConfig;
     private final String xmlVersion;
     private final String defaultFormattingLanguage;
     private QueryEvaluation primaryEvaluation;
@@ -30,7 +30,7 @@ class AssertionContext {
             String testString,
             Environment environment,
             boolean useXQueryParser,
-            RumbleRuntimeConfiguration rumbleConfig,
+            RumbleConfiguration rumbleConfig,
             String xmlVersion,
             String defaultFormattingLanguage
     ) {
@@ -79,15 +79,17 @@ class AssertionContext {
             query = Converter.convert(query);
         }
 
-        applyDependenciesToConfig();
-        SequenceOfItems queryResult = new Rumble(this.rumbleConfig).runQuery(query);
+        RumbleConfiguration updatedConfig = applyDependenciesToConfig(this.rumbleConfig);
+        SequenceOfItems queryResult = new Rumble(updatedConfig).runQuery(query);
         List<Item> resultAsList = new ArrayList<>();
         queryResult.populateList(resultAsList, 0);
         return resultAsList;
     }
 
-    private void applyDependenciesToConfig() {
-        this.rumbleConfig.setXmlVersion("1.0");
+    private RumbleConfiguration applyDependenciesToConfig(RumbleConfiguration config) {
+        RumbleConfiguration.RumbleConfigurationBuilder builder = config.toBuilder();
+
+        builder.configureSemantics(s -> s.xmlVersion("1.0"));
 
         String v = this.xmlVersion;
         if (v != null) {
@@ -95,14 +97,15 @@ class AssertionContext {
         }
 
         if ("1.1".equals(v)) {
-            this.rumbleConfig.setXmlVersion("1.1");
+            builder.configureSemantics(s -> s.xmlVersion("1.1"));
         } else if ("1.0".equals(v)) {
-            this.rumbleConfig.setXmlVersion("1.0");
+            builder.configureSemantics(s -> s.xmlVersion("1.0"));
         }
 
         if (this.defaultFormattingLanguage != null) {
-            this.rumbleConfig.setDefaultFormattingLanguage(this.defaultFormattingLanguage);
+            builder.configureFormatting(f -> f.defaultFormattingLanguage(this.defaultFormattingLanguage));
         }
+        return builder.build();
     }
 }
 
