@@ -8,9 +8,6 @@ final class SimpleReplacementConversion implements ConversionPass {
     private static final Map<String, String> CONVERSIONS = new LinkedHashMap<>();
 
     static {
-        // Will cover all the subclasses - item()+, item()* and item()+. item(anything here) does not exist
-        CONVERSIONS.put("item()", "item");
-
         // We need fn to specify we want the function
         CONVERSIONS.put("true()", "fn:true()");
         CONVERSIONS.put("fn:fn:true()", "fn:true()"); // not very nice but works for now
@@ -18,9 +15,6 @@ final class SimpleReplacementConversion implements ConversionPass {
         CONVERSIONS.put("fn:fn:false()", "fn:false()");
         CONVERSIONS.put("not()", "fn:not()");
         CONVERSIONS.put("fn:fn:not()", "fn:not()");
-
-        CONVERSIONS.put("map{", "{");
-        CONVERSIONS.put("map {", " {");
 
         // if it has a space, it is context item for sure
         CONVERSIONS.put(". ", "$$ ");

@@ -96,7 +96,8 @@ public class TestBase {
                         useXQueryParser,
                         rumbleConfig,
                         testCase.xmlVersion,
-                        testCase.defaultFormattingLanguage
+                        testCase.defaultFormattingLanguage,
+                        testCase.staticBaseUri
                 )
             );
         } catch (RumbleException e) {
