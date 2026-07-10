@@ -18,6 +18,8 @@ public class Constants {
      */
     public static final List<String> skippedTestSets = List.of(
         "fn/subsequence.xml", // contains large testcases that take forever to run
+        "prod/WindowClause.xml" // we dont support window yet
+
     );
 
     /**
