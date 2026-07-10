@@ -407,8 +407,9 @@ public class TestBase {
         return parts.prolog
             + "\ndeclare variable $result := ("
             + parts.body
-            + ");\n"
-            + assertionExpression;
+            + ");\nboolean("
+            + assertionExpression
+            + ")";
     }
 
 }
