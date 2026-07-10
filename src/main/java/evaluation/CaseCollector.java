@@ -197,9 +197,6 @@ public class CaseCollector {
 
         // check for possible skip reasons
         String skipReason = null;
-        if (environment != null && environment.isUnsupportedCollation()) {
-            skipReason = "unsupported collation";
-        }
         DependencyCheckResult dependencies = checkDependencies(testCase);
         if (dependencies.skipReason != null) {
             skipReason = "dependency " + dependencies.skipReason;
