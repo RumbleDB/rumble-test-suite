@@ -17,7 +17,7 @@ public class Constants {
      * Testsets that we decide to skip fully
      */
     public static final List<String> skippedTestSets = List.of(
-        "fn/subsequence.xml", // contains large testcases that take forever to run
+        "fn/subsequence.xml" // contains large testcases that take forever to run
     );
 
     /**
