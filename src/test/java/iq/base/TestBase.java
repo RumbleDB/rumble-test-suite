@@ -165,7 +165,7 @@ public class TestBase {
                 break;
             case "assert-string-value":
                 results = context.getPrimaryResult();
-                String actual = results.stream().map(Item::serialize).collect(Collectors.joining(" "));
+                String actual = results.stream().map(Item::getStringValue).collect(Collectors.joining(" "));
 
                 String expected = assertion.getStringValue();
 
