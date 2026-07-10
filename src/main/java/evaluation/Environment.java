@@ -25,7 +25,6 @@ public class Environment {
 
     private final List<String> decimalFormatDeclarations = new ArrayList<>();
 
-    private boolean unsupportedCollation = false;
     private boolean staticBaseUriUndefined = false;
 
     public Environment(XdmNode environmentNode, Path envPath) {
@@ -33,16 +32,6 @@ public class Environment {
         initNamespaces(environmentNode);
         initDecimalFormats(environmentNode);
         initStaticBaseUri(environmentNode);
-
-        Iterator<XdmNode> collation = environmentNode.children("collation").iterator();
-        if (
-            collation.hasNext()
-                && !collation.next()
-                    .attribute("uri")
-                    .equals("http://www.w3.org/2005/xpath-functions/collation/codepoint")
-        ) {
-            unsupportedCollation = true;
-        }
         initResources(environmentNode, envPath);
         initSources(environmentNode, envPath);
     }
@@ -416,9 +405,5 @@ public class Environment {
             }
         }
         return query.length();
-    }
-
-    public boolean isUnsupportedCollation() {
-        return unsupportedCollation;
     }
 }
