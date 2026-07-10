@@ -154,13 +154,18 @@ public class CaseCollector {
         ) {
             allTests.add(
                 new CollectedTestCase(
-                        new TestCase(null, null, "Testcase/set on skiplist", null, null, null),
+                        new TestCase(null, null, "Testcase/set on skiplist", null, null, null, null),
                         currentTestSet,
                         currentTestCase
                 )
             );
             return;
         }
+
+        // the directory containing this test-set's own XML file; relative resource
+        // hrefs in the test query must resolve against this
+        Path testSetDirectory = testsRepositoryDirectoryPath.resolve(currentTestSet).getParent();
+        String staticBaseUri = toDirectoryUri(testSetDirectory);
 
         // get the relevant environment for the testcase
         Environment environment = null;
@@ -180,16 +185,18 @@ public class CaseCollector {
                 // environment defined in testcase
                 environment = new Environment(
                         environments.get(0),
-                        testsRepositoryDirectoryPath.resolve(currentTestSet).getParent() // looks bad but works for now
+                        testSetDirectory
                 );
             }
         }
 
+        if (environment != null && environment.isStaticBaseUriUndefined()) {
+            // the test case requires that no static base URI is available
+            staticBaseUri = null;
+        }
+
         // check for possible skip reasons
         String skipReason = null;
-        if (environment != null && environment.isUnsupportedCollation()) {
-            skipReason = "unsupported collation";
-        }
         DependencyCheckResult dependencies = checkDependencies(testCase);
         if (dependencies.skipReason != null) {
             skipReason = "dependency " + dependencies.skipReason;
@@ -206,12 +213,21 @@ public class CaseCollector {
                             skipReason,
                             environment,
                             dependencies.xmlVersion,
-                            dependencies.defaultFormattingLanguage
+                            dependencies.defaultFormattingLanguage,
+                            staticBaseUri
                     ),
                     currentTestSet,
                     currentTestCase
             )
         );
+    }
+
+    private static String toDirectoryUri(Path directory) {
+        String uri = directory.toUri().toString();
+        if (!uri.endsWith("/")) {
+            uri += "/";
+        }
+        return uri + ".";
     }
 
     /**

@@ -13,6 +13,7 @@ public class TestCase {
     public final String xmlVersion;
     public final String defaultFormattingLanguage;
     public Environment environment;
+    public final String staticBaseUri;
 
     public TestCase(
             String testString,
@@ -20,7 +21,8 @@ public class TestCase {
             String skipReason,
             Environment environment,
             String xmlVersion,
-            String defaultFormattingLanguage
+            String defaultFormattingLanguage,
+            String staticBaseUri
     ) {
         this.testString = testString;
         this.assertion = assertion;
@@ -28,5 +30,6 @@ public class TestCase {
         this.environment = environment;
         this.xmlVersion = xmlVersion;
         this.defaultFormattingLanguage = defaultFormattingLanguage;
+        this.staticBaseUri = staticBaseUri;
     }
 }

@@ -25,22 +25,13 @@ public class Environment {
 
     private final List<String> decimalFormatDeclarations = new ArrayList<>();
 
-    private boolean unsupportedCollation = false;
+    private boolean staticBaseUriUndefined = false;
 
     public Environment(XdmNode environmentNode, Path envPath) {
         initParams(environmentNode);
         initNamespaces(environmentNode);
         initDecimalFormats(environmentNode);
-
-        Iterator<XdmNode> collation = environmentNode.children("collation").iterator();
-        if (
-            collation.hasNext()
-                && !collation.next()
-                    .attribute("uri")
-                    .equals("http://www.w3.org/2005/xpath-functions/collation/codepoint")
-        ) {
-            unsupportedCollation = true;
-        }
+        initStaticBaseUri(environmentNode);
         initResources(environmentNode, envPath);
         initSources(environmentNode, envPath);
     }
@@ -134,6 +125,18 @@ public class Environment {
             }
         }
         return null;
+    }
+
+
+    private void initStaticBaseUri(XdmNode environmentNode) {
+        Iterator<XdmNode> staticBaseUri = environmentNode.children("static-base-uri").iterator();
+        if (staticBaseUri.hasNext() && "#UNDEFINED".equals(staticBaseUri.next().attribute("uri"))) {
+            staticBaseUriUndefined = true;
+        }
+    }
+
+    public boolean isStaticBaseUriUndefined() {
+        return staticBaseUriUndefined;
     }
 
     private void initResources(XdmNode environmentNode, Path envPath) {
@@ -402,9 +405,5 @@ public class Environment {
             }
         }
         return query.length();
-    }
-
-    public boolean isUnsupportedCollation() {
-        return unsupportedCollation;
     }
 }
