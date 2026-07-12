@@ -26,6 +26,7 @@ public class Environment {
     private final List<String> decimalFormatDeclarations = new ArrayList<>();
 
     private boolean staticBaseUriUndefined = false;
+    private String staticBaseUri = null;
 
     public Environment(XdmNode environmentNode, Path envPath) {
         initParams(environmentNode);
@@ -129,14 +130,23 @@ public class Environment {
 
 
     private void initStaticBaseUri(XdmNode environmentNode) {
-        Iterator<XdmNode> staticBaseUri = environmentNode.children("static-base-uri").iterator();
-        if (staticBaseUri.hasNext() && "#UNDEFINED".equals(staticBaseUri.next().attribute("uri"))) {
-            staticBaseUriUndefined = true;
+        Iterator<XdmNode> staticBaseUriNodes = environmentNode.children("static-base-uri").iterator();
+        if (staticBaseUriNodes.hasNext()) {
+            String uri = staticBaseUriNodes.next().attribute("uri");
+            if ("#UNDEFINED".equals(uri)) {
+                staticBaseUriUndefined = true;
+            } else {
+                staticBaseUri = uri;
+            }
         }
     }
 
     public boolean isStaticBaseUriUndefined() {
         return staticBaseUriUndefined;
+    }
+
+    public String getStaticBaseUri() {
+        return staticBaseUri;
     }
 
     private void initResources(XdmNode environmentNode, Path envPath) {
