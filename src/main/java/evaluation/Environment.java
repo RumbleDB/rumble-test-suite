@@ -154,6 +154,7 @@ public class Environment {
         for (XdmNode resource : resources) {
             String file = envPath
                 .resolve(resource.attribute("file"))
+                .toUri()
                 .toString();
             String uri = resource.attribute("uri");
             resourceLookup.put(uri, file);
@@ -165,6 +166,7 @@ public class Environment {
         for (XdmNode source : sources) {
             String file = envPath
                 .resolve(source.attribute("file"))
+                .toUri()
                 .toString();
             String uri = source.attribute("uri");
             String role = source.attribute("role");
