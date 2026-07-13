@@ -26,6 +26,7 @@ public class Environment {
     private final List<String> decimalFormatDeclarations = new ArrayList<>();
 
     private boolean staticBaseUriUndefined = false;
+    private String staticBaseUri = null;
 
     public Environment(XdmNode environmentNode, Path envPath) {
         initParams(environmentNode);
@@ -129,9 +130,14 @@ public class Environment {
 
 
     private void initStaticBaseUri(XdmNode environmentNode) {
-        Iterator<XdmNode> staticBaseUri = environmentNode.children("static-base-uri").iterator();
-        if (staticBaseUri.hasNext() && "#UNDEFINED".equals(staticBaseUri.next().attribute("uri"))) {
-            staticBaseUriUndefined = true;
+        Iterator<XdmNode> staticBaseUriNodes = environmentNode.children("static-base-uri").iterator();
+        if (staticBaseUriNodes.hasNext()) {
+            String uri = staticBaseUriNodes.next().attribute("uri");
+            if ("#UNDEFINED".equals(uri)) {
+                staticBaseUriUndefined = true;
+            } else {
+                staticBaseUri = uri;
+            }
         }
     }
 
@@ -139,11 +145,16 @@ public class Environment {
         return staticBaseUriUndefined;
     }
 
+    public String getStaticBaseUri() {
+        return staticBaseUri;
+    }
+
     private void initResources(XdmNode environmentNode, Path envPath) {
         List<XdmNode> resources = environmentNode.select(Steps.descendant("resource")).asList();
         for (XdmNode resource : resources) {
             String file = envPath
                 .resolve(resource.attribute("file"))
+                .toUri()
                 .toString();
             String uri = resource.attribute("uri");
             resourceLookup.put(uri, file);
@@ -155,6 +166,7 @@ public class Environment {
         for (XdmNode source : sources) {
             String file = envPath
                 .resolve(source.attribute("file"))
+                .toUri()
                 .toString();
             String uri = source.attribute("uri");
             String role = source.attribute("role");

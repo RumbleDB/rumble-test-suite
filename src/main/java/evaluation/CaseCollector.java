@@ -190,9 +190,14 @@ public class CaseCollector {
             }
         }
 
-        if (environment != null && environment.isStaticBaseUriUndefined()) {
-            // the test case requires that no static base URI is available
-            staticBaseUri = null;
+        if (environment != null) {
+            if (environment.isStaticBaseUriUndefined()) {
+                // the test case requires that no static base URI is available
+                staticBaseUri = null;
+            } else if (environment.getStaticBaseUri() != null) {
+                // the environment declares an explicit static base URI that overrides the testset-directory default
+                staticBaseUri = environment.getStaticBaseUri();
+            }
         }
 
         // check for possible skip reasons
