@@ -13,6 +13,16 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class CaseCollector {
+    private static final Set<String> SUPPORTED_SPECS = Set.of(
+        "XP20+",
+        "XP30+",
+        "XP31",
+        "XP31+",
+        "XQ10+",
+        "XQ30+",
+        "XQ31",
+        "XQ31+"
+    );
     private Path testsRepositoryDirectoryPath;
     private String currentTestSet;
     private final boolean useXQueryParser;
@@ -319,27 +329,10 @@ public class CaseCollector {
                 }
                 // Check if not the XSLT (isApplicable original method)
                 case "spec": {
-                    // XP30+,XQ10+,XQ30+,XQ31+,XP31+,XP31,XQ31,XP20,XQ10,XP20+ is ok, XT30+
-                    // not
-                    // if (!value.contains("XSLT") && !value.contains("XT")) {
-                    if (!(value.contains("XQ") || value.contains("XP"))) {
+                    if (!isSupportedSpecDependency(value)) {
                         result.skipReason = type + " " + value;
                         return result;
                     }
-                    // Skip XP30, XQ30
-                    for (String spec : value.trim().split("\\s+")) {
-                        if ("XP30".equals(spec) || "XQ30".equals(spec)) {
-                            result.skipReason = type + " " + value;
-                            return result;
-                        }
-                    }
-
-                    // We can think about adding this because some tests have two versions and we
-                    // generally only try to
-                    // support 3.1. But it removes a lot of tests so for now I think its overkill
-                    // if (value.equals("XQ10+")) {
-                    // return type + " " + value;
-                    // }
                     break;
                 }
                 case "limit": {
@@ -364,6 +357,11 @@ public class CaseCollector {
         }
 
         return result;
+    }
+
+    static boolean isSupportedSpecDependency(String value) {
+        List<String> specs = Arrays.asList(value.trim().split("\\s+"));
+        return specs.stream().anyMatch(SUPPORTED_SPECS::contains);
     }
 
     private static final class DependencyCheckResult {
