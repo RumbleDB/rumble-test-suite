@@ -4,7 +4,6 @@ import evaluation.*;
 import net.sf.saxon.s9api.XdmNode;
 import org.opentest4j.TestAbortedException;
 import org.rumbledb.api.Item;
-import org.rumbledb.config.RumbleRuntimeConfiguration;
 import org.rumbledb.exceptions.RumbleException;
 import org.xmlunit.builder.DiffBuilder;
 import org.xmlunit.diff.Diff;
@@ -20,28 +19,9 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class TestBase {
     private final boolean useXQueryParser;
-    /** The configuration for the Rumble runtimes spinned up for this test case. */
-    private final RumbleRuntimeConfiguration rumbleConfig;
 
     protected TestBase() {
         this.useXQueryParser = useXQueryParserFromConfiguration();
-        this.rumbleConfig = new RumbleRuntimeConfiguration(
-                this.useXQueryParser
-                    ? new String[] {
-                        "--output-format",
-                        "json",
-                        "--materialization-cap",
-                        "1000000000",
-                        "--default-language",
-                        "xquery31" }
-                    : new String[] {
-                        "--output-format",
-                        "json",
-                        "--materialization-cap",
-                        "1000000000",
-                        "--default-language",
-                        "jsoniq40" }
-        );
     }
 
     public static List<CollectedTestCase> getData(String testSuite) throws Exception {
@@ -94,9 +74,9 @@ public class TestBase {
                         testString,
                         environment,
                         useXQueryParser,
-                        rumbleConfig,
                         testCase.xmlVersion,
                         testCase.defaultFormattingLanguage,
+                        testCase.staticTyping,
                         testCase.staticBaseUri
                 )
             );
