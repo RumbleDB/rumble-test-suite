@@ -9,6 +9,7 @@ import org.rumbledb.config.RumbleRuntimeConfiguration;
 import org.rumbledb.exceptions.RumbleException;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -21,9 +22,9 @@ class AssertionContext {
     private final String testString;
     private final Environment environment;
     private final boolean useXQueryParser;
-    private final RumbleRuntimeConfiguration rumbleConfig;
     private final String xmlVersion;
     private final String defaultFormattingLanguage;
+    private final boolean staticTyping;
     private final String staticBaseUri;
     private QueryEvaluation primaryEvaluation;
 
@@ -31,18 +32,18 @@ class AssertionContext {
             String testString,
             Environment environment,
             boolean useXQueryParser,
-            RumbleRuntimeConfiguration rumbleConfig,
             String xmlVersion,
             String defaultFormattingLanguage,
+            boolean staticTyping,
             String staticBaseUri
     ) {
         /// This is the test
         this.testString = testString;
         this.environment = environment;
         this.useXQueryParser = useXQueryParser;
-        this.rumbleConfig = rumbleConfig;
         this.xmlVersion = xmlVersion;
         this.defaultFormattingLanguage = defaultFormattingLanguage;
+        this.staticTyping = staticTyping;
         this.staticBaseUri = staticBaseUri;
     }
 
@@ -82,15 +83,34 @@ class AssertionContext {
             query = Converter.convert(query);
         }
 
-        applyDependenciesToConfig();
-        SequenceOfItems queryResult = new Rumble(this.rumbleConfig).runQuery(query);
+        RumbleRuntimeConfiguration rumbleConfig = createRumbleConfig();
+        applyDependenciesToConfig(rumbleConfig);
+        SequenceOfItems queryResult = new Rumble(rumbleConfig).runQuery(query);
         List<Item> resultAsList = new ArrayList<>();
         queryResult.populateList(resultAsList, 0);
         return resultAsList;
     }
 
-    private void applyDependenciesToConfig() {
-        this.rumbleConfig.setXmlVersion("1.0");
+    private RumbleRuntimeConfiguration createRumbleConfig() {
+        List<String> arguments = new ArrayList<>(
+            Arrays.asList(
+                "--output-format",
+                "json",
+                "--materialization-cap",
+                "1000000000",
+                "--default-language",
+                this.useXQueryParser ? "xquery31" : "jsoniq40"
+            )
+        );
+        if (this.staticTyping) {
+            arguments.add("--static-typing");
+            arguments.add("yes");
+        }
+        return new RumbleRuntimeConfiguration(arguments.toArray(new String[0]));
+    }
+
+    private void applyDependenciesToConfig(RumbleRuntimeConfiguration rumbleConfig) {
+        rumbleConfig.setXmlVersion("1.0");
 
         String v = this.xmlVersion;
         if (v != null) {
@@ -98,18 +118,17 @@ class AssertionContext {
         }
 
         if ("1.1".equals(v)) {
-            this.rumbleConfig.setXmlVersion("1.1");
+            rumbleConfig.setXmlVersion("1.1");
         } else if ("1.0".equals(v)) {
-            this.rumbleConfig.setXmlVersion("1.0");
+            rumbleConfig.setXmlVersion("1.0");
         }
 
         if (this.defaultFormattingLanguage != null) {
-            this.rumbleConfig.setDefaultFormattingLanguage(this.defaultFormattingLanguage);
+            rumbleConfig.setDefaultFormattingLanguage(this.defaultFormattingLanguage);
         }
 
         if (this.staticBaseUri != null) {
-            this.rumbleConfig.setStaticBaseUri(this.staticBaseUri);
+            rumbleConfig.setStaticBaseUri(this.staticBaseUri);
         }
     }
 }
-
