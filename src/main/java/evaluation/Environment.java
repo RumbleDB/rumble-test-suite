@@ -25,22 +25,14 @@ public class Environment {
 
     private final List<String> decimalFormatDeclarations = new ArrayList<>();
 
-    private boolean unsupportedCollation = false;
+    private boolean staticBaseUriUndefined = false;
+    private String staticBaseUri = null;
 
     public Environment(XdmNode environmentNode, Path envPath) {
         initParams(environmentNode);
         initNamespaces(environmentNode);
         initDecimalFormats(environmentNode);
-
-        Iterator<XdmNode> collation = environmentNode.children("collation").iterator();
-        if (
-            collation.hasNext()
-                && !collation.next()
-                    .attribute("uri")
-                    .equals("http://www.w3.org/2005/xpath-functions/collation/codepoint")
-        ) {
-            unsupportedCollation = true;
-        }
+        initStaticBaseUri(environmentNode);
         initResources(environmentNode, envPath);
         initSources(environmentNode, envPath);
     }
@@ -136,11 +128,33 @@ public class Environment {
         return null;
     }
 
+
+    private void initStaticBaseUri(XdmNode environmentNode) {
+        Iterator<XdmNode> staticBaseUriNodes = environmentNode.children("static-base-uri").iterator();
+        if (staticBaseUriNodes.hasNext()) {
+            String uri = staticBaseUriNodes.next().attribute("uri");
+            if ("#UNDEFINED".equals(uri)) {
+                staticBaseUriUndefined = true;
+            } else {
+                staticBaseUri = uri;
+            }
+        }
+    }
+
+    public boolean isStaticBaseUriUndefined() {
+        return staticBaseUriUndefined;
+    }
+
+    public String getStaticBaseUri() {
+        return staticBaseUri;
+    }
+
     private void initResources(XdmNode environmentNode, Path envPath) {
         List<XdmNode> resources = environmentNode.select(Steps.descendant("resource")).asList();
         for (XdmNode resource : resources) {
             String file = envPath
                 .resolve(resource.attribute("file"))
+                .toUri()
                 .toString();
             String uri = resource.attribute("uri");
             resourceLookup.put(uri, file);
@@ -152,6 +166,7 @@ public class Environment {
         for (XdmNode source : sources) {
             String file = envPath
                 .resolve(source.attribute("file"))
+                .toUri()
                 .toString();
             String uri = source.attribute("uri");
             String role = source.attribute("role");
@@ -402,9 +417,5 @@ public class Environment {
             }
         }
         return query.length();
-    }
-
-    public boolean isUnsupportedCollation() {
-        return unsupportedCollation;
     }
 }

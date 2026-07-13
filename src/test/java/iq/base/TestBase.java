@@ -96,7 +96,8 @@ public class TestBase {
                         useXQueryParser,
                         rumbleConfig,
                         testCase.xmlVersion,
-                        testCase.defaultFormattingLanguage
+                        testCase.defaultFormattingLanguage,
+                        testCase.staticBaseUri
                 )
             );
         } catch (RumbleException e) {
@@ -164,7 +165,7 @@ public class TestBase {
                 break;
             case "assert-string-value":
                 results = context.getPrimaryResult();
-                String actual = results.stream().map(Item::serialize).collect(Collectors.joining(" "));
+                String actual = results.stream().map(Item::getStringValue).collect(Collectors.joining(" "));
 
                 String expected = assertion.getStringValue();
 
@@ -406,8 +407,9 @@ public class TestBase {
         return parts.prolog
             + "\ndeclare variable $result := ("
             + parts.body
-            + ");\n"
-            + assertionExpression;
+            + ");\nboolean("
+            + assertionExpression
+            + ")";
     }
 
 }

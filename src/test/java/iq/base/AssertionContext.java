@@ -24,6 +24,7 @@ class AssertionContext {
     private final RumbleRuntimeConfiguration rumbleConfig;
     private final String xmlVersion;
     private final String defaultFormattingLanguage;
+    private final String staticBaseUri;
     private QueryEvaluation primaryEvaluation;
 
     AssertionContext(
@@ -32,7 +33,8 @@ class AssertionContext {
             boolean useXQueryParser,
             RumbleRuntimeConfiguration rumbleConfig,
             String xmlVersion,
-            String defaultFormattingLanguage
+            String defaultFormattingLanguage,
+            String staticBaseUri
     ) {
         /// This is the test
         this.testString = testString;
@@ -41,6 +43,7 @@ class AssertionContext {
         this.rumbleConfig = rumbleConfig;
         this.xmlVersion = xmlVersion;
         this.defaultFormattingLanguage = defaultFormattingLanguage;
+        this.staticBaseUri = staticBaseUri;
     }
 
     String getTestString() {
@@ -102,6 +105,10 @@ class AssertionContext {
 
         if (this.defaultFormattingLanguage != null) {
             this.rumbleConfig.setDefaultFormattingLanguage(this.defaultFormattingLanguage);
+        }
+
+        if (this.staticBaseUri != null) {
+            this.rumbleConfig.setStaticBaseUri(this.staticBaseUri);
         }
     }
 }
