@@ -164,7 +164,7 @@ public class CaseCollector {
         ) {
             allTests.add(
                 new CollectedTestCase(
-                        new TestCase(null, null, "Testcase/set on skiplist", null, null, null, null),
+                        new TestCase(null, null, "Testcase/set on skiplist", null, null, null, false, null),
                         currentTestSet,
                         currentTestCase
                 )
@@ -229,6 +229,7 @@ public class CaseCollector {
                             environment,
                             dependencies.xmlVersion,
                             dependencies.defaultFormattingLanguage,
+                            dependencies.staticTyping,
                             staticBaseUri
                     ),
                     currentTestSet,
@@ -322,8 +323,7 @@ public class CaseCollector {
                     // remote_http (not sure what this is, do you have an example?)
                     // typedData (not sure what this is, do you have an example?)
                     // schema-location-hint (XML specific)
-                    // Only three below are supported by Rumble. Included staticTyping myself as +20
-                    // pass, 30 fail, 20 unsupported types but no crashes!
+                    // These are the feature dependencies we currently support in the harness.
                     if (
                         !(value.contains("higherOrderFunctions")
                             || value.contains("moduleImport")
@@ -335,6 +335,9 @@ public class CaseCollector {
                     ) {
                         result.skipReason = type + " " + value;
                         return result;
+                    }
+                    if (value.contains("staticTyping")) {
+                        result.staticTyping = true;
                     }
                     break;
                 }
@@ -389,5 +392,6 @@ public class CaseCollector {
         private String skipReason;
         private String xmlVersion;
         private String defaultFormattingLanguage;
+        private boolean staticTyping;
     }
 }
