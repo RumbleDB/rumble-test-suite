@@ -300,7 +300,7 @@ public class TestBase {
      * in the result.
      */
     private String serializeQueryResult(AssertionContext context) {
-        return context.getPrimarySerializedResult();
+        return context.getPrimaryEvaluation().getSerializedResult();
     }
 
     // TODO check this, I just took it over for now
