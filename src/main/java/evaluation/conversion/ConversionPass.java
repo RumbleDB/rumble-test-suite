@@ -1,5 +1,5 @@
 package evaluation.conversion;
 
 interface ConversionPass {
-    String convert(String input);
+    void rewrite(ConversionContext context);
 }
