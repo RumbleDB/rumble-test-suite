@@ -15,9 +15,6 @@ final class SimpleReplacementConversion implements ConversionPass {
         CONVERSIONS.put("fn:fn:false()", "fn:false()");
         CONVERSIONS.put("not()", "fn:not()");
         CONVERSIONS.put("fn:fn:not()", "fn:not()");
-
-        // if it has a space, it is context item for sure
-        CONVERSIONS.put(". ", "$$ ");
     }
 
 
