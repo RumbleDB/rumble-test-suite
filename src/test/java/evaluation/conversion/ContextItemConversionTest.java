@@ -40,4 +40,23 @@ public class ContextItemConversionTest {
         String query = "./value +";
         assertEquals("$$/value +", this.conversion.convert(query));
     }
+
+    @Test
+    public void preservesCharactersOmittedByTheXQueryLexer() {
+        String invalidEntityReference = "\"a string &;\"";
+        assertEquals(invalidEntityReference, this.conversion.convert(invalidEntityReference));
+
+        String xpathString = "xs:anyURI(\"http://!$&'()*+,;=/\")";
+        assertEquals(xpathString, this.conversion.convert(xpathString));
+    }
+
+    @Test
+    public void preservesLexerErrorsWhileApplyingRecognizedEdits() {
+        assertEquals("$$/value, \"a string &;\"", this.conversion.convert("./value, \"a string &;\""));
+    }
+
+    @Test
+    public void usesCodePointOffsetsForSourceEdits() {
+        assertEquals("\"😀\", $$/value", this.conversion.convert("\"😀\", ./value"));
+    }
 }

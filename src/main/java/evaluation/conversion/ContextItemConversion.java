@@ -2,7 +2,6 @@ package evaluation.conversion;
 
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
-import org.antlr.v4.runtime.TokenStreamRewriter;
 import org.antlr.v4.runtime.misc.ParseCancellationException;
 import org.rumbledb.parser.xquery.XQueryLexer;
 import org.rumbledb.parser.xquery.XQueryParser;
@@ -27,16 +26,16 @@ final class ContextItemConversion implements ConversionPass {
             return input;
         }
 
-        TokenStreamRewriter rewriter = new TokenStreamRewriter(tokens);
+        SourceTextRewriter rewriter = new SourceTextRewriter(input);
         new ContextItemVisitor(rewriter).visit(module);
-        return rewriter.getText();
+        return rewriter.result();
     }
 
     private static final class ContextItemVisitor extends XQueryParserBaseVisitor<Void> {
 
-        private final TokenStreamRewriter rewriter;
+        private final SourceTextRewriter rewriter;
 
-        private ContextItemVisitor(TokenStreamRewriter rewriter) {
+        private ContextItemVisitor(SourceTextRewriter rewriter) {
             this.rewriter = rewriter;
         }
 
