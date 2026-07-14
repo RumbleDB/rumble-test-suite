@@ -14,7 +14,7 @@ import java.util.function.Supplier;
  */
 class QueryEvaluation {
     private final Supplier<SequenceOfItems> sequenceSupplier;
-    private final RumbleException error;
+    private RumbleException error;
     private List<Item> result;
     private String serializedResult;
 
@@ -32,14 +32,9 @@ class QueryEvaluation {
     }
 
     List<Item> getResult() {
+        ensureResultEvaluated();
         if (this.error != null) {
             throw this.error;
-        }
-        if (this.result == null) {
-            SequenceOfItems sequence = this.sequenceSupplier.get();
-            List<Item> materializedResult = new ArrayList<>();
-            sequence.populateList(materializedResult, 0);
-            this.result = materializedResult;
         }
         return this.result;
     }
@@ -49,12 +44,32 @@ class QueryEvaluation {
             throw this.error;
         }
         if (this.serializedResult == null) {
-            this.serializedResult = this.sequenceSupplier.get().serialize();
+            try {
+                this.serializedResult = this.sequenceSupplier.get().serialize();
+            } catch (RumbleException e) {
+                this.error = e;
+                throw e;
+            }
         }
         return this.serializedResult;
     }
 
     RumbleException getError() {
+        ensureResultEvaluated();
         return this.error;
+    }
+
+    private void ensureResultEvaluated() {
+        if (this.result != null || this.error != null) {
+            return;
+        }
+        try {
+            SequenceOfItems sequence = this.sequenceSupplier.get();
+            List<Item> materializedResult = new ArrayList<>();
+            sequence.populateList(materializedResult, 0);
+            this.result = materializedResult;
+        } catch (RumbleException e) {
+            this.error = e;
+        }
     }
 }
