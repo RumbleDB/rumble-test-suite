@@ -20,4 +20,24 @@ public class ContextItemConversionTest {
         String query = "(.., 1.5, .5, local:some.name, \"./text\", (: . :) )";
         assertEquals(query, this.conversion.convert(query));
     }
+
+    @Test
+    public void onlyConvertsExpressionsInsideDirectElementConstructors() {
+        String query = "<para>There lived a hobbit.</para>";
+        assertEquals(query, this.conversion.convert(query));
+
+        query = "<eg> (: an (:example:) </eg>";
+        assertEquals(query, this.conversion.convert(query));
+
+        assertEquals(
+            "<word count=\"{count($words[$$ = $word])}\"/>",
+            this.conversion.convert("<word count=\"{count($words[. = $word])}\"/>")
+        );
+    }
+
+    @Test
+    public void convertsRecognizedContextItemsInInvalidXQuery() {
+        String query = "./value +";
+        assertEquals("$$/value +", this.conversion.convert(query));
+    }
 }

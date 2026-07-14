@@ -1,72 +1,50 @@
 package evaluation.conversion;
 
+import org.antlr.v4.runtime.CharStreams;
+import org.antlr.v4.runtime.CommonTokenStream;
+import org.antlr.v4.runtime.TokenStreamRewriter;
+import org.antlr.v4.runtime.misc.ParseCancellationException;
+import org.rumbledb.parser.xquery.XQueryLexer;
+import org.rumbledb.parser.xquery.XQueryParser;
+import org.rumbledb.parser.xquery.XQueryParserBaseVisitor;
+
 /** Converts XQuery context-item expressions ({@code .}) to their JSONiq equivalent ({@code $$}). */
 final class ContextItemConversion implements ConversionPass {
 
     @Override
     public String convert(String input) {
-        StringBuilder output = new StringBuilder(input.length());
-        int position = 0;
+        XQueryLexer lexer = new XQueryLexer(CharStreams.fromString(input));
+        lexer.removeErrorListeners();
 
-        while (position < input.length()) {
-            if (ConversionLexicalUtils.startsWith(input, position, "(:")) {
-                int end = ConversionLexicalUtils.skipComment(input, position);
-                output.append(input, position, end);
-                position = end;
-                continue;
-            }
+        CommonTokenStream tokens = new CommonTokenStream(lexer);
+        XQueryParser parser = new XQueryParser(tokens);
+        parser.removeErrorListeners();
 
-            char current = input.charAt(position);
-            if (current == '"' || current == '\'') {
-                int end = findStringEnd(input, position);
-                output.append(input, position, end);
-                position = end;
-                continue;
-            }
-
-            if (current == '.' && isContextItem(input, position)) {
-                output.append("$$");
-            } else {
-                output.append(current);
-            }
-            position++;
+        XQueryParser.ModuleAndThisIsItContext module;
+        try {
+            module = parser.moduleAndThisIsIt();
+        } catch (ParseCancellationException exception) {
+            return input;
         }
 
-        return output.toString();
+        TokenStreamRewriter rewriter = new TokenStreamRewriter(tokens);
+        new ContextItemVisitor(rewriter).visit(module);
+        return rewriter.getText();
     }
 
-    private static boolean isContextItem(String input, int position) {
-        char previous = position == 0 ? '\0' : input.charAt(position - 1);
-        char next = position + 1 == input.length() ? '\0' : input.charAt(position + 1);
+    private static final class ContextItemVisitor extends XQueryParserBaseVisitor<Void> {
 
-        return previous != '.'
-            && next != '.'
-            && !isNameCharacter(previous)
-            && !isNameCharacter(next)
-            && !Character.isDigit(previous)
-            && !Character.isDigit(next);
-    }
+        private final TokenStreamRewriter rewriter;
 
-    private static boolean isNameCharacter(char character) {
-        return Character.isLetter(character) || character == '_' || character == '-';
-    }
-
-    private static int findStringEnd(String input, int start) {
-        char delimiter = input.charAt(start);
-        int position = start + 1;
-
-        while (position < input.length()) {
-            if (input.charAt(position) == '\\') {
-                position += 2;
-                continue;
-            }
-            if (input.charAt(position) == delimiter) {
-                return position + 1;
-            }
-            position++;
+        private ContextItemVisitor(TokenStreamRewriter rewriter) {
+            this.rewriter = rewriter;
         }
 
-        return input.length();
+        @Override
+        public Void visitContextItemExpr(XQueryParser.ContextItemExprContext context) {
+            this.rewriter.replace(context.DOT().getSymbol(), "$$");
+            return null;
+        }
     }
 
 }
