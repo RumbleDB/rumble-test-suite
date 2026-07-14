@@ -34,6 +34,12 @@ import java.util.Set;
  * <li>Backslashes must be escaped.</li>
  * <li>Double quotes must be escaped.</li>
  * </ul>
+ *
+ * <p>
+ * Direct XML support in this pass is intentionally limited to attribute values in element start tags. It does not
+ * parse complete direct element content, so quotes in element content are still handled by the ordinary string-literal
+ * conversion. Full direct-constructor handling should eventually be driven by the XQuery parse tree.
+ * </p>
  */
 final class StringLiteralConversion implements ConversionPass {
 
@@ -154,10 +160,7 @@ final class StringLiteralConversion implements ConversionPass {
         // Avoid treating the common no-whitespace comparison form ($x<y) as
         // a direct constructor. The parser remains the authority for rarer
         // ambiguous cases.
-        int previous = offset - 1;
-        while (previous >= 0 && Character.isWhitespace(input.charAt(previous))) {
-            previous--;
-        }
+        int previous = findPreviousSignificantCharacter(input, offset);
         if (previous < 0) {
             // If there's no character before '<', it can be a direct element start.
             return true;
@@ -193,7 +196,7 @@ final class StringLiteralConversion implements ConversionPass {
      * Copies one direct XML attribute value to {@code output}, preserving its delimiters and static XML content while
      * recursively converting XQuery string literals inside enclosed expressions. Returns the input position directly
      * after the closing attribute delimiter.
-     * 
+     *
      * For example, `<e attr="static {concat('\path', 'x')} text"/>` should become `<e attr="static {concat("\\path",
      * "x")} text"/>` (adding JSONiq escaping to the string literals inside the enclosed expression).
      */
@@ -246,6 +249,50 @@ final class StringLiteralConversion implements ConversionPass {
         }
 
         throw new IllegalArgumentException("Unterminated direct attribute value starting at position " + start);
+    }
+
+    /**
+     * Finds the preceding non-whitespace character, ignoring complete XQuery comments because comments are
+     * syntactically equivalent to whitespace for direct-constructor detection.
+     */
+    private static int findPreviousSignificantCharacter(String input, int offset) {
+        int previous = offset - 1;
+        while (previous >= 0) {
+            while (previous >= 0 && Character.isWhitespace(input.charAt(previous))) {
+                previous--;
+            }
+
+            if (previous < 1 || input.charAt(previous) != ')' || input.charAt(previous - 1) != ':') {
+                return previous;
+            }
+
+            int commentStart = findCommentStart(input, previous);
+            if (commentStart < 0) {
+                // Leave malformed comments to the parser instead of guessing where they began.
+                return previous;
+            }
+            previous = commentStart - 1;
+        }
+        return previous;
+    }
+
+    /** Finds the opening {@code (:} matching a comment whose closing parenthesis is at {@code commentEnd}. */
+    private static int findCommentStart(String input, int commentEnd) {
+        int depth = 1;
+        for (int i = commentEnd - 2; i >= 0; i--) {
+            if (i > 0 && input.charAt(i - 1) == ':' && input.charAt(i) == ')') {
+                depth++;
+                i--;
+                continue;
+            }
+            if (i + 1 < input.length() && input.charAt(i) == '(' && input.charAt(i + 1) == ':') {
+                depth--;
+                if (depth == 0) {
+                    return i;
+                }
+            }
+        }
+        return -1;
     }
 
     private static int findEnclosedExpressionEnd(String input, int start) {

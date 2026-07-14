@@ -12,6 +12,8 @@ public class StringLiteralConversionTest {
     public void convertsOrdinaryXQueryStrings() {
         assertEquals("\"a \\\" b\"", this.conversion.convert("\"a \"\" b\""));
         assertEquals("\"\\\\path\"", this.conversion.convert("'\\path'"));
+        assertEquals("\"a & b\"", this.conversion.convert("\"a & b\""));
+        assertEquals("\"&amp;\"", this.conversion.convert("\"&amp;\""));
     }
 
     @Test
@@ -19,6 +21,7 @@ public class StringLiteralConversionTest {
         assertEquals("<elem attr=\"\"\"\"/>", this.conversion.convert("<elem attr=\"\"\"\"/>"));
         assertEquals("<elem attr=''''/>", this.conversion.convert("<elem attr=''''/>"));
         assertEquals("<elem attr=\"&amp;&lt;&gt;\"/>", this.conversion.convert("<elem attr=\"&amp;&lt;&gt;\"/>"));
+        assertEquals("<elem attr=\"\\n\"/>", this.conversion.convert("<elem attr=\"\\n\"/>"));
     }
 
     @Test
@@ -42,6 +45,10 @@ public class StringLiteralConversionTest {
         String expected = "<e attr=\"{concat(\"\\\\path\", \"a \\\" b\")}\"/>";
 
         assertEquals(expected, this.conversion.convert(query));
+
+        query = "<e attr=\"&amp;{'a & b'}\"/>";
+        expected = "<e attr=\"&amp;{\"a & b\"}\"/>";
+        assertEquals(expected, this.conversion.convert(query));
     }
 
     @Test
@@ -54,9 +61,11 @@ public class StringLiteralConversionTest {
         String afterAnd = "true() and <e attr=\"\"\"\"/>";
         String afterWhere = "for $x in 1 where <e attr=\"\"\"\"/> return $x";
         String afterUnion = "$x union <e attr=\"\"\"\"/>";
+        String afterComment = "for $x in 1 return (: outer (: nested :) :) <e attr=\"\\path\"/>";
 
         assertEquals(afterAnd, this.conversion.convert(afterAnd));
         assertEquals(afterWhere, this.conversion.convert(afterWhere));
         assertEquals(afterUnion, this.conversion.convert(afterUnion));
+        assertEquals(afterComment, this.conversion.convert(afterComment));
     }
 }
