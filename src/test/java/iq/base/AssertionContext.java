@@ -86,9 +86,7 @@ class AssertionContext {
         RumbleRuntimeConfiguration rumbleConfig = createRumbleConfig();
         applyDependenciesToConfig(rumbleConfig);
         SequenceOfItems queryResult = new Rumble(rumbleConfig).runQuery(query);
-        List<Item> resultAsList = new ArrayList<>();
-        queryResult.populateList(resultAsList, 0);
-        return resultAsList;
+        return queryResult.getAsList();
     }
 
     private RumbleRuntimeConfiguration createRumbleConfig() {
