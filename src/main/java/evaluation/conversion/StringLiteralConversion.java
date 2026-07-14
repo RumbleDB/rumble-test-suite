@@ -90,8 +90,8 @@ final class StringLiteralConversion implements ConversionPass {
         boolean inDirectElementStartTag = false;
         while (i < input.length()) {
             // We skip comments
-            if (startsWith(input, i, "(:")) {
-                int end = skipComment(input, i);
+            if (ConversionLexicalUtils.startsWith(input, i, "(:")) {
+                int end = ConversionLexicalUtils.skipComment(input, i);
                 output.append(input, i, end);
                 i = end;
                 continue;
@@ -299,8 +299,8 @@ final class StringLiteralConversion implements ConversionPass {
         int depth = 1;
         int i = start + 1;
         while (i < input.length()) {
-            if (startsWith(input, i, "(:")) {
-                i = skipComment(input, i);
+            if (ConversionLexicalUtils.startsWith(input, i, "(:")) {
+                i = ConversionLexicalUtils.skipComment(input, i);
                 continue;
             }
 
@@ -400,38 +400,6 @@ final class StringLiteralConversion implements ConversionPass {
         output.append('"');
 
         return output.toString();
-    }
-
-    private static int skipComment(String input, int start) {
-        int depth = 1;
-        int i = start + 2;
-
-        while (i < input.length()) {
-            if (startsWith(input, i, "(:")) {
-                depth++;
-                i += 2;
-                continue;
-            }
-
-            if (startsWith(input, i, ":)")) {
-                depth--;
-                i += 2;
-
-                if (depth == 0) {
-                    return i;
-                }
-
-                continue;
-            }
-
-            i++;
-        }
-
-        throw new IllegalArgumentException("Unterminated XQuery comment starting at position " + start);
-    }
-
-    private static boolean startsWith(String input, int offset, String prefix) {
-        return input.regionMatches(offset, prefix, 0, prefix.length());
     }
 
     private static final class ParsedStringLiteral {
