@@ -1,5 +1,7 @@
 package evaluation.conversion;
 
+import java.util.Set;
+
 /**
  * Converts XQuery string literals to JSONiq-compatible string literals.
  *
@@ -32,8 +34,49 @@ package evaluation.conversion;
  * <li>Backslashes must be escaped.</li>
  * <li>Double quotes must be escaped.</li>
  * </ul>
+ *
+ * <p>
+ * Direct XML support in this pass is intentionally limited to attribute values in element start tags. It does not
+ * parse complete direct element content, so quotes in element content are still handled by the ordinary string-literal
+ * conversion. Full direct-constructor handling should eventually be driven by the XQuery parse tree.
+ * </p>
  */
 final class StringLiteralConversion implements ConversionPass {
+
+    // Temporary heuristic until conversion is driven by the XQuery parse tree.
+    // These keywords require another expression, so a following "<name" starts
+    // a direct constructor rather than a less-than comparison.
+    private static final Set<String> DIRECT_CONSTRUCTOR_PREFIX_KEYWORDS = Set.of(
+        "return",
+        "then",
+        "else",
+        "in",
+        "satisfies",
+        "case",
+        "default",
+        "and",
+        "or",
+        "div",
+        "idiv",
+        "mod",
+        "to",
+        "union",
+        "intersect",
+        "except",
+        "eq",
+        "ne",
+        "lt",
+        "le",
+        "gt",
+        "ge",
+        "is",
+        "before",
+        "after",
+        "of",
+        "as",
+        "where",
+        "by"
+    );
 
     @Override
     public String convert(String input) {
@@ -44,6 +87,7 @@ final class StringLiteralConversion implements ConversionPass {
         StringBuilder output = new StringBuilder(input.length());
 
         int i = 0;
+        boolean inDirectElementStartTag = false;
         while (i < input.length()) {
             // We skip comments
             if (startsWith(input, i, "(:")) {
@@ -53,9 +97,34 @@ final class StringLiteralConversion implements ConversionPass {
                 continue;
             }
 
+            // Check if we are at the start of a direct element constructor.
+            // In this mode, attribute values are preserved while strings inside
+            // enclosed expressions are still converted.
+            if (!inDirectElementStartTag && isDirectElementStart(input, i)) {
+                inDirectElementStartTag = true;
+                output.append('<');
+                i++;
+                continue;
+            }
+
             char currentChar = input.charAt(i);
 
-            // Strings
+            if (inDirectElementStartTag && currentChar == '>') {
+                inDirectElementStartTag = false;
+                output.append(currentChar);
+                i++;
+                continue;
+            }
+
+            // Attribute values in direct constructors follow XML/XQuery escaping
+            // rules. Preserve their text while still converting strings inside
+            // enclosed expressions.
+            if (inDirectElementStartTag && (currentChar == '"' || currentChar == '\'')) {
+                i = convertDirectAttributeValue(input, i, output);
+                continue;
+            }
+
+            // Genuine XQuery string literals.
             if (currentChar == '"' || currentChar == '\'') {
                 ParsedStringLiteral stringLiteral = parseXQueryStringLiteral(input, i);
                 output.append(toJSONiqStringLiteral(stringLiteral.value));
@@ -68,6 +137,190 @@ final class StringLiteralConversion implements ConversionPass {
         }
 
         return output.toString();
+    }
+
+    /**
+     * Detects if the character at the given offset is the start of a direct element constructor.
+     *
+     * Unfortunately, this is a heuristic and may not be 100% accurate because we are not using a parser here.
+     *
+     */
+    private static boolean isDirectElementStart(String input, int offset) {
+        if (input.charAt(offset) != '<' || offset + 1 >= input.length()) {
+            // If current char is not '<' or there is no next char, it cannot be a direct element start.
+            return false;
+        }
+
+        char next = input.charAt(offset + 1);
+        if (!(next == '_' || Character.isLetter(next))) {
+            // If the next char is not a letter or '_', it cannot be a direct element start.
+            return false;
+        }
+
+        // Avoid treating the common no-whitespace comparison form ($x<y) as
+        // a direct constructor. The parser remains the authority for rarer
+        // ambiguous cases.
+        int previous = findPreviousSignificantCharacter(input, offset);
+        if (previous < 0) {
+            // If there's no character before '<', it can be a direct element start.
+            return true;
+        }
+
+        char previousChar = input.charAt(previous);
+        if (Character.isLetter(previousChar)) {
+            // If the previous character is a letter, check if it forms a keyword with the preceding characters.
+            int wordStart = previous;
+            while (wordStart > 0 && Character.isLetter(input.charAt(wordStart - 1))) {
+                wordStart--;
+            }
+
+            // If the preceding word is a keyword in DIRECT_CONSTRUCTOR_PREFIX_KEYWORDS, then treat it as a direct
+            // constructor.
+            if (DIRECT_CONSTRUCTOR_PREFIX_KEYWORDS.contains(input.substring(wordStart, previous + 1))) {
+                return true;
+            }
+        }
+
+        // If the previous character is not a letter, digit, underscore, or one of the specified characters, then treat
+        // it as a direct constructor.
+        return !(previousChar == '$'
+            || previousChar == ')'
+            || previousChar == ']'
+            || previousChar == '\''
+            || previousChar == '"'
+            || Character.isLetterOrDigit(previousChar)
+            || previousChar == '_');
+    }
+
+    /**
+     * Copies one direct XML attribute value to {@code output}, preserving its delimiters and static XML content while
+     * recursively converting XQuery string literals inside enclosed expressions. Returns the input position directly
+     * after the closing attribute delimiter.
+     *
+     * For example, `<e attr="static {concat('\path', 'x')} text"/>` should become `<e attr="static {concat("\\path",
+     * "x")} text"/>` (adding JSONiq escaping to the string literals inside the enclosed expression).
+     */
+    private int convertDirectAttributeValue(String input, int start, StringBuilder output) {
+        char delimiter = input.charAt(start);
+        output.append(delimiter);
+        int i = start + 1;
+
+        while (i < input.length()) {
+            char currentChar = input.charAt(i);
+            if (currentChar == delimiter) {
+                if (i + 1 < input.length() && input.charAt(i + 1) == delimiter) {
+                    // If the delimiter is doubled, it's an escaped delimiter, so we append it and continue.
+                    output.append(delimiter).append(delimiter);
+                    i += 2;
+                    continue;
+                }
+
+                // We reached the closing delimiter of the attribute value, so we append it and return the position
+                // after it.
+                output.append(delimiter);
+                return i + 1;
+            }
+
+            // Handle enclosed expressions inside the attribute value.
+            if (currentChar == '{') {
+                if (i + 1 < input.length() && input.charAt(i + 1) == '{') {
+                    // Double braces does not start an enclosed expression, so we append them and continue.
+                    output.append("{{");
+                    i += 2;
+                    continue;
+                }
+
+                // Handle the enclosed expression by finding its end and recursively converting its content.
+                int expressionEnd = findEnclosedExpressionEnd(input, i);
+                output.append('{');
+                output.append(convert(input.substring(i + 1, expressionEnd)));
+                output.append('}');
+                i = expressionEnd + 1;
+                continue;
+            }
+
+            if (currentChar == '}' && i + 1 < input.length() && input.charAt(i + 1) == '}') {
+                output.append("}}");
+                i += 2;
+                continue;
+            }
+            output.append(currentChar);
+            i++;
+        }
+
+        throw new IllegalArgumentException("Unterminated direct attribute value starting at position " + start);
+    }
+
+    /**
+     * Finds the preceding non-whitespace character, ignoring complete XQuery comments because comments are
+     * syntactically equivalent to whitespace for direct-constructor detection.
+     */
+    private static int findPreviousSignificantCharacter(String input, int offset) {
+        int previous = offset - 1;
+        while (previous >= 0) {
+            while (previous >= 0 && Character.isWhitespace(input.charAt(previous))) {
+                previous--;
+            }
+
+            if (previous < 1 || input.charAt(previous) != ')' || input.charAt(previous - 1) != ':') {
+                return previous;
+            }
+
+            int commentStart = findCommentStart(input, previous);
+            if (commentStart < 0) {
+                // Leave malformed comments to the parser instead of guessing where they began.
+                return previous;
+            }
+            previous = commentStart - 1;
+        }
+        return previous;
+    }
+
+    /** Finds the opening {@code (:} matching a comment whose closing parenthesis is at {@code commentEnd}. */
+    private static int findCommentStart(String input, int commentEnd) {
+        int depth = 1;
+        for (int i = commentEnd - 2; i >= 0; i--) {
+            if (i > 0 && input.charAt(i - 1) == ':' && input.charAt(i) == ')') {
+                depth++;
+                i--;
+                continue;
+            }
+            if (i + 1 < input.length() && input.charAt(i) == '(' && input.charAt(i + 1) == ':') {
+                depth--;
+                if (depth == 0) {
+                    return i;
+                }
+            }
+        }
+        return -1;
+    }
+
+    private static int findEnclosedExpressionEnd(String input, int start) {
+        int depth = 1;
+        int i = start + 1;
+        while (i < input.length()) {
+            if (startsWith(input, i, "(:")) {
+                i = skipComment(input, i);
+                continue;
+            }
+
+            char currentChar = input.charAt(i);
+            if (currentChar == '"' || currentChar == '\'') {
+                i = parseXQueryStringLiteral(input, i).end;
+                continue;
+            }
+            if (currentChar == '{') {
+                depth++;
+            } else if (currentChar == '}') {
+                depth--;
+                if (depth == 0) {
+                    return i;
+                }
+            }
+            i++;
+        }
+
+        throw new IllegalArgumentException("Unterminated enclosed expression starting at position " + start);
     }
 
     private static ParsedStringLiteral parseXQueryStringLiteral(String input, int start) {
