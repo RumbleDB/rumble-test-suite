@@ -105,16 +105,16 @@ public class TestBase {
                 assertTrue(results.isEmpty());
                 break;
             case "assert":
-                secondQuery = declareResultVariableFromTestExpression(
+                secondQuery = buildResultBasedQuery(
                     context.getTestString(),
-                    assertion.getStringValue()
+                    "boolean(" + assertion.getStringValue() + ")"
                 );
                 assertTrueSingleElement(context.runQuery(secondQuery));
                 break;
             case "not":
-                secondQuery = declareResultVariableFromTestExpression(
+                secondQuery = buildResultBasedQuery(
                     context.getTestString(),
-                    assertion.getStringValue()
+                    "boolean(" + assertion.getStringValue() + ")"
                 );
                 assertFalseSingleElement(context.runQuery(secondQuery));
                 break;
@@ -126,13 +126,10 @@ public class TestBase {
                 assertEquals(testCaseResult, assertionResult);
                 break;
             case "assert-deep-eq":
-                parts = splitLeadingDeclarations(context.getTestString());
-                secondQuery = parts.prolog
-                    + "\ndeep-equal(("
-                    + parts.body
-                    + "), ("
-                    + assertion.getStringValue()
-                    + "))";
+                secondQuery = buildResultBasedQuery(
+                    context.getTestString(),
+                    "deep-equal($result, (" + assertion.getStringValue() + "))"
+                );
                 assertTrueSingleElement(context.runQuery(secondQuery));
                 break;
             case "assert-true":
@@ -189,12 +186,10 @@ public class TestBase {
                 assertTrue(success, "All assertions in any-of failed");
                 break;
             case "assert-type":
-                parts = splitLeadingDeclarations(context.getTestString());
-                secondQuery = parts.prolog
-                    + "\n("
-                    + parts.body
-                    + ") instance of "
-                    + assertion.getStringValue();
+                secondQuery = buildResultBasedQuery(
+                    context.getTestString(),
+                    "$result instance of " + assertion.getStringValue()
+                );
                 assertTrueSingleElement(context.runQuery(secondQuery));
                 break;
             case "assert-count":
@@ -308,7 +303,9 @@ public class TestBase {
             XdmNode assertion,
             AssertionContext context
     ) {
-        String assertExpression = "declare function allpermutations($sequence as item*) as array* {\n"
+        QueryParts parts = splitLeadingDeclarations(context.getTestString());
+        String assertExpression = parts.prolog
+            + "\ndeclare function allpermutations($sequence as item*) as array* {\n"
             + " if(count($sequence) le 1)\n"
             + " then\n"
             + "   [ $sequence ]\n"
@@ -324,9 +321,10 @@ public class TestBase {
             + "   return [ $first, $recursive[]]\n"
             + "};\n"
             + "\n"
-            + "some $a in allpermutations("
-            + context.getTestString()
-            + ")"
+            + "let $result := (\n"
+            + parts.body
+            + "\n)\n"
+            + "return some $a in allpermutations($result)\n"
             + "satisfies deep-equal($a[], (("
             + assertion.getStringValue()
             + ")))";
@@ -365,15 +363,15 @@ public class TestBase {
         }
     }
 
-    private static final Pattern LEADING_DECLARATION =
-        Pattern.compile("\\G\\s*declare\\s+[^;]*;\\s*", Pattern.DOTALL);
-
     private static QueryParts splitLeadingDeclarations(String query) {
-        Matcher matcher = LEADING_DECLARATION.matcher(query);
-
         int end = 0;
-        while (matcher.find()) {
-            end = matcher.end();
+
+        while (true) {
+            int start = skipIgnorable(query, end);
+            if (!startsWithLeadingDeclaration(query, start)) {
+                break;
+            }
+            end = skipIgnorable(query, consumeTopLevelDeclaration(query, start));
         }
 
         return new QueryParts(
@@ -382,14 +380,167 @@ public class TestBase {
         );
     }
 
-    private static String declareResultVariableFromTestExpression(String query, String assertionExpression) {
+    private static String buildResultBasedQuery(String query, String assertionExpression) {
         QueryParts parts = splitLeadingDeclarations(query);
         return parts.prolog
-            + "\ndeclare variable $result := ("
+            + "\nlet $result := (\n"
             + parts.body
-            + ");\nboolean("
+            + "\n)\nreturn "
             + assertionExpression
-            + ")";
+            ;
+    }
+
+    private static boolean startsWithLeadingDeclaration(String query, int index) {
+        return startsWithKeyword(query, index, "xquery")
+            || startsWithKeyword(query, index, "declare")
+            || startsWithKeyword(query, index, "import")
+            || startsWithKeyword(query, index, "module");
+    }
+
+    private static boolean startsWithKeyword(String query, int index, String keyword) {
+        if (!query.regionMatches(index, keyword, 0, keyword.length())) {
+            return false;
+        }
+
+        int end = index + keyword.length();
+        return end >= query.length() || !isNcNameChar(query.charAt(end));
+    }
+
+    private static boolean isNcNameChar(char character) {
+        return Character.isLetterOrDigit(character)
+            || character == '_'
+            || character == '-'
+            || character == '.'
+            || character == ':';
+    }
+
+    private static int skipIgnorable(String query, int index) {
+        while (index < query.length()) {
+            char current = query.charAt(index);
+            if (Character.isWhitespace(current)) {
+                index++;
+                continue;
+            }
+            if (query.startsWith("(:", index)) {
+                index = skipComment(query, index);
+                continue;
+            }
+            break;
+        }
+        return index;
+    }
+
+    private static int consumeTopLevelDeclaration(String query, int index) {
+        int parenthesisDepth = 0;
+        int squareDepth = 0;
+        int curlyDepth = 0;
+
+        while (index < query.length()) {
+            if (query.startsWith("(:", index)) {
+                index = skipComment(query, index);
+                continue;
+            }
+
+            char current = query.charAt(index);
+            if (current == '\'' || current == '"') {
+                index = skipStringLiteral(query, index, current);
+                continue;
+            }
+
+            if (current == '&') {
+                index = skipEntityReference(query, index);
+                continue;
+            }
+
+            switch (current) {
+                case '(':
+                    parenthesisDepth++;
+                    break;
+                case ')':
+                    if (parenthesisDepth > 0) {
+                        parenthesisDepth--;
+                    }
+                    break;
+                case '[':
+                    squareDepth++;
+                    break;
+                case ']':
+                    if (squareDepth > 0) {
+                        squareDepth--;
+                    }
+                    break;
+                case '{':
+                    curlyDepth++;
+                    break;
+                case '}':
+                    if (curlyDepth > 0) {
+                        curlyDepth--;
+                    }
+                    break;
+                case ';':
+                    if (parenthesisDepth == 0 && squareDepth == 0 && curlyDepth == 0) {
+                        return index + 1;
+                    }
+                    break;
+                default:
+                    break;
+            }
+
+            index++;
+        }
+
+        return index;
+    }
+
+    private static int skipComment(String query, int index) {
+        int depth = 1;
+        index += 2;
+
+        while (index < query.length() && depth > 0) {
+            if (query.startsWith("(:", index)) {
+                depth++;
+                index += 2;
+            } else if (query.startsWith(":)", index)) {
+                depth--;
+                index += 2;
+            } else {
+                index++;
+            }
+        }
+
+        return index;
+    }
+
+    private static int skipStringLiteral(String query, int index, char delimiter) {
+        index++;
+
+        while (index < query.length()) {
+            if (query.charAt(index) == delimiter) {
+                if (index + 1 < query.length() && query.charAt(index + 1) == delimiter) {
+                    index += 2;
+                } else {
+                    return index + 1;
+                }
+            } else {
+                index++;
+            }
+        }
+
+        return index;
+    }
+
+    private static int skipEntityReference(String query, int index) {
+        index++;
+        while (index < query.length()) {
+            if (query.charAt(index) == ';') {
+                return index + 1;
+            }
+            if (Character.isWhitespace(query.charAt(index))) {
+                return index;
+            }
+            index++;
+        }
+        return index;
     }
 
 }
