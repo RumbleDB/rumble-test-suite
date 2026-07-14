@@ -27,6 +27,7 @@ class AssertionContext {
     private final boolean staticTyping;
     private final String staticBaseUri;
     private QueryEvaluation primaryEvaluation;
+    private String primarySerializedResult;
 
     AssertionContext(
             String testString,
@@ -53,6 +54,13 @@ class AssertionContext {
 
     List<Item> getPrimaryResult() {
         return getPrimaryEvaluation().getResult();
+    }
+
+    String getPrimarySerializedResult() {
+        if (this.primarySerializedResult == null) {
+            this.primarySerializedResult = executeQueryToString(this.testString);
+        }
+        return this.primarySerializedResult;
     }
 
     QueryEvaluation getPrimaryEvaluation() {
@@ -89,6 +97,20 @@ class AssertionContext {
         List<Item> resultAsList = new ArrayList<>();
         queryResult.populateList(resultAsList, 0);
         return resultAsList;
+    }
+
+    private String executeQueryToString(String query) {
+        if (this.environment != null) {
+            query = this.environment.applyToQuery(query);
+        }
+
+        if (!this.useXQueryParser) {
+            query = Converter.convert(query);
+        }
+
+        RumbleRuntimeConfiguration rumbleConfig = createRumbleConfig();
+        applyDependenciesToConfig(rumbleConfig);
+        return new Rumble(rumbleConfig).runQueryToString(query);
     }
 
     private RumbleRuntimeConfiguration createRumbleConfig() {
