@@ -27,7 +27,6 @@ class AssertionContext {
     private final boolean staticTyping;
     private final String staticBaseUri;
     private QueryEvaluation primaryEvaluation;
-    private String primarySerializedResult;
 
     AssertionContext(
             String testString,
@@ -56,13 +55,6 @@ class AssertionContext {
         return getPrimaryEvaluation().getResult();
     }
 
-    String getPrimarySerializedResult() {
-        if (this.primarySerializedResult == null) {
-            this.primarySerializedResult = executeQueryToString(this.testString);
-        }
-        return this.primarySerializedResult;
-    }
-
     QueryEvaluation getPrimaryEvaluation() {
         if (this.primaryEvaluation == null) {
             this.primaryEvaluation = evaluateQuery(this.testString);
@@ -76,13 +68,13 @@ class AssertionContext {
 
     private QueryEvaluation evaluateQuery(String query) {
         try {
-            return QueryEvaluation.withResult(executeQuery(query));
+            return QueryEvaluation.withResult(() -> executeQuery(query));
         } catch (RumbleException e) {
             return QueryEvaluation.withError(e);
         }
     }
 
-    private List<Item> executeQuery(String query) {
+    private SequenceOfItems executeQuery(String query) {
         if (this.environment != null) {
             query = this.environment.applyToQuery(query);
         }
@@ -93,24 +85,7 @@ class AssertionContext {
 
         RumbleRuntimeConfiguration rumbleConfig = createRumbleConfig();
         applyDependenciesToConfig(rumbleConfig);
-        SequenceOfItems queryResult = new Rumble(rumbleConfig).runQuery(query);
-        List<Item> resultAsList = new ArrayList<>();
-        queryResult.populateList(resultAsList, 0);
-        return resultAsList;
-    }
-
-    private String executeQueryToString(String query) {
-        if (this.environment != null) {
-            query = this.environment.applyToQuery(query);
-        }
-
-        if (!this.useXQueryParser) {
-            query = Converter.convert(query);
-        }
-
-        RumbleRuntimeConfiguration rumbleConfig = createRumbleConfig();
-        applyDependenciesToConfig(rumbleConfig);
-        return new Rumble(rumbleConfig).runQueryToString(query);
+        return new Rumble(rumbleConfig).runQuery(query);
     }
 
     private RumbleRuntimeConfiguration createRumbleConfig() {
