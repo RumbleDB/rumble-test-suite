@@ -190,10 +190,6 @@ final class StringLiteralConversion implements ConversionPass {
     }
 
     /**
-     * Converts a direct attribute value in a direct element constructor, preserving its text while still converting
-     * string literals inside enclosed expressions.
-     */
-    /**
      * Copies one direct XML attribute value to {@code output}, preserving its delimiters and static XML content while
      * recursively converting XQuery string literals inside enclosed expressions. Returns the input position directly
      * after the closing attribute delimiter.
