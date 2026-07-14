@@ -66,6 +66,10 @@ class AssertionContext {
         return evaluateQuery(query).getResult();
     }
 
+    String getPrimarySerialization() {
+        return getPrimaryEvaluation().getSerializedResult();
+    }
+
     private QueryEvaluation evaluateQuery(String query) {
         try {
             return QueryEvaluation.withResult(executeQuery(query));
@@ -74,7 +78,7 @@ class AssertionContext {
         }
     }
 
-    private List<Item> executeQuery(String query) {
+    private SequenceOfItems executeQuery(String query) {
         if (this.environment != null) {
             query = this.environment.applyToQuery(query);
         }
@@ -85,8 +89,7 @@ class AssertionContext {
 
         RumbleRuntimeConfiguration rumbleConfig = createRumbleConfig();
         applyDependenciesToConfig(rumbleConfig);
-        SequenceOfItems queryResult = new Rumble(rumbleConfig).runQuery(query);
-        return queryResult.getAsList();
+        return new Rumble(rumbleConfig).runQuery(query);
     }
 
     private RumbleRuntimeConfiguration createRumbleConfig() {

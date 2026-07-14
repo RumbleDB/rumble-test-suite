@@ -300,7 +300,7 @@ public class TestBase {
      * in the result.
      */
     private String serializeQueryResult(AssertionContext context) {
-        return context.getPrimaryResult().stream().map(Item::serialize).collect(Collectors.joining());
+        return context.getPrimarySerialization();
     }
 
     // TODO check this, I just took it over for now
