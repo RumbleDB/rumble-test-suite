@@ -26,6 +26,7 @@ final class StringLiteralConversion implements ConversionPass {
         for (int i = 1; i < source.length() - 1; i++) {
             char current = source.charAt(i);
             if (current == delimiter && i + 1 < source.length() - 1 && source.charAt(i + 1) == delimiter) {
+                // Converts doubled delimiters into one literal delimiter
                 value.append(delimiter);
                 i++;
             } else {
