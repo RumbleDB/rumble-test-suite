@@ -72,7 +72,9 @@ class AssertionContext {
 
     private QueryEvaluation evaluateQuery(String query) {
         try {
-            return QueryEvaluation.withResult(executeQuery(query));
+            SequenceOfItems result = executeQuery(query);
+            result.getAsList();
+            return QueryEvaluation.withResult(result);
         } catch (RumbleException e) {
             return QueryEvaluation.withError(e);
         }
