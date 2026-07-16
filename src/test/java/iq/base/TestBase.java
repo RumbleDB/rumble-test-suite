@@ -20,27 +20,25 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class TestBase {
     private static final String PERMUTATION_ASSERTION_QUERY = """
-            declare function local:allpermutations($sequence) {
-              if (count($sequence) le 1)
-              then
-                [ $sequence ]
-              else
-                for $i in 1 to count($sequence)
-                let $first := $sequence[$i]
-                let $others :=
-                  for $s in $sequence
-                  count $c
-                  where $c ne $i
-                  return $s
-                for $recursive in local:allpermutations($others)
-                return [ $first, $recursive?*]
-            };
-
-            let $result := (
+            let $actual := (
             %s
             )
-            return some $a in local:allpermutations($result)
-            satisfies deep-equal($a?*, ((%s)))
+            let $expected := (
+            %s
+            )
+            return count($actual) eq count($expected)
+              and (
+                every $item in $actual
+                satisfies count(
+                  for $candidate in $actual
+                  where deep-equal($candidate, $item)
+                  return $candidate
+                ) eq count(
+                  for $candidate in $expected
+                  where deep-equal($candidate, $item)
+                  return $candidate
+                )
+              )
             """;
 
     private final boolean useXQueryParser;
@@ -326,7 +324,6 @@ public class TestBase {
         return context.getPrimarySerialization();
     }
 
-    // TODO check this, I just took it over for now
     private void assertPermutation(
             XdmNode assertion,
             AssertionContext context
