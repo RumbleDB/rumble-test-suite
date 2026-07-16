@@ -2,10 +2,6 @@ package evaluation.conversion;
 
 import java.util.List;
 
-import org.antlr.v4.runtime.CharStreams;
-import org.antlr.v4.runtime.CommonTokenStream;
-import org.antlr.v4.runtime.misc.ParseCancellationException;
-import org.rumbledb.parser.xquery.XQueryLexer;
 import org.rumbledb.parser.xquery.XQueryParser;
 
 /**
@@ -29,17 +25,8 @@ public final class Converter {
      * @return converted string that adheres to JSONiq++ grammar instead of XQuery
      */
     public static String convert(String originalString) {
-        XQueryLexer lexer = new XQueryLexer(CharStreams.fromString(originalString));
-        lexer.removeErrorListeners();
-
-        CommonTokenStream tokens = new CommonTokenStream(lexer);
-        XQueryParser parser = new XQueryParser(tokens);
-        parser.removeErrorListeners();
-
-        XQueryParser.ModuleAndThisIsItContext module;
-        try {
-            module = parser.moduleAndThisIsIt();
-        } catch (ParseCancellationException exception) {
+        XQueryParser.ModuleAndThisIsItContext module = XQueryParsing.parseModule(originalString);
+        if (module == null) {
             // If the input is not valid XQuery, we cannot convert it to JSONiq++.
             return originalString;
         }

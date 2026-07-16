@@ -186,6 +186,15 @@ public class Environment {
      * @return a String containing the updated query with the context-item, params and resources set.
      */
     public String applyToQuery(String query) {
+        return EnvironmentQueryRewriter.rewrite(
+            query,
+            createDeclarations(),
+            externalParamLookup,
+            resourceLookup
+        );
+    }
+
+    private String createDeclarations() {
         StringBuilder declarations = new StringBuilder();
         declarations.append(createDecimalFormatAndNamespaceProlog());
         for (Map.Entry<String, String> r : roleLookup.entrySet()) {
@@ -202,13 +211,7 @@ public class Environment {
             String select = param.getValue();
             declarations.append("declare variable $").append(name).append(" := ").append(select).append(";");
         }
-
-        return EnvironmentQueryRewriter.rewrite(
-            query,
-            declarations.toString(),
-            externalParamLookup,
-            resourceLookup
-        );
+        return declarations.toString();
     }
 
     public String createDecimalFormatAndNamespaceProlog() {

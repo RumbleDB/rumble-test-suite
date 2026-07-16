@@ -2,14 +2,7 @@ package evaluation.conversion;
 
 import java.util.Map;
 
-import org.antlr.v4.runtime.BaseErrorListener;
-import org.antlr.v4.runtime.CharStreams;
-import org.antlr.v4.runtime.CommonTokenStream;
-import org.antlr.v4.runtime.RecognitionException;
-import org.antlr.v4.runtime.Recognizer;
 import org.antlr.v4.runtime.Token;
-import org.antlr.v4.runtime.misc.ParseCancellationException;
-import org.rumbledb.parser.xquery.XQueryLexer;
 import org.rumbledb.parser.xquery.XQueryParser;
 import org.rumbledb.parser.xquery.XQueryParserBaseVisitor;
 
@@ -25,7 +18,7 @@ public final class EnvironmentQueryRewriter {
             Map<String, String> externalParams,
             Map<String, String> resources
     ) {
-        XQueryParser.ModuleAndThisIsItContext module = parse(query);
+        XQueryParser.ModuleAndThisIsItContext module = XQueryParsing.parseValidModule(query);
         if (module == null) {
             return query;
         }
@@ -36,7 +29,9 @@ public final class EnvironmentQueryRewriter {
         String queryWithDeclarations = context.result();
 
         // Parse the intermediate query so resource URIs inside injected parameter values are rewritten too.
-        XQueryParser.ModuleAndThisIsItContext queryWithDeclarationsModule = parse(queryWithDeclarations);
+        XQueryParser.ModuleAndThisIsItContext queryWithDeclarationsModule = XQueryParsing.parseValidModule(
+                queryWithDeclarations
+        );
         if (queryWithDeclarationsModule == null) {
             return queryWithDeclarations;
         }
@@ -44,25 +39,6 @@ public final class EnvironmentQueryRewriter {
         ConversionContext resourceContext = new ConversionContext(queryWithDeclarations, queryWithDeclarationsModule);
         new ResourceVisitor(resourceContext, resources).visit(queryWithDeclarationsModule);
         return resourceContext.result();
-    }
-
-    private static XQueryParser.ModuleAndThisIsItContext parse(String query) {
-        XQueryLexer lexer = new XQueryLexer(CharStreams.fromString(query));
-        lexer.removeErrorListeners();
-        ParseErrorListener lexerErrorListener = new ParseErrorListener();
-        lexer.addErrorListener(lexerErrorListener);
-
-        CommonTokenStream tokens = new CommonTokenStream(lexer);
-        XQueryParser parser = new XQueryParser(tokens);
-        parser.removeErrorListeners();
-
-        XQueryParser.ModuleAndThisIsItContext module;
-        try {
-            module = parser.moduleAndThisIsIt();
-        } catch (ParseCancellationException exception) {
-            return null;
-        }
-        return !lexerErrorListener.hasError() && parser.getNumberOfSyntaxErrors() == 0 ? module : null;
     }
 
     private static void insertDeclarations(
@@ -127,24 +103,4 @@ public final class EnvironmentQueryRewriter {
         }
     }
 
-    private static final class ParseErrorListener extends BaseErrorListener {
-
-        private boolean hasError;
-
-        @Override
-        public void syntaxError(
-                Recognizer<?, ?> recognizer,
-                Object offendingSymbol,
-                int line,
-                int charPositionInLine,
-                String message,
-                RecognitionException exception
-        ) {
-            this.hasError = true;
-        }
-
-        private boolean hasError() {
-            return this.hasError;
-        }
-    }
 }
