@@ -5,7 +5,9 @@ import net.sf.saxon.s9api.Axis;
 import net.sf.saxon.s9api.XdmNode;
 import net.sf.saxon.s9api.XdmSequenceIterator;
 import net.sf.saxon.s9api.streams.Steps;
+import org.rumbledb.resources.ResourceResolver;
 
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -14,10 +16,11 @@ import java.util.Map;
 import java.nio.file.Path;
 
 public class Environment {
-    private final Map<String, String> resourceLookup = new HashMap<>();
+    private final Map<String, String> runtimeResourceLookup = new HashMap<>();
     private final Map<String, String> paramLookup = new HashMap<>();
     private final Map<String, String> externalParamLookup = new HashMap<>();
     private final Map<String, String> roleLookup = new HashMap<>();
+    private final Map<URI, URI> importResourceLookup = new HashMap<>();
 
     private final Map<String, String> namespaceLookup = new HashMap<>();
 
@@ -34,6 +37,7 @@ public class Environment {
         initStaticBaseUri(environmentNode);
         initResources(environmentNode, envPath);
         initSources(environmentNode, envPath);
+        initCompilationResources(environmentNode, envPath);
     }
 
     private void initParams(XdmNode environmentNode) {
@@ -156,7 +160,7 @@ public class Environment {
                 .toUri()
                 .toString();
             String uri = resource.attribute("uri");
-            resourceLookup.put(uri, file);
+            runtimeResourceLookup.put(uri, file);
         }
     }
 
@@ -170,12 +174,33 @@ public class Environment {
             String uri = source.attribute("uri");
             String role = source.attribute("role");
             if (uri != null && !file.equals(uri)) {
-                resourceLookup.put(uri, file);
+                runtimeResourceLookup.put(uri, file);
             }
             if (role != null) {
                 roleLookup.put(role, file);
             }
         }
+    }
+
+    private void initCompilationResources(XdmNode environmentNode, Path envPath) {
+        initCompilationResources(environmentNode, envPath, "module");
+        initCompilationResources(environmentNode, envPath, "schema");
+    }
+
+    private void initCompilationResources(XdmNode environmentNode, Path envPath, String elementName) {
+        for (XdmNode resource : environmentNode.select(Steps.descendant(elementName)).asList()) {
+            try {
+                URI logicalUri = URI.create(resource.attribute("uri"));
+                URI physicalUri = envPath.resolve(resource.attribute("file")).toUri();
+                importResourceLookup.putIfAbsent(logicalUri, physicalUri);
+            } catch (IllegalArgumentException ignored) {
+                // Negative tests can deliberately declare malformed logical URIs.
+            }
+        }
+    }
+
+    public ResourceResolver getResourceResolver() {
+        return new ResourceResolver(importResourceLookup);
     }
 
     /**
@@ -190,7 +215,7 @@ public class Environment {
             query,
             createDeclarations(),
             externalParamLookup,
-            resourceLookup
+            runtimeResourceLookup
         );
     }
 
