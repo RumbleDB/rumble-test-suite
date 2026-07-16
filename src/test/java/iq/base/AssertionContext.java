@@ -8,7 +8,6 @@ import org.rumbledb.api.SequenceOfItems;
 import org.rumbledb.config.RumbleConfiguration;
 import org.rumbledb.exceptions.RumbleException;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -24,6 +23,8 @@ class AssertionContext {
     private final RumbleConfiguration rumbleConfig;
     private final String xmlVersion;
     private final String defaultFormattingLanguage;
+    private final boolean staticTyping;
+    private final String staticBaseUri;
     private QueryEvaluation primaryEvaluation;
 
     AssertionContext(
@@ -32,7 +33,9 @@ class AssertionContext {
             boolean useXQueryParser,
             RumbleConfiguration rumbleConfig,
             String xmlVersion,
-            String defaultFormattingLanguage
+            String defaultFormattingLanguage,
+            boolean staticTyping,
+            String staticBaseUri
     ) {
         /// This is the test
         this.testString = testString;
@@ -41,6 +44,8 @@ class AssertionContext {
         this.rumbleConfig = rumbleConfig;
         this.xmlVersion = xmlVersion;
         this.defaultFormattingLanguage = defaultFormattingLanguage;
+        this.staticTyping = staticTyping;
+        this.staticBaseUri = staticBaseUri;
     }
 
     String getTestString() {
@@ -62,15 +67,21 @@ class AssertionContext {
         return evaluateQuery(query).getResult();
     }
 
+    String getPrimarySerialization() {
+        return getPrimaryEvaluation().getSerializedResult();
+    }
+
     private QueryEvaluation evaluateQuery(String query) {
         try {
-            return QueryEvaluation.withResult(executeQuery(query));
+            SequenceOfItems result = executeQuery(query);
+            result.getAsList();
+            return QueryEvaluation.withResult(result);
         } catch (RumbleException e) {
             return QueryEvaluation.withError(e);
         }
     }
 
-    private List<Item> executeQuery(String query) {
+    private SequenceOfItems executeQuery(String query) {
         if (this.environment != null) {
             query = this.environment.applyToQuery(query);
         }
@@ -80,10 +91,7 @@ class AssertionContext {
         }
 
         RumbleConfiguration updatedConfig = applyDependenciesToConfig(this.rumbleConfig);
-        SequenceOfItems queryResult = new Rumble(updatedConfig).runQuery(query);
-        List<Item> resultAsList = new ArrayList<>();
-        queryResult.populateList(resultAsList, 0);
-        return resultAsList;
+        return new Rumble(updatedConfig).runQuery(query);
     }
 
     private RumbleConfiguration applyDependenciesToConfig(RumbleConfiguration config) {
@@ -105,7 +113,14 @@ class AssertionContext {
         if (this.defaultFormattingLanguage != null) {
             builder.configureFormatting(f -> f.defaultFormattingLanguage(this.defaultFormattingLanguage));
         }
+
+        if (this.staticTyping) {
+            builder.configureAnalysis(a -> a.enableStaticTyping(true));
+        }
+
+        if (this.staticBaseUri != null) {
+            builder.configureSemantics(s -> s.staticBaseUri(this.staticBaseUri));
+        }
         return builder.build();
     }
 }
-

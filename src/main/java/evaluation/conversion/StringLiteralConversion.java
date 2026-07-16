@@ -1,111 +1,48 @@
 package evaluation.conversion;
 
-/**
- * Converts XQuery string literals to JSONiq-compatible string literals.
- *
- * <p>
- * Examples:
- * </p>
- *
- * <pre>
- * {@code
- * 'abc'      -> "abc"
- * "a "" b"  -> "a \" b"
- * '\?'      -> "\\?"
- * '\'       -> "\\"
- * }
- * </pre>
- *
- * <p>
- * XQuery escaping rules:
- * </p>
- * <ul>
- * <li>Quotes inside string literals are escaped by doubling them.</li>
- * <li>Backslash has no special meaning in XQuery string literals.</li>
- * </ul>
- *
- * <p>
- * JSONiq escaping rules:
- * </p>
- * <ul>
- * <li>String literals use JSON-style escaping.</li>
- * <li>Backslashes must be escaped.</li>
- * <li>Double quotes must be escaped.</li>
- * </ul>
- */
+import org.rumbledb.parser.xquery.XQueryParser;
+import org.rumbledb.parser.xquery.XQueryParserBaseVisitor;
+
+/** Converts XQuery string literals to JSONiq-compatible string literals. */
 final class StringLiteralConversion implements ConversionPass {
 
     @Override
-    public String convert(String input) {
-        if (input.indexOf('"') < 0 && input.indexOf('\'') < 0) {
-            return input;
-        }
-
-        StringBuilder output = new StringBuilder(input.length());
-
-        int i = 0;
-        while (i < input.length()) {
-            // We skip comments
-            if (startsWith(input, i, "(:")) {
-                int end = skipComment(input, i);
-                output.append(input, i, end);
-                i = end;
-                continue;
-            }
-
-            char currentChar = input.charAt(i);
-
-            // Strings
-            if (currentChar == '"' || currentChar == '\'') {
-                ParsedStringLiteral stringLiteral = parseXQueryStringLiteral(input, i);
-                output.append(toJSONiqStringLiteral(stringLiteral.value));
-                i = stringLiteral.end;
-                continue;
-            }
-
-            output.append(currentChar);
-            i++;
-        }
-
-        return output.toString();
+    public void rewrite(ConversionContext context) {
+        new StringLiteralVisitor(context).visit(context.module());
     }
 
-    private static ParsedStringLiteral parseXQueryStringLiteral(String input, int start) {
-        char quote = input.charAt(start);
-        StringBuilder value = new StringBuilder();
-
-        int i = start + 1;
-        while (i < input.length()) {
-            char currentChar = input.charAt(i);
-
-            if (currentChar == quote) {
-                // Keep going if the quote is doubled (escaped)
-                if (i + 1 < input.length() && input.charAt(i + 1) == quote) {
-                    value.append(quote);
-                    i += 2;
-                    continue;
-                }
-
-                return new ParsedStringLiteral(value.toString(), i + 1);
-            }
-
-            value.append(currentChar);
-            i++;
+    private static String parseXQueryStringLiteral(String source) {
+        if (source.length() < 2) {
+            // A valid XQuery string literal is always at least two characters '' or ""
+            return null;
         }
 
-        throw new IllegalArgumentException("Unterminated string literal starting at position " + start);
+        char delimiter = source.charAt(0);
+        if ((delimiter != '\'' && delimiter != '"') || source.charAt(source.length() - 1) != delimiter) {
+            return null;
+        }
+
+        StringBuilder value = new StringBuilder(source.length() - 2);
+        for (int i = 1; i < source.length() - 1; i++) {
+            char current = source.charAt(i);
+            if (current == delimiter && i + 1 < source.length() - 1 && source.charAt(i + 1) == delimiter) {
+                // Converts doubled delimiters into one literal delimiter
+                value.append(delimiter);
+                i++;
+            } else {
+                value.append(current);
+            }
+        }
+        return value.toString();
     }
 
-    // TODO clarify whether raw control characters need to be escaped for JSONiq string literals
     private static String toJSONiqStringLiteral(String value) {
         StringBuilder output = new StringBuilder(value.length() + 2);
-
         output.append('"');
 
         for (int i = 0; i < value.length(); i++) {
-            char currentChar = value.charAt(i);
-
-            switch (currentChar) {
+            char current = value.charAt(i);
+            switch (current) {
                 case '\\':
                     output.append("\\\\");
                     break;
@@ -128,67 +65,44 @@ final class StringLiteralConversion implements ConversionPass {
                     output.append("\\t");
                     break;
                 default:
-                    if (currentChar < 0x20) {
-                        output.append("\\u");
-
-                        String hex = Integer.toHexString(currentChar);
-                        for (int j = hex.length(); j < 4; j++) {
-                            output.append('0');
-                        }
-
-                        output.append(hex);
-                    } else {
-                        output.append(currentChar);
-                    }
+                    appendJSONiqCharacter(output, current);
                     break;
             }
         }
 
         output.append('"');
-
         return output.toString();
     }
 
-    private static int skipComment(String input, int start) {
-        int depth = 1;
-        int i = start + 2;
-
-        while (i < input.length()) {
-            if (startsWith(input, i, "(:")) {
-                depth++;
-                i += 2;
-                continue;
-            }
-
-            if (startsWith(input, i, ":)")) {
-                depth--;
-                i += 2;
-
-                if (depth == 0) {
-                    return i;
-                }
-
-                continue;
-            }
-
-            i++;
+    private static void appendJSONiqCharacter(StringBuilder output, char character) {
+        if (character >= 0x20) {
+            output.append(character);
+            return;
         }
 
-        throw new IllegalArgumentException("Unterminated XQuery comment starting at position " + start);
+        output.append("\\u");
+        String hex = Integer.toHexString(character);
+        for (int i = hex.length(); i < 4; i++) {
+            output.append('0');
+        }
+        output.append(hex);
     }
 
-    private static boolean startsWith(String input, int offset, String prefix) {
-        return input.regionMatches(offset, prefix, 0, prefix.length());
-    }
+    private static final class StringLiteralVisitor extends XQueryParserBaseVisitor<Void> {
 
-    private static final class ParsedStringLiteral {
+        private final ConversionContext conversionContext;
 
-        private final String value;
-        private final int end;
+        private StringLiteralVisitor(ConversionContext conversionContext) {
+            this.conversionContext = conversionContext;
+        }
 
-        private ParsedStringLiteral(String value, int end) {
-            this.value = value;
-            this.end = end;
+        @Override
+        public Void visitStringLiteral(XQueryParser.StringLiteralContext context) {
+            String value = parseXQueryStringLiteral(this.conversionContext.text(context));
+            if (value != null) {
+                this.conversionContext.replace(context, toJSONiqStringLiteral(value));
+            }
+            return null;
         }
     }
 }

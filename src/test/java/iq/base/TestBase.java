@@ -82,14 +82,16 @@ public class TestBase {
                         testString,
                         environment,
                         useXQueryParser,
-                        rumbleConfig,
+                        this.rumbleConfig,
                         testCase.xmlVersion,
-                        testCase.defaultFormattingLanguage
+                        testCase.defaultFormattingLanguage,
+                        testCase.staticTyping,
+                        testCase.staticBaseUri
                 )
             );
         } catch (RumbleException e) {
             if (isSkipErrorCode(e.getErrorCode().toString())) {
-                assumeTrue(false, "Skip errorcode: " + e.getErrorCode().toString());
+                assumeTrue(false, "Skip errorcode: " + e.getErrorCode().toString() + ", reason: " + e.getMessage());
             } else {
                 throw e;
             }
@@ -152,7 +154,7 @@ public class TestBase {
                 break;
             case "assert-string-value":
                 results = context.getPrimaryResult();
-                String actual = results.stream().map(Item::serialize).collect(Collectors.joining(" "));
+                String actual = results.stream().map(Item::getStringValue).collect(Collectors.joining(" "));
 
                 String expected = assertion.getStringValue();
 
@@ -307,7 +309,7 @@ public class TestBase {
      * in the result.
      */
     private String serializeQueryResult(AssertionContext context) {
-        return context.getPrimaryResult().stream().map(Item::serialize).collect(Collectors.joining());
+        return context.getPrimarySerialization();
     }
 
     // TODO check this, I just took it over for now
@@ -394,8 +396,9 @@ public class TestBase {
         return parts.prolog
             + "\ndeclare variable $result := ("
             + parts.body
-            + ");\n"
-            + assertionExpression;
+            + ");\nboolean("
+            + assertionExpression
+            + ")";
     }
 
 }

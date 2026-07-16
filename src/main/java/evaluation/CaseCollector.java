@@ -13,6 +13,16 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class CaseCollector {
+    private static final Set<String> SUPPORTED_SPECS = Set.of(
+        "XP20+",
+        "XP30+",
+        "XP31",
+        "XP31+",
+        "XQ10+",
+        "XQ30+",
+        "XQ31",
+        "XQ31+"
+    );
     private Path testsRepositoryDirectoryPath;
     private String currentTestSet;
     private final boolean useXQueryParser;
@@ -154,13 +164,18 @@ public class CaseCollector {
         ) {
             allTests.add(
                 new CollectedTestCase(
-                        new TestCase(null, null, "Testcase/set on skiplist", null, null, null),
+                        new TestCase(null, null, "Testcase/set on skiplist", null, null, null, false, null),
                         currentTestSet,
                         currentTestCase
                 )
             );
             return;
         }
+
+        // the directory containing this test-set's own XML file; relative resource
+        // hrefs in the test query must resolve against this
+        Path testSetDirectory = testsRepositoryDirectoryPath.resolve(currentTestSet).getParent();
+        String staticBaseUri = toDirectoryUri(testSetDirectory);
 
         // get the relevant environment for the testcase
         Environment environment = null;
@@ -180,16 +195,23 @@ public class CaseCollector {
                 // environment defined in testcase
                 environment = new Environment(
                         environments.get(0),
-                        testsRepositoryDirectoryPath.resolve(currentTestSet).getParent() // looks bad but works for now
+                        testSetDirectory
                 );
+            }
+        }
+
+        if (environment != null) {
+            if (environment.isStaticBaseUriUndefined()) {
+                // the test case requires that no static base URI is available
+                staticBaseUri = null;
+            } else if (environment.getStaticBaseUri() != null) {
+                // the environment declares an explicit static base URI that overrides the testset-directory default
+                staticBaseUri = environment.getStaticBaseUri();
             }
         }
 
         // check for possible skip reasons
         String skipReason = null;
-        if (environment != null && environment.isUnsupportedCollation()) {
-            skipReason = "unsupported collation";
-        }
         DependencyCheckResult dependencies = checkDependencies(testCase);
         if (dependencies.skipReason != null) {
             skipReason = "dependency " + dependencies.skipReason;
@@ -206,12 +228,22 @@ public class CaseCollector {
                             skipReason,
                             environment,
                             dependencies.xmlVersion,
-                            dependencies.defaultFormattingLanguage
+                            dependencies.defaultFormattingLanguage,
+                            dependencies.staticTyping,
+                            staticBaseUri
                     ),
                     currentTestSet,
                     currentTestCase
             )
         );
+    }
+
+    private static String toDirectoryUri(Path directory) {
+        String uri = directory.toUri().toString();
+        if (!uri.endsWith("/")) {
+            uri += "/";
+        }
+        return uri + ".";
     }
 
     /**
@@ -291,8 +323,7 @@ public class CaseCollector {
                     // remote_http (not sure what this is, do you have an example?)
                     // typedData (not sure what this is, do you have an example?)
                     // schema-location-hint (XML specific)
-                    // Only three below are supported by Rumble. Included staticTyping myself as +20
-                    // pass, 30 fail, 20 unsupported types but no crashes!
+                    // These are the feature dependencies we currently support in the harness.
                     if (
                         !(value.contains("higherOrderFunctions")
                             || value.contains("moduleImport")
@@ -304,6 +335,9 @@ public class CaseCollector {
                     ) {
                         result.skipReason = type + " " + value;
                         return result;
+                    }
+                    if (value.contains("staticTyping")) {
+                        result.staticTyping = true;
                     }
                     break;
                 }
@@ -319,27 +353,10 @@ public class CaseCollector {
                 }
                 // Check if not the XSLT (isApplicable original method)
                 case "spec": {
-                    // XP30+,XQ10+,XQ30+,XQ31+,XP31+,XP31,XQ31,XP20,XQ10,XP20+ is ok, XT30+
-                    // not
-                    // if (!value.contains("XSLT") && !value.contains("XT")) {
-                    if (!(value.contains("XQ") || value.contains("XP"))) {
+                    if (!isSupportedSpecDependency(value)) {
                         result.skipReason = type + " " + value;
                         return result;
                     }
-                    // Skip XP30, XQ30
-                    for (String spec : value.trim().split("\\s+")) {
-                        if ("XP30".equals(spec) || "XQ30".equals(spec)) {
-                            result.skipReason = type + " " + value;
-                            return result;
-                        }
-                    }
-
-                    // We can think about adding this because some tests have two versions and we
-                    // generally only try to
-                    // support 3.1. But it removes a lot of tests so for now I think its overkill
-                    // if (value.equals("XQ10+")) {
-                    // return type + " " + value;
-                    // }
                     break;
                 }
                 case "limit": {
@@ -366,9 +383,15 @@ public class CaseCollector {
         return result;
     }
 
+    static boolean isSupportedSpecDependency(String value) {
+        List<String> specs = Arrays.asList(value.trim().split("\\s+"));
+        return specs.stream().anyMatch(SUPPORTED_SPECS::contains);
+    }
+
     private static final class DependencyCheckResult {
         private String skipReason;
         private String xmlVersion;
         private String defaultFormattingLanguage;
+        private boolean staticTyping;
     }
 }

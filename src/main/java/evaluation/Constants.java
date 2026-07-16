@@ -17,9 +17,7 @@ public class Constants {
      * Testsets that we decide to skip fully
      */
     public static final List<String> skippedTestSets = List.of(
-        "fn/subsequence.xml", // contains large testcases that take forever to run
-        "prod/WindowClause.xml" // we dont support window yet
-
+        "fn/subsequence.xml" // contains large testcases that take forever to run
     );
 
     /**
@@ -46,8 +44,7 @@ public class Constants {
      */
     public static final List<String> skipReasonErrorCodes = List.of(
         "XPST0051", // type not implemented
-        "XPST0003", // parser failed, assuming that feature is not implemented
-        "FOCH0002" // unsupported collation parameter, rumble doesnt support additional collations
+        "XPST0003" // parser failed, assuming that feature is not implemented
     );
 
     /**
@@ -58,10 +55,9 @@ public class Constants {
     public static final List<String> xQuerySkipReasonErrorCodes = List.of(
         // XPST0017 is not in the list of error codes, as we treat it as an actual test case result
         // this allows us to test also that such static errors are thrown for test cases that expect such error code
-        "XPST0051", // type not implemented
+        "XPST0051" // type not implemented
         // XPST0003 is not in the list of error codes, as we treat it as an actual test case result
         // this allows us to test also that parsing errors are thrown for test cases that expect such error code
-        "FOCH0002" // unsupported collation parameter, rumble doesnt support additional collations
     );
 
 }
