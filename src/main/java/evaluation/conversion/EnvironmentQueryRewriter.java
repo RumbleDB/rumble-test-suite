@@ -30,7 +30,7 @@ public final class EnvironmentQueryRewriter {
 
         // Parse the intermediate query so resource URIs inside injected parameter values are rewritten too.
         XQueryParser.ModuleAndThisIsItContext queryWithDeclarationsModule = XQueryParsing.parseValidModule(
-                queryWithDeclarations
+            queryWithDeclarations
         );
         if (queryWithDeclarationsModule == null) {
             return queryWithDeclarations;
