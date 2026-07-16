@@ -13,6 +13,25 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class CaseCollector {
+    // Features intentionally omitted from this set include:
+    // schemaValidation and schemaImport (XML Schema is not supported),
+    // advanced-uca-fallback, non_unicode_codepoint_collation, and simple-uca-fallback
+    // (additional collations are not supported),
+    // non_empty_sequence_collection, collection-stability, and directory-as-collection-uri
+    // (collection support is incomplete),
+    // fn-format-integer-CLDR, xpath-1.0-compatibility, fn-load-xquery-module,
+    // fn-transform-XSLT, fn-transform-XSLT30, namespace-axis, infoset-dtd, remote_http,
+    // typedData, and schema-location-hint.
+    // olson-timezone is partially supported by the date/time formatting functions.
+    private static final Set<String> SUPPORTED_FEATURES = Set.of(
+        "arbitraryPrecisionDecimal",
+        "higherOrderFunctions",
+        "moduleImport",
+        "olson-timezone",
+        "serialization",
+        "staticTyping"
+    );
+
     private static final Set<String> SUPPORTED_SPECS = Set.of(
         "XP20+",
         "XP30+",
@@ -304,40 +323,13 @@ public class CaseCollector {
                     break;
                 }
                 case "feature": {
-                    // schemaValidation (XML specific)
-                    // schemaImport (XML specific)
-                    // advanced-uca-fallback (we don't support other collations)
-                    // non_empty_sequence_collection (we don't support collection() yet)
-                    // collection-stability (we don't support collection() yet)
-                    // directory-as-collection-uri (we don't support collection() yet)
-                    // non_unicode_codepoint_collation (we don't support other collations)
-                    // simple-uca-fallback (we don't support other collations)
-                    // olson-timezone (partly supported by the datetime formatting builtins, unskip for now)
-                    // fn-format-integer-CLDR (not supported yet)
-                    // xpath-1.0-compatibility (we are not backwards compatible with XPath 1.0)
-                    // fn-load-xquery-module (not supported yet)
-                    // fn-transform-XSLT (not supported yet)
-                    // namespace-axis (XML specific)
-                    // infoset-dtd (XML specific)
-                    // serialization
-                    // fn-transform-XSLT30 (not supported yet)
-                    // remote_http (not sure what this is, do you have an example?)
-                    // typedData (not sure what this is, do you have an example?)
-                    // schema-location-hint (XML specific)
-                    // These are the feature dependencies we currently support in the harness.
-                    if (
-                        !(value.contains("higherOrderFunctions")
-                            || value.contains("moduleImport")
-                            ||
-                            value.contains("arbitraryPrecisionDecimal")
-                            || value.contains("staticTyping")
-                            || value.contains("olson-timezone")
-                            || value.contains("serialization"))
-                    ) {
+                    boolean expectedToBeSupported = !"false".equals(dependencyNode.attribute("satisfied"));
+                    boolean supported = SUPPORTED_FEATURES.contains(value);
+                    if (expectedToBeSupported != supported) {
                         result.skipReason = type + " " + value;
                         return result;
                     }
-                    if (value.contains("staticTyping")) {
+                    if (expectedToBeSupported && value.equals("staticTyping")) {
                         result.staticTyping = true;
                     }
                     break;
