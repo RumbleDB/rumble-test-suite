@@ -96,14 +96,14 @@ class AssertionContext {
 
     private RumbleRuntimeConfiguration createRumbleConfig() {
         List<String> arguments = new ArrayList<>(
-            Arrays.asList(
-                "--output-format",
-                "json",
-                "--materialization-cap",
-                "1000000000",
-                "--default-language",
-                this.useXQueryParser ? "xquery31" : "jsoniq40"
-            )
+                Arrays.asList(
+                    "--output-format",
+                    "json",
+                    "--materialization-cap",
+                    "1000000000",
+                    "--default-language",
+                    this.useXQueryParser ? "xquery31" : "jsoniq40"
+                )
         );
         if (this.staticTyping) {
             arguments.add("--static-typing");

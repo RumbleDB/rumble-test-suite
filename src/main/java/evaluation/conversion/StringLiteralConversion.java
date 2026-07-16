@@ -11,31 +11,6 @@ final class StringLiteralConversion implements ConversionPass {
         new StringLiteralVisitor(context).visit(context.module());
     }
 
-    private static String parseXQueryStringLiteral(String source) {
-        if (source.length() < 2) {
-            // A valid XQuery string literal is always at least two characters '' or ""
-            return null;
-        }
-
-        char delimiter = source.charAt(0);
-        if ((delimiter != '\'' && delimiter != '"') || source.charAt(source.length() - 1) != delimiter) {
-            return null;
-        }
-
-        StringBuilder value = new StringBuilder(source.length() - 2);
-        for (int i = 1; i < source.length() - 1; i++) {
-            char current = source.charAt(i);
-            if (current == delimiter && i + 1 < source.length() - 1 && source.charAt(i + 1) == delimiter) {
-                // Converts doubled delimiters into one literal delimiter
-                value.append(delimiter);
-                i++;
-            } else {
-                value.append(current);
-            }
-        }
-        return value.toString();
-    }
-
     private static String toJSONiqStringLiteral(String value) {
         StringBuilder output = new StringBuilder(value.length() + 2);
         output.append('"');
@@ -98,7 +73,7 @@ final class StringLiteralConversion implements ConversionPass {
 
         @Override
         public Void visitStringLiteral(XQueryParser.StringLiteralContext context) {
-            String value = parseXQueryStringLiteral(this.conversionContext.text(context));
+            String value = XQueryStringLiteral.parse(this.conversionContext.text(context));
             if (value != null) {
                 this.conversionContext.replace(context, toJSONiqStringLiteral(value));
             }

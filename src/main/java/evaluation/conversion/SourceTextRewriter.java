@@ -26,6 +26,14 @@ final class SourceTextRewriter {
         addEdit(context.getStart().getStartIndex(), context.getStop().getStopIndex(), replacement);
     }
 
+    void insertBefore(Token token, String text) {
+        addInsertion(token.getStartIndex(), text);
+    }
+
+    void insertAfter(Token token, String text) {
+        addInsertion(token.getStopIndex() + 1, text);
+    }
+
     String text(ParserRuleContext context) {
         int start = context.getStart().getStartIndex();
         int stop = context.getStop().getStopIndex();
@@ -55,6 +63,14 @@ final class SourceTextRewriter {
     private void addEdit(int start, int stop, String replacement) {
         if (isCodePointRange(start, stop)) {
             this.edits.add(new SourceEdit(toStringOffset(start), toStringOffset(stop + 1), replacement));
+        }
+    }
+
+    private void addInsertion(int position, String text) {
+        int codePointCount = this.source.codePointCount(0, this.source.length());
+        if (position >= 0 && position <= codePointCount) {
+            int offset = toStringOffset(position);
+            this.edits.add(new SourceEdit(offset, offset, text));
         }
     }
 
