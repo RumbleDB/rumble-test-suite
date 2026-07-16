@@ -1,6 +1,7 @@
 package iq.base;
 
 import org.rumbledb.api.Item;
+import org.rumbledb.api.SequenceOfItems;
 import org.rumbledb.exceptions.RumbleException;
 
 import java.util.List;
@@ -10,15 +11,15 @@ import java.util.List;
  * Because we also test with errors, it can either contain a normal result or error
  */
 class QueryEvaluation {
-    private final List<Item> result;
+    private final SequenceOfItems result;
     private final RumbleException error;
 
-    private QueryEvaluation(List<Item> result, RumbleException error) {
+    private QueryEvaluation(SequenceOfItems result, RumbleException error) {
         this.result = result;
         this.error = error;
     }
 
-    static QueryEvaluation withResult(List<Item> result) {
+    static QueryEvaluation withResult(SequenceOfItems result) {
         return new QueryEvaluation(result, null);
     }
 
@@ -30,7 +31,14 @@ class QueryEvaluation {
         if (this.error != null) {
             throw this.error;
         }
-        return this.result;
+        return this.result.getAsList();
+    }
+
+    String getSerializedResult() {
+        if (this.error != null) {
+            throw this.error;
+        }
+        return this.result.serialize();
     }
 
     RumbleException getError() {
