@@ -82,7 +82,7 @@ public class TestBase {
             );
         } catch (RumbleException e) {
             if (isSkipErrorCode(e.getErrorCode().toString())) {
-                assumeTrue(false, "Skip errorcode: " + e.getErrorCode().toString());
+                assumeTrue(false, "Skip errorcode: " + e.getErrorCode().toString() + ", reason: " + e.getMessage());
             } else {
                 throw e;
             }
