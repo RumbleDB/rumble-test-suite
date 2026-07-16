@@ -37,7 +37,37 @@ public class Environment {
         initStaticBaseUri(environmentNode);
         initResources(environmentNode, envPath);
         initSources(environmentNode, envPath);
-        initCompilationResources(environmentNode, envPath);
+        addImportResources(collectImportResources(environmentNode, envPath));
+    }
+
+    private Environment() {
+    }
+
+    private Environment(Environment environment) {
+        this.runtimeResourceLookup.putAll(environment.runtimeResourceLookup);
+        this.paramLookup.putAll(environment.paramLookup);
+        this.externalParamLookup.putAll(environment.externalParamLookup);
+        this.roleLookup.putAll(environment.roleLookup);
+        this.importResourceLookup.putAll(environment.importResourceLookup);
+        this.namespaceLookup.putAll(environment.namespaceLookup);
+        this.decimalFormatDeclarations.addAll(environment.decimalFormatDeclarations);
+        this.staticBaseUriUndefined = environment.staticBaseUriUndefined;
+        this.staticBaseUri = environment.staticBaseUri;
+    }
+
+    public static Environment forTestCase(
+            Environment environment,
+            XdmNode testCase,
+            Path testSetDirectory
+    ) {
+        Map<URI, URI> imports = collectImportResources(testCase, testSetDirectory);
+        if (imports.isEmpty()) {
+            return environment;
+        }
+
+        Environment result = environment == null ? new Environment() : new Environment(environment);
+        result.addImportResources(imports);
+        return result;
     }
 
     private void initParams(XdmNode environmentNode) {
@@ -182,20 +212,35 @@ public class Environment {
         }
     }
 
-    private void initCompilationResources(XdmNode environmentNode, Path envPath) {
-        initCompilationResources(environmentNode, envPath, "module");
-        initCompilationResources(environmentNode, envPath, "schema");
+    private void addImportResources(Map<URI, URI> imports) {
+        // The compiler currently supports one physical location per logical URI.
+        imports.forEach(importResourceLookup::putIfAbsent);
     }
 
-    private void initCompilationResources(XdmNode environmentNode, Path envPath, String elementName) {
-        for (XdmNode resource : environmentNode.select(Steps.descendant(elementName)).asList()) {
-            try {
-                URI logicalUri = URI.create(resource.attribute("uri"));
-                URI physicalUri = envPath.resolve(resource.attribute("file")).toUri();
-                importResourceLookup.putIfAbsent(logicalUri, physicalUri);
-            } catch (IllegalArgumentException ignored) {
-                // Negative tests can deliberately declare malformed logical URIs.
+    private static Map<URI, URI> collectImportResources(XdmNode node, Path basePath) {
+        Map<URI, URI> imports = new HashMap<>();
+        for (String elementName : List.of("module", "schema")) {
+            for (XdmNode resource : node.select(Steps.descendant(elementName)).asList()) {
+                String uri = resource.attribute("uri");
+                String file = resource.attribute("file");
+                URI logicalUri = parseLogicalUri(uri);
+                if (logicalUri != null && file != null) {
+                    imports.putIfAbsent(logicalUri, basePath.resolve(file).toUri());
+                }
             }
+        }
+        return imports;
+    }
+
+    private static URI parseLogicalUri(String uri) {
+        if (uri == null) {
+            return null;
+        }
+        try {
+            return URI.create(uri);
+        } catch (IllegalArgumentException ignored) {
+            // Negative tests can deliberately declare malformed logical URIs.
+            return null;
         }
     }
 

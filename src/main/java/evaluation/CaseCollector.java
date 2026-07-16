@@ -177,28 +177,7 @@ public class CaseCollector {
         Path testSetDirectory = testsRepositoryDirectoryPath.resolve(currentTestSet).getParent();
         String staticBaseUri = toDirectoryUri(testSetDirectory);
 
-        // get the relevant environment for the testcase
-        Environment environment = null;
-        List<XdmNode> environments = testCase.select(Steps.child("environment")).asList();
-        if (environments != null && !environments.isEmpty()) {
-            if (environments.get(0).attribute("ref") != null) {
-                // predefined environment from testset or catalog
-                String envName = environments.get(0).attribute("ref");
-                if (catalogEnvironments.containsKey(envName)) {
-                    environment = catalogEnvironments.get(envName);
-                } else if (testSetEnvironments.containsKey(envName)) {
-                    environment = testSetEnvironments.get(envName);
-                } else {
-                    throw new RuntimeException("No environment found with name: " + envName);
-                }
-            } else {
-                // environment defined in testcase
-                environment = new Environment(
-                        environments.get(0),
-                        testSetDirectory
-                );
-            }
-        }
+        Environment environment = prepareEnvironment(testCase, testSetDirectory);
 
         if (environment != null) {
             if (environment.isStaticBaseUriUndefined()) {
@@ -236,6 +215,28 @@ public class CaseCollector {
                     currentTestCase
             )
         );
+    }
+
+    private Environment prepareEnvironment(XdmNode testCase, Path testSetDirectory) {
+        List<XdmNode> environments = testCase.select(Steps.child("environment")).asList();
+        Environment environment = environments.isEmpty()
+            ? null
+            : resolveEnvironment(environments.get(0), testSetDirectory);
+        return Environment.forTestCase(environment, testCase, testSetDirectory);
+    }
+
+    private Environment resolveEnvironment(XdmNode environmentNode, Path testSetDirectory) {
+        String reference = environmentNode.attribute("ref");
+        if (reference == null) {
+            return new Environment(environmentNode, testSetDirectory);
+        }
+        if (catalogEnvironments.containsKey(reference)) {
+            return catalogEnvironments.get(reference);
+        }
+        if (testSetEnvironments.containsKey(reference)) {
+            return testSetEnvironments.get(reference);
+        }
+        throw new IllegalArgumentException("No environment found with name: " + reference);
     }
 
     private static String toDirectoryUri(Path directory) {
@@ -374,11 +375,6 @@ public class CaseCollector {
             }
         }
         // all dependencies are okay
-
-        // check if it uses module
-        if (testCase.select(Steps.child("module")).exists()) {
-            result.skipReason = "module requirement not implemented";
-        }
 
         return result;
     }
