@@ -182,8 +182,20 @@ public class TestBase {
                 assertEquals(expected, actual, "Wrong string value");
                 break;
             case "all-of":
-                for (XdmNode individualAssertion : assertion.children("*")) {
-                    checkAssertion(individualAssertion, context);
+                List<XdmNode> individualAssertions = new ArrayList<>();
+                assertion.children("*").forEach(individualAssertions::add);
+                // These assertions all consume the same $result. Put them in one query so that an expensive test
+                // expression is evaluated once rather than once per assertion.
+                if (canEvaluateTogether(individualAssertions)) {
+                    secondQuery = declareResultVariableFromTestExpression(
+                        context.getTestString(),
+                        combineAssertionExpressions(individualAssertions)
+                    );
+                    assertTrueSingleElement(context.runQuery(secondQuery));
+                } else {
+                    for (XdmNode individualAssertion : individualAssertions) {
+                        checkAssertion(individualAssertion, context);
+                    }
                 }
                 break;
             case "any-of":
@@ -366,6 +378,26 @@ public class TestBase {
                 + assertionExpression
                 + ")"
         );
+    }
+
+    private static boolean canEvaluateTogether(List<XdmNode> assertions) {
+        return !assertions.isEmpty()
+            && assertions.stream()
+                .map(assertion -> assertion.getNodeName().getLocalName())
+                .allMatch(tag -> tag.equals("assert") || tag.equals("not"));
+    }
+
+    static String combineAssertionExpressions(List<XdmNode> assertions) {
+        return assertions.stream()
+            .map(
+                assertion -> {
+                    String expression = "boolean(" + assertion.getStringValue() + ")";
+                    return assertion.getNodeName().getLocalName().equals("not")
+                        ? "not(" + expression + ")"
+                        : expression;
+                }
+            )
+            .collect(Collectors.joining(",\n", "every $assertion in (\n", "\n) satisfies $assertion"));
     }
 
 }
