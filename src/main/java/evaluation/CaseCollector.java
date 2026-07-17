@@ -29,7 +29,10 @@ public class CaseCollector {
         "moduleImport",
         "olson-timezone",
         "serialization",
-        "staticTyping"
+        "staticTyping",
+        "schemaImport",
+        "schemaValidation",
+        "schema-location-hint"
     );
 
     private static final Set<String> SUPPORTED_SPECS = Set.of(
