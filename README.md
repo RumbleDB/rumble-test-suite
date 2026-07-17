@@ -55,6 +55,7 @@ If you want to work on this repo, you can install it locally with the following 
 4. ``cd rumble``
 5. ``mvn clean compile assembly:single -quiet``
 6. ``cd ..``
+7. ``./get-tests-repository.sh``
 
 Then you can run a test folder like this (example for *prod*)
 ```

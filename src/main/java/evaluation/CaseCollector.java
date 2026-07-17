@@ -3,10 +3,9 @@ package evaluation;
 import net.sf.saxon.s9api.*;
 import net.sf.saxon.s9api.streams.Steps;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -66,7 +65,7 @@ public class CaseCollector {
      * method that collects all the testcases into a local variable allowing
      * getAllTests() to be called later
      */
-    public void execute(String testFolder) throws IOException, SaxonApiException, InterruptedException {
+    public void execute(String testFolder) throws IOException, SaxonApiException {
         getTestsRepository();
         processCatalog(testFolder);
 
@@ -82,31 +81,17 @@ public class CaseCollector {
         return this.allTests;
     }
 
-    /**
-     * method that clones the git repository containing the tests and assigns
-     * testsRepositoryScriptFileName
-     */
-    public void getTestsRepository() throws IOException, InterruptedException {
-        String testsRepositoryScriptFileName = "get-tests-repository.sh";
-        ProcessBuilder pb = new ProcessBuilder(
-                Constants.WORKING_DIRECTORY_PATH.resolve(testsRepositoryScriptFileName).toString()
-        );
-
-        Process p = pb.start();
-        final int exitValue = p.waitFor();
-
-        if (exitValue == 0) {
-            testsRepositoryDirectoryPath = Constants.WORKING_DIRECTORY_PATH.resolve("qt3tests");
-        } else {
-            BufferedReader stderr = new BufferedReader(new InputStreamReader(p.getErrorStream()));
-            String line;
-            StringBuilder result = new StringBuilder();
-            while ((line = stderr.readLine()) != null) {
-                result.append(line);
-            }
-            throw new IOException("Error with get-tests-repository.sh script" + result);
+    /** Resolves the QT3 repository prepared before the test run. */
+    public void getTestsRepository() throws IOException {
+        Path repositoryPath = Constants.WORKING_DIRECTORY_PATH.resolve("qt3tests");
+        if (!Files.isRegularFile(repositoryPath.resolve("catalog.xml"))) {
+            throw new IOException(
+                    "QT3 tests are missing at "
+                        + repositoryPath
+                        + ". Run ./get-tests-repository.sh before starting Maven."
+            );
         }
-
+        this.testsRepositoryDirectoryPath = repositoryPath;
     }
 
     private void processCatalog(String testFolder) throws SaxonApiException {
