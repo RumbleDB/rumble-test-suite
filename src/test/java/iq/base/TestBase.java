@@ -112,11 +112,25 @@ public class TestBase {
                 assertTrueSingleElement(context.runQuery(secondQuery));
                 break;
             case "not":
-                secondQuery = declareResultVariableFromTestExpression(
-                    context.getTestString(),
-                    assertion.getStringValue()
-                );
-                assertFalseSingleElement(context.runQuery(secondQuery));
+                List<XdmNode> nestedAssertions = new ArrayList<>();
+                for (XdmNode nestedAssertion : assertion.children("*")) {
+                    nestedAssertions.add(nestedAssertion);
+                }
+                if (!nestedAssertions.isEmpty()) {
+                    assertEquals(1, nestedAssertions.size(), "not assertion must contain exactly one nested assertion");
+                    try {
+                        checkAssertion(nestedAssertions.get(0), context);
+                        fail("Nested assertion inside not succeeded");
+                    } catch (AssertionError e) {
+                        // Expected: the nested assertion should fail.
+                    }
+                } else {
+                    secondQuery = declareResultVariableFromTestExpression(
+                        context.getTestString(),
+                        assertion.getStringValue()
+                    );
+                    assertFalseSingleElement(context.runQuery(secondQuery));
+                }
                 break;
             case "assert-eq":
                 String assertionQuery = "(" + assertion.getStringValue() + ")";
