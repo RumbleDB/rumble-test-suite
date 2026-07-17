@@ -41,6 +41,7 @@ env:
   JAVA_VERSION: "17"
   PYTHON_VERSION: "3.14"
   NODE_VERSION: "26"
+  QT3_REVISION: "201a6e466940cdfc727f4babfedcde5332b9f578"
 
 jobs:
   tests:
@@ -76,6 +77,14 @@ jobs:
         with:
           name: ${{ inputs.rumble_artifact_name }}
           path: rumble/target
+
+      - name: Checkout QT3 tests
+        uses: actions/checkout@v6
+        with:
+          repository: w3c/qt3tests
+          ref: ${{ env.QT3_REVISION }}
+          path: qt3tests
+          fetch-depth: 1
 
       - name: (DEBUG) List rumble/target
         run: ls -R rumble
@@ -127,6 +136,14 @@ jobs:
           java-version: ${{ env.JAVA_VERSION }}
           cache: maven
 
+      - name: Checkout QT3 tests
+        uses: actions/checkout@v6
+        with:
+          repository: w3c/qt3tests
+          ref: ${{ env.QT3_REVISION }}
+          path: qt3tests
+          fetch-depth: 1
+
       - name: Download Surefire artifacts
         uses: actions/download-artifact@v8
         with:
@@ -149,10 +166,6 @@ jobs:
         with:
           name: ${{ inputs.rumble_artifact_name }}
           path: rumble/target
-
-      - name: Download QT3 test suite
-        shell: bash
-        run: ./get-tests-repository.sh
 
       - name: Generate analysis
         shell: bash
