@@ -10,7 +10,7 @@ QT3TESTS_REPO_URL = "https://github.com/w3c/qt3tests/blob/master"
 
 # Because of GitHub comment size limits, we limit the number of regressions displayed in the comment.
 # To see the full list of regressions, users can download the detailed test results from the artifacts.
-DISPLAY_LIMIT = 250
+DISPLAY_LIMIT = 50
 
 
 def load_analysis(analysis_json: str) -> dict:
