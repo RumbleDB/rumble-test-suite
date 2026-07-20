@@ -16,8 +16,6 @@ type IssuesTabProps = {
   setSortBy: (sort: "count" | "count-asc" | "suite" | "message") => void;
   selectedIssueKey: string | null;
   setSelectedIssueKey: (key: string | null) => void;
-  parserMode: ParserMode;
-  setParserMode: (mode: ParserMode) => void;
   copiedKey: string | null;
   handleCopyCommand: (command: string, key: string) => void;
 };
@@ -243,7 +241,7 @@ export function IssuesTab(props: IssuesTabProps) {
                 return matchingTestCases().slice(start, start + itemsPerPage);
               });
 
-              const rerunCommand = createMemo(() => getParserCommand(issue, props.parserMode));
+              const rerunCommand = createMemo(() => getParserCommand(issue));
 
               return (
                 <div class="panel" style={{ display: "flex", "flex-direction": "column", gap: "18px", padding: "18px" }}>
@@ -269,29 +267,6 @@ export function IssuesTab(props: IssuesTabProps) {
                       <span style={{ "font-size": "0.72rem", "font-weight": "800", "text-transform": "uppercase", "letter-spacing": "0.05em", color: "var(--muted)" }}>
                         Rerun Entire Suite
                       </span>
-                      <div class="parser-selector" style={{ display: "flex", gap: "2px", background: "rgba(0,0,0,0.03)", padding: "2px", "border-radius": "6px", border: "1px solid var(--border)" }}>
-                        <button
-                          class="parser-btn"
-                          classList={{ "parser-btn-active": props.parserMode === "jsoniq" }}
-                          onClick={() => props.setParserMode("jsoniq")}
-                        >
-                          JSONiq
-                        </button>
-                        <button
-                          class="parser-btn"
-                          classList={{ "parser-btn-active": props.parserMode === "xquery" }}
-                          onClick={() => props.setParserMode("xquery")}
-                        >
-                          XQuery
-                        </button>
-                        <button
-                          class="parser-btn"
-                          classList={{ "parser-btn-active": props.parserMode === "default" }}
-                          onClick={() => props.setParserMode("default")}
-                        >
-                          Default
-                        </button>
-                      </div>
                     </div>
                     <div class="code-snippet-box">
                       <div class="code-snippet-text">
@@ -344,7 +319,7 @@ export function IssuesTab(props: IssuesTabProps) {
                         }
                       >
                         {(c) => {
-                          const singleTestRerun = () => getSingleTestCaseCommand(issue.suite, c.id, props.parserMode);
+                          const singleTestRerun = () => getSingleTestCaseCommand(issue.suite, c.id, issue.parser);
                           const isSingleCopied = () => props.copiedKey === c.id;
 
                           return (

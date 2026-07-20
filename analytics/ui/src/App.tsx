@@ -1,9 +1,9 @@
 import { Show, createSignal, onMount } from "solid-js";
 import type { AnalysisPayload, ParserMode, StatusFilter, ViewModel } from "./lib/analysis";
-import { buildViewModel } from "./lib/analysis";
+import { buildViewModel, findIssueKeyForCase } from "./lib/analysis";
 import { ShieldAlert } from "./components/Icons";
-import type { TabType } from "./components/Sidebar";
-import { Sidebar } from "./components/Sidebar";
+import type { TabType } from "./components/HeaderNav";
+import { HeaderNav } from "./components/HeaderNav";
 import { OverviewTab } from "./components/OverviewTab";
 import { SuitesTab } from "./components/SuitesTab";
 import { IssuesTab } from "./components/IssuesTab";
@@ -30,7 +30,6 @@ export default function App() {
   
   // Issue explorer / diagnostic states
   const [selectedIssueKey, setSelectedIssueKey] = createSignal<string | null>(null);
-  const [parserMode, setParserMode] = createSignal<ParserMode>("jsoniq");
   const [copiedKey, setCopiedKey] = createSignal<string | null>(null);
 
   onMount(async () => {
@@ -73,6 +72,19 @@ export default function App() {
     setActiveTab("issues");
   };
 
+  // Handle direct navigation to issue from Changes tab
+  const handleJumpToIssue = (suiteName: string, caseId: string) => {
+    setActiveSuite(suiteName);
+    const model = viewModel();
+    if (model) {
+      const issueKey = findIssueKeyForCase(model, suiteName, caseId);
+      if (issueKey) {
+        setSelectedIssueKey(issueKey);
+      }
+    }
+    setActiveTab("issues");
+  };
+
   // Handle active status selection from health legend (navigate to issues tab)
   const handleSelectStatus = (status: StatusFilter) => {
     setActiveStatus(status);
@@ -87,7 +99,7 @@ export default function App() {
   };
 
   return (
-    <div class="page-shell">
+    <div class="page-shell-topnav">
       <Show
         when={viewModel()}
         fallback={
@@ -106,27 +118,16 @@ export default function App() {
 
           return (
             <>
-              {/* SIDEBAR NAVIGATION */}
-              <Sidebar
+              {/* TOP NAVIGATION HEADER */}
+              <HeaderNav
                 viewModel={model}
                 activeTab={activeTab()}
                 setActiveTab={setActiveTab}
               />
 
               {/* MAIN CONTENT AREA */}
-              <main class="main-content">
-                {/* TOP HEADER */}
-                <header class="top-header">
-                  <div class="top-header-title">
-                    <Show when={activeTab() === "overview"}>Overview Dashboard</Show>
-                    <Show when={activeTab() === "suites"}>Test Suites</Show>
-                    <Show when={activeTab() === "issues"}>Failure Groups</Show>
-                    <Show when={activeTab() === "changes"}>Baseline Changes</Show>
-                  </div>
-                </header>
-
-                {/* PAGE BODY */}
-                <div class="page-body">
+              <main class="main-content-topnav">
+                <div class="page-body-topnav">
                   <Show when={activeTab() === "overview"}>
                     <OverviewTab
                       viewModel={model}
@@ -160,8 +161,6 @@ export default function App() {
                       setSortBy={setSortBy}
                       selectedIssueKey={selectedIssueKey()}
                       setSelectedIssueKey={setSelectedIssueKey}
-                      parserMode={parserMode()}
-                      setParserMode={setParserMode}
                       copiedKey={copiedKey()}
                       handleCopyCommand={handleCopyCommand}
                     />
@@ -174,9 +173,9 @@ export default function App() {
                       activeStatus={activeStatus()}
                       searchQuery={searchQuery()}
                       setSearchQuery={setSearchQuery}
-                      parserMode={parserMode()}
                       copiedKey={copiedKey()}
                       handleCopyCommand={handleCopyCommand}
+                      onJumpToIssue={handleJumpToIssue}
                     />
                   </Show>
                 </div>
