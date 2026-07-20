@@ -889,26 +889,7 @@ body {
   color: var(--ink);
 }
 
-.btn-jump-issue {
-  background: var(--accent-light);
-  color: var(--accent);
-  border: 1px solid rgba(79, 70, 229, 0.2);
-  border-radius: var(--radius-sm);
-  font-size: 0.72rem;
-  font-weight: 700;
-  padding: 4px 10px;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  transition: all 150ms ease;
-  user-select: none;
-}
 
-.btn-jump-issue:hover {
-  background: var(--accent);
-  color: #ffffff;
-}
 
 .change-item-id-row {
   cursor: pointer;
@@ -1256,37 +1237,7 @@ body {
   color: #fff;
 }
 
-.parser-selector {
-  display: flex;
-  gap: 2px;
-  background: rgba(0,0,0,0.03);
-  padding: 2px;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-}
 
-.parser-btn {
-  background: transparent;
-  border: none;
-  color: var(--muted);
-  font-size: 0.72rem;
-  padding: 3px 8px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: 600;
-  text-transform: uppercase;
-  transition: all 120ms ease;
-  user-select: none;
-}
-
-.parser-btn:hover {
-  color: var(--ink);
-}
-
-.parser-btn-active {
-  background: var(--accent);
-  color: #fff !important;
-}
 
 .affected-list {
   display: flex;
