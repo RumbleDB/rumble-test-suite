@@ -220,7 +220,6 @@ export function IssuesTab(props: IssuesTabProps) {
                 setAffectedSearch(initialLocalSearch());
               });
 
-              const [page, setPage] = createSignal(1);
               const [expandedCaseId, setExpandedCaseId] = createSignal<string | null>(null);
               const [copiedCodeKey, setCopiedCodeKey] = createSignal<string | null>(null);
 
@@ -231,8 +230,6 @@ export function IssuesTab(props: IssuesTabProps) {
                 setTimeout(() => setCopiedCodeKey(null), 2000);
               };
 
-              const itemsPerPage = 20;
-
               const matchingTestCases = createMemo(() => {
                 const q = affectedSearch().trim().toLowerCase();
                 if (!q) return issue.cases;
@@ -241,13 +238,6 @@ export function IssuesTab(props: IssuesTabProps) {
                   (c.description && c.description.toLowerCase().includes(q)) ||
                   (c.query && c.query.toLowerCase().includes(q))
                 );
-              });
-
-              const totalPages = createMemo(() => Math.max(Math.ceil(matchingTestCases().length / itemsPerPage), 1));
-
-              const paginatedTestCases = createMemo(() => {
-                const start = (page() - 1) * itemsPerPage;
-                return matchingTestCases().slice(start, start + itemsPerPage);
               });
 
               const rerunCommand = createMemo(() => getParserCommand(issue));
@@ -310,7 +300,6 @@ export function IssuesTab(props: IssuesTabProps) {
                           value={affectedSearch()}
                           onInput={(e) => {
                             setAffectedSearch(e.currentTarget.value);
-                            setPage(1);
                             setExpandedCaseId(null);
                           }}
                         />
@@ -319,7 +308,7 @@ export function IssuesTab(props: IssuesTabProps) {
 
                     <div class="affected-list">
                       <For
-                        each={paginatedTestCases()}
+                        each={matchingTestCases()}
                         fallback={
                           <div class="empty-state" style={{ padding: "20px" }}>
                             <h3>No Matching Testcases</h3>
@@ -462,29 +451,6 @@ export function IssuesTab(props: IssuesTabProps) {
                         }}
                       </For>
                     </div>
-
-                    {/* Pagination controls */}
-                    <Show when={totalPages() > 1}>
-                      <div class="pagination">
-                        <span>Page {page()} of {totalPages()}</span>
-                        <div class="pagination-buttons">
-                          <button
-                            class="pagination-btn"
-                            disabled={page() === 1}
-                            onClick={() => setPage(p => p - 1)}
-                          >
-                            <ChevronLeft size={12} />
-                          </button>
-                          <button
-                            class="pagination-btn"
-                            disabled={page() === totalPages()}
-                            onClick={() => setPage(p => p + 1)}
-                          >
-                            <ChevronRight size={12} />
-                          </button>
-                        </div>
-                      </div>
-                    </Show>
                   </div>
                 </div>
               );
