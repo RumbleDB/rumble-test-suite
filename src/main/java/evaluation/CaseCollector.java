@@ -33,10 +33,6 @@ public class CaseCollector {
     );
 
     private static final Set<String> SUPPORTED_SPECS = Set.of(
-        "XP20+",
-        "XP30+",
-        "XP31",
-        "XP31+",
         "XQ10+",
         "XQ30+",
         "XQ31",
