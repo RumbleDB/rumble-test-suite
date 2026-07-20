@@ -68,9 +68,9 @@ body {
 }
 
 .header-nav-container {
-  max-width: 1440px;
-  margin: 0 auto;
-  padding: 0 24px;
+  width: 100%;
+  max-width: 100%;
+  padding: 0 32px;
   height: 64px;
   display: flex;
   align-items: center;
@@ -212,14 +212,13 @@ body {
   flex: 1;
   display: flex;
   flex-direction: column;
-  max-width: 1440px;
   width: 100%;
-  margin: 0 auto;
+  max-width: 100%;
 }
 
 .page-body-topnav {
   flex: 1;
-  padding: 24px;
+  padding: 24px 32px;
 }
 
 /* Custom scrollbar */
@@ -635,8 +634,8 @@ body {
 /* Issues layout split */
 .issues-layout {
   display: grid;
-  grid-template-columns: 380px 1fr;
-  gap: 20px;
+  grid-template-columns: clamp(360px, 24vw, 460px) 1fr;
+  gap: 24px;
   flex: 1;
   min-height: 0;
 }

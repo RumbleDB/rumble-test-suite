@@ -12,7 +12,6 @@ type ChangesTabProps = {
   setSearchQuery: (query: string) => void;
   copiedKey: string | null;
   handleCopyCommand: (command: string, key: string) => void;
-  onJumpToIssue: (suite: string, caseId: string) => void;
 };
 
 export function ChangesTab(props: ChangesTabProps) {
@@ -144,17 +143,6 @@ export function ChangesTab(props: ChangesTabProps) {
                             <HighlightText text={item.suite} query={props.searchQuery} />
                           </span>
                         </div>
-
-                        <button
-                          class="btn-jump-issue"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            props.onJumpToIssue(item.suite, item.id);
-                          }}
-                          title="View in Failure Groups diagnostic view"
-                        >
-                          <ExternalLink size={12} /> View in Failure Groups
-                        </button>
                       </div>
 
                       {/* Test Case ID */}

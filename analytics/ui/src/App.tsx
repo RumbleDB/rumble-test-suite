@@ -175,7 +175,6 @@ export default function App() {
                       setSearchQuery={setSearchQuery}
                       copiedKey={copiedKey()}
                       handleCopyCommand={handleCopyCommand}
-                      onJumpToIssue={handleJumpToIssue}
                     />
                   </Show>
                 </div>
