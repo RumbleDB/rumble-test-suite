@@ -55,8 +55,11 @@ def render_regression_details(analysis: dict) -> str:
         "| --- | --- | --- | --- | --- |",
     ]
 
-    for suite, items in sorted(regressions.items())[:DISPLAY_LIMIT]:
+    displayed = 0
+    for suite, items in sorted(regressions.items()):
         for item in sorted(items, key=lambda entry: str(entry.get("id", ""))):
+            if displayed >= DISPLAY_LIMIT:
+                break
             raw_test_id = item.get("id", "")
             test_file, test_name = parse_test_id(raw_test_id)
             test_id = table_cell(test_name)
@@ -66,6 +69,9 @@ def render_regression_details(analysis: dict) -> str:
             lines.append(
                 f"| `{table_cell(suite)}` | `{status}` | {test_file_link} | `{test_id}` | `{message}` |"
             )
+            displayed += 1
+        if displayed >= DISPLAY_LIMIT:
+            break
 
     if total > DISPLAY_LIMIT:
         lines.append("")
@@ -90,13 +96,19 @@ def render_improvement_details(analysis: dict) -> str:
         "| --- | --- | --- |",
     ]
 
-    for suite, items in sorted(improvements.items())[:DISPLAY_LIMIT]:
+    displayed = 0
+    for suite, items in sorted(improvements.items()):
         for raw_test_id in sorted(items, key=str):
+            if displayed >= DISPLAY_LIMIT:
+                break
             test_file, test_name = parse_test_id(raw_test_id)
             test_file_link = render_test_file_link(test_file, test_name)
             lines.append(
                 f"| `{table_cell(suite)}` | {test_file_link} | `{table_cell(test_name)}` |"
             )
+            displayed += 1
+        if displayed >= DISPLAY_LIMIT:
+            break
 
     if total > DISPLAY_LIMIT:
         lines.append("")
