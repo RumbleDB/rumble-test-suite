@@ -1,6 +1,7 @@
 package iq.base;
 
 import evaluation.*;
+import evaluation.conversion.XQueryMainModuleRewriter;
 import net.sf.saxon.s9api.XdmNode;
 import org.opentest4j.TestAbortedException;
 import org.rumbledb.api.Item;
@@ -18,6 +19,28 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class TestBase {
+    private static final String PERMUTATION_ASSERTION_QUERY = """
+            let $actual := (
+            %s
+            )
+            let $expected := (
+            %s
+            )
+            return count($actual) eq count($expected)
+              and (
+                every $item in $actual
+                satisfies count(
+                  for $candidate in $actual
+                  where deep-equal($candidate, $item)
+                  return $candidate
+                ) eq count(
+                  for $candidate in $expected
+                  where deep-equal($candidate, $item)
+                  return $candidate
+                )
+              )
+            """;
+
     private final boolean useXQueryParser;
 
     protected TestBase() {
@@ -97,7 +120,6 @@ public class TestBase {
         String tag = assertion.getNodeName().getLocalName();
         String secondQuery;
         List<Item> results;
-        QueryParts parts = null;
 
         switch (tag) {
             case "assert-empty":
@@ -140,13 +162,14 @@ public class TestBase {
                 assertEquals(testCaseResult, assertionResult);
                 break;
             case "assert-deep-eq":
-                parts = splitLeadingDeclarations(context.getTestString());
-                secondQuery = parts.prolog
-                    + "\ndeep-equal(("
-                    + parts.body
-                    + "), ("
-                    + assertion.getStringValue()
-                    + "))";
+                secondQuery = XQueryMainModuleRewriter.rewriteProgram(
+                    context.getTestString(),
+                    program -> "deep-equal(("
+                        + program
+                        + "), ("
+                        + assertion.getStringValue()
+                        + "))"
+                );
                 assertTrueSingleElement(context.runQuery(secondQuery));
                 break;
             case "assert-true":
@@ -203,12 +226,10 @@ public class TestBase {
                 assertTrue(success, "All assertions in any-of failed");
                 break;
             case "assert-type":
-                parts = splitLeadingDeclarations(context.getTestString());
-                secondQuery = parts.prolog
-                    + "\n("
-                    + parts.body
-                    + ") instance of "
-                    + assertion.getStringValue();
+                secondQuery = XQueryMainModuleRewriter.rewriteProgram(
+                    context.getTestString(),
+                    program -> "(" + program + ") instance of " + assertion.getStringValue()
+                );
                 assertTrueSingleElement(context.runQuery(secondQuery));
                 break;
             case "assert-count":
@@ -317,33 +338,14 @@ public class TestBase {
         return context.getPrimarySerialization();
     }
 
-    // TODO check this, I just took it over for now
     private void assertPermutation(
             XdmNode assertion,
             AssertionContext context
     ) {
-        String assertExpression = "declare function allpermutations($sequence as item*) as array* {\n"
-            + " if(count($sequence) le 1)\n"
-            + " then\n"
-            + "   [ $sequence ]\n"
-            + " else\n"
-            + "   for $i in 1 to count($sequence)\n"
-            + "   let $first := $sequence[$i]\n"
-            + "   let $others :=\n"
-            + "     for $s in $sequence\n"
-            + "     count $c\n"
-            + "     where $c ne $i\n"
-            + "     return $s\n"
-            + "   for $recursive in allpermutations($others)\n"
-            + "   return [ $first, $recursive[]]\n"
-            + "};\n"
-            + "\n"
-            + "some $a in allpermutations("
-            + context.getTestString()
-            + ")"
-            + "satisfies deep-equal($a[], (("
-            + assertion.getStringValue()
-            + ")))";
+        String assertExpression = XQueryMainModuleRewriter.rewriteProgram(
+            context.getTestString(),
+            program -> PERMUTATION_ASSERTION_QUERY.formatted(program, assertion.getStringValue())
+        );
         List<Item> results = context.runQuery(assertExpression);
         assertTrueSingleElement(results);
     }
@@ -369,41 +371,15 @@ public class TestBase {
     }
 
 
-    private static class QueryParts {
-        final String prolog;
-        final String body;
-
-        QueryParts(String prolog, String body) {
-            this.prolog = prolog;
-            this.body = body;
-        }
-    }
-
-    private static final Pattern LEADING_DECLARATION =
-        Pattern.compile("\\G\\s*declare\\s+[^;]*;\\s*", Pattern.DOTALL);
-
-    private static QueryParts splitLeadingDeclarations(String query) {
-        Matcher matcher = LEADING_DECLARATION.matcher(query);
-
-        int end = 0;
-        while (matcher.find()) {
-            end = matcher.end();
-        }
-
-        return new QueryParts(
-                query.substring(0, end),
-                query.substring(end)
-        );
-    }
-
     private static String declareResultVariableFromTestExpression(String query, String assertionExpression) {
-        QueryParts parts = splitLeadingDeclarations(query);
-        return parts.prolog
-            + "\ndeclare variable $result := ("
-            + parts.body
-            + ");\nboolean("
-            + assertionExpression
-            + ")";
+        return XQueryMainModuleRewriter.rewriteProgram(
+            query,
+            program -> "declare variable $result := ("
+                + program
+                + ");\nboolean("
+                + assertionExpression
+                + ")"
+        );
     }
 
 }
