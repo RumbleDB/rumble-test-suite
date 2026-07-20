@@ -89,6 +89,8 @@ export type RegressionRow = {
   id: string;
   status: Status;
   message: string;
+  detail?: string;
+  type?: string;
   query?: string;
   description?: string;
   expected?: string;
@@ -183,24 +185,27 @@ export function percentNumber(value: number, total: number): number {
 
 export function getSuiteClassName(suiteName: string): string {
   if (!suiteName) return "";
+  const lower = suiteName.toLowerCase();
+  if (lower === "prod") return "Prod1Test,Prod2Test";
+  if (lower === "fn") return "Fn1Test,Fn2Test";
   return `${suiteName.charAt(0).toUpperCase()}${suiteName.slice(1)}Test`;
 }
 
-export function getParserCommand(issue: IssueRow | null, parserMode: ParserMode): string {
+export function getParserCommand(issue: IssueRow | null): string {
   if (!issue?.suite) return "";
   const suiteClass = getSuiteClassName(issue.suite);
-  if (parserMode === "default") {
+  const parser = issue.parser || "jsoniq";
+  if (parser === "default") {
     return `mvn -Dtest=${suiteClass} test`;
   }
-  return `mvn -Dtest=${suiteClass} -Dparser=${parserMode} test`;
+  return `mvn -Dtest=${suiteClass} -Dparser=${parser} test`;
 }
 
-export function getSingleTestCaseCommand(suiteName: string, caseId: string, parserMode: ParserMode): string {
+export function getSingleTestCaseCommand(suiteName: string, caseId: string, parser?: string): string {
   if (!suiteName || !caseId) return "";
   const suiteClass = getSuiteClassName(suiteName);
   
   // Extract test name (the part after the colon)
-  // Example caseId: "ser/method-json.xml:Serialization-json-59" -> "Serialization-json-59"
   let testCaseName = caseId;
   const colonIndex = caseId.indexOf(":");
   if (colonIndex !== -1) {
@@ -210,7 +215,7 @@ export function getSingleTestCaseCommand(suiteName: string, caseId: string, pars
   // Clean up any characters that might interfere with Maven matching
   testCaseName = testCaseName.replace(/[*?()\[\]]/g, "");
   
-  const parserArg = parserMode === "default" ? "" : ` -Dparser=${parserMode}`;
+  const parserArg = (!parser || parser === "default") ? "" : ` -Dparser=${parser}`;
   return `mvn -Dtest=${suiteClass} -Dtest.case=${testCaseName}${parserArg} test`;
 }
 
@@ -310,7 +315,9 @@ function flattenRegressions(
         suite: suiteName,
         id,
         status,
-        message: item.message || "",
+        message: item.message || details.message || "(no message)",
+        detail: details.detail,
+        type: details.type,
         query: details.query,
         description: details.description,
         expected: decodeExpectedResult(details.expected),
@@ -325,6 +332,17 @@ function flattenRegressions(
       left.id.localeCompare(right.id)
   );
   return rows;
+}
+
+export function findIssueKeyForCase(viewModel: ViewModel, suiteName: string, caseId: string): string | null {
+  for (const issue of viewModel.issueRows) {
+    if (issue.suite === suiteName && issue.cases.some((c) => c.id === caseId)) {
+      return issue.key;
+    }
+  }
+  // Fallback to any issue in suite
+  const suiteIssue = viewModel.issueRows.find((i) => i.suite === suiteName);
+  return suiteIssue ? suiteIssue.key : null;
 }
 
 function flattenImprovements(improvementsBySuite: AnalysisPayload["improvements"]): ImprovementRow[] {

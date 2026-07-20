@@ -31,6 +31,14 @@ final class ConversionContext {
         this.rewriter.replace(context, replacement);
     }
 
+    void insertBefore(Token token, String text) {
+        this.rewriter.insertBefore(token, text);
+    }
+
+    void insertAfter(Token token, String text) {
+        this.rewriter.insertAfter(token, text);
+    }
+
     String result() {
         return this.rewriter.result();
     }
