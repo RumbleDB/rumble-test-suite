@@ -545,6 +545,7 @@ body {
   gap: 12px;
   align-items: center;
   width: 100%;
+  margin-bottom: 16px;
 }
 
 .toolbar .search-input-wrapper {
@@ -774,8 +775,9 @@ body {
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  border-bottom: 1px solid var(--border);
   padding-bottom: 8px;
+  margin-bottom: 10px;
   display: flex;
   align-items: center;
   justify-content: space-between;

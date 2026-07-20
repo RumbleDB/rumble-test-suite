@@ -222,6 +222,15 @@ export function IssuesTab(props: IssuesTabProps) {
 
               const [page, setPage] = createSignal(1);
               const [expandedCaseId, setExpandedCaseId] = createSignal<string | null>(null);
+              const [copiedCodeKey, setCopiedCodeKey] = createSignal<string | null>(null);
+
+              const copyText = (text: string, key: string, e: Event) => {
+                e.stopPropagation();
+                navigator.clipboard.writeText(text);
+                setCopiedCodeKey(key);
+                setTimeout(() => setCopiedCodeKey(null), 2000);
+              };
+
               const itemsPerPage = 20;
 
               const matchingTestCases = createMemo(() => {
@@ -287,17 +296,17 @@ export function IssuesTab(props: IssuesTabProps) {
                     </div>
                   </div>
 
-                  {/* Affected Testcases list */}
+                  {/* Impacted Testcases list */}
                   <div style={{ display: "flex", "flex-direction": "column", gap: "10px" }}>
-                    <div style={{ display: "flex", "justify-content": "space-between", "align-items": "center" }}>
+                    <div style={{ display: "flex", "justify-content": "space-between", "align-items": "center", "margin-bottom": "10px" }}>
                       <span class="kicker">Impacted Tests ({matchingTestCases().length})</span>
-                      <div class="search-input-wrapper" style={{ width: "160px" }}>
+                      <div class="search-input-wrapper" style={{ width: "200px" }}>
                         <Search size={12} />
                         <input
                           type="text"
                           class="search-input"
                           style={{ padding: "6px 10px 6px 30px", "font-size": "0.78rem" }}
-                          placeholder="Filter list..."
+                          placeholder="Filter impacted tests..."
                           value={affectedSearch()}
                           onInput={(e) => {
                             setAffectedSearch(e.currentTarget.value);
@@ -406,17 +415,39 @@ export function IssuesTab(props: IssuesTabProps) {
                                   </Show>
 
                                   <Show when={c.query} fallback={<p style={{ margin: "4px 0 0 0", "font-size": "0.75rem", color: "var(--muted)" }}>No query text available</p>}>
-                                    <div style={{ display: "flex", "flex-direction": "column", gap: "6px", width: "100%" }}>
-                                      <div style={{ background: "#0f172a", border: "1px solid #1e293b", padding: "10px", "border-radius": "6px", overflow: "auto" }}>
-                                        <pre style={{ margin: "0", "font-family": "var(--font-mono)", "font-size": "0.78rem", color: "#a5b4fc", "white-space": "pre-wrap", "word-break": "break-all" }}>
-                                          <HighlightText text={c.query} query={affectedSearch()} />
+                                    <div style={{ display: "flex", "flex-direction": "column", gap: "6px", width: "100%", "margin-top": "4px" }}>
+                                      <div style={{ display: "flex", "justify-content": "space-between", "align-items": "center" }}>
+                                        <span style={{ "font-size": "0.7rem", color: "var(--muted)", "font-weight": "700", "text-transform": "uppercase", "letter-spacing": "0.05em" }}>Test Query:</span>
+                                        <button
+                                          class="btn-copy-sm"
+                                          onClick={(e) => copyText(c.query || "", `query-${c.id}`, e)}
+                                        >
+                                          <Show when={copiedCodeKey() === `query-${c.id}`} fallback={<><Copy size={11} /> Copy Query</>}>
+                                            <Check size={11} /> Copied!
+                                          </Show>
+                                        </button>
+                                      </div>
+                                      <div class="code-box">
+                                        <pre class="code-pre query-pre">
+                                          <HighlightText text={c.query || ""} query={affectedSearch()} />
                                         </pre>
                                       </div>
+
                                       <Show when={c.expected}>
-                                        <div style={{ display: "flex", "flex-direction": "column", gap: "2px" }}>
-                                          <span style={{ "font-size": "0.7rem", color: "var(--muted)", "font-weight": "600", "text-transform": "uppercase", "letter-spacing": "0.05em" }}>Expected Result:</span>
-                                          <div style={{ background: "#1e293b", border: "1px solid #334155", padding: "8px 10px", "border-radius": "6px", overflow: "auto" }}>
-                                            <pre style={{ margin: "0", "font-family": "var(--font-mono)", "font-size": "0.78rem", color: "#cbd5e1", "white-space": "pre-wrap", "word-break": "break-all" }}>
+                                        <div style={{ display: "flex", "flex-direction": "column", gap: "4px", "margin-top": "6px" }}>
+                                          <div style={{ display: "flex", "justify-content": "space-between", "align-items": "center" }}>
+                                            <span style={{ "font-size": "0.7rem", color: "var(--muted)", "font-weight": "700", "text-transform": "uppercase", "letter-spacing": "0.05em" }}>Expected Result:</span>
+                                            <button
+                                              class="btn-copy-sm"
+                                              onClick={(e) => copyText(decodeExpectedResult(c.expected) || "", `exp-${c.id}`, e)}
+                                            >
+                                              <Show when={copiedCodeKey() === `exp-${c.id}`} fallback={<><Copy size={11} /> Copy Expected</>}>
+                                                <Check size={11} /> Copied!
+                                              </Show>
+                                            </button>
+                                          </div>
+                                          <div class="code-box">
+                                            <pre class="code-pre expected-pre">
                                               <HighlightText text={decodeExpectedResult(c.expected) || ""} query={affectedSearch()} />
                                             </pre>
                                           </div>
