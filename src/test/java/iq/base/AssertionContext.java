@@ -5,8 +5,10 @@ import evaluation.conversion.Converter;
 import org.rumbledb.api.Item;
 import org.rumbledb.api.Rumble;
 import org.rumbledb.api.SequenceOfItems;
+import org.rumbledb.config.CompilationConfiguration;
 import org.rumbledb.config.RumbleConfiguration;
 import org.rumbledb.exceptions.RumbleException;
+import org.rumbledb.resources.ResourceResolver;
 
 import java.util.List;
 
@@ -91,7 +93,11 @@ class AssertionContext {
         }
 
         RumbleConfiguration updatedConfig = applyDependenciesToConfig(this.rumbleConfig);
-        return new Rumble(updatedConfig).runQuery(query);
+        ResourceResolver resourceResolver = this.environment == null
+            ? new ResourceResolver()
+            : this.environment.getResourceResolver();
+        CompilationConfiguration compilationConfig = new CompilationConfiguration(updatedConfig, resourceResolver);
+        return new Rumble(compilationConfig).runQuery(query);
     }
 
     private RumbleConfiguration applyDependenciesToConfig(RumbleConfiguration config) {
