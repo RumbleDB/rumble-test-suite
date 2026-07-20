@@ -68,9 +68,10 @@ body {
 }
 
 .header-nav-container {
+  max-width: 1920px;
   width: 100%;
-  max-width: 100%;
-  padding: 0 32px;
+  margin: 0 auto;
+  padding: 0 24px;
   height: 64px;
   display: flex;
   align-items: center;
@@ -212,13 +213,14 @@ body {
   flex: 1;
   display: flex;
   flex-direction: column;
+  max-width: 1920px;
   width: 100%;
-  max-width: 100%;
+  margin: 0 auto;
 }
 
 .page-body-topnav {
   flex: 1;
-  padding: 24px 32px;
+  padding: 24px;
 }
 
 /* Custom scrollbar */
