@@ -16,8 +16,6 @@ type IssuesTabProps = {
   setSortBy: (sort: "count" | "count-asc" | "suite" | "message") => void;
   selectedIssueKey: string | null;
   setSelectedIssueKey: (key: string | null) => void;
-  parserMode: ParserMode;
-  setParserMode: (mode: ParserMode) => void;
   copiedKey: string | null;
   handleCopyCommand: (command: string, key: string) => void;
 };
@@ -222,9 +220,15 @@ export function IssuesTab(props: IssuesTabProps) {
                 setAffectedSearch(initialLocalSearch());
               });
 
-              const [page, setPage] = createSignal(1);
               const [expandedCaseId, setExpandedCaseId] = createSignal<string | null>(null);
-              const itemsPerPage = 20;
+              const [copiedCodeKey, setCopiedCodeKey] = createSignal<string | null>(null);
+
+              const copyText = (text: string, key: string, e: Event) => {
+                e.stopPropagation();
+                navigator.clipboard.writeText(text);
+                setCopiedCodeKey(key);
+                setTimeout(() => setCopiedCodeKey(null), 2000);
+              };
 
               const matchingTestCases = createMemo(() => {
                 const q = affectedSearch().trim().toLowerCase();
@@ -236,14 +240,7 @@ export function IssuesTab(props: IssuesTabProps) {
                 );
               });
 
-              const totalPages = createMemo(() => Math.max(Math.ceil(matchingTestCases().length / itemsPerPage), 1));
-
-              const paginatedTestCases = createMemo(() => {
-                const start = (page() - 1) * itemsPerPage;
-                return matchingTestCases().slice(start, start + itemsPerPage);
-              });
-
-              const rerunCommand = createMemo(() => getParserCommand(issue, props.parserMode));
+              const rerunCommand = createMemo(() => getParserCommand(issue));
 
               return (
                 <div class="panel" style={{ display: "flex", "flex-direction": "column", gap: "18px", padding: "18px" }}>
@@ -269,29 +266,6 @@ export function IssuesTab(props: IssuesTabProps) {
                       <span style={{ "font-size": "0.72rem", "font-weight": "800", "text-transform": "uppercase", "letter-spacing": "0.05em", color: "var(--muted)" }}>
                         Rerun Entire Suite
                       </span>
-                      <div class="parser-selector" style={{ display: "flex", gap: "2px", background: "rgba(0,0,0,0.03)", padding: "2px", "border-radius": "6px", border: "1px solid var(--border)" }}>
-                        <button
-                          class="parser-btn"
-                          classList={{ "parser-btn-active": props.parserMode === "jsoniq" }}
-                          onClick={() => props.setParserMode("jsoniq")}
-                        >
-                          JSONiq
-                        </button>
-                        <button
-                          class="parser-btn"
-                          classList={{ "parser-btn-active": props.parserMode === "xquery" }}
-                          onClick={() => props.setParserMode("xquery")}
-                        >
-                          XQuery
-                        </button>
-                        <button
-                          class="parser-btn"
-                          classList={{ "parser-btn-active": props.parserMode === "default" }}
-                          onClick={() => props.setParserMode("default")}
-                        >
-                          Default
-                        </button>
-                      </div>
                     </div>
                     <div class="code-snippet-box">
                       <div class="code-snippet-text">
@@ -312,21 +286,20 @@ export function IssuesTab(props: IssuesTabProps) {
                     </div>
                   </div>
 
-                  {/* Affected Testcases list */}
+                  {/* Impacted Testcases list */}
                   <div style={{ display: "flex", "flex-direction": "column", gap: "10px" }}>
-                    <div style={{ display: "flex", "justify-content": "space-between", "align-items": "center" }}>
+                    <div style={{ display: "flex", "justify-content": "space-between", "align-items": "center", "margin-bottom": "10px" }}>
                       <span class="kicker">Impacted Tests ({matchingTestCases().length})</span>
-                      <div class="search-input-wrapper" style={{ width: "160px" }}>
+                      <div class="search-input-wrapper" style={{ width: "200px" }}>
                         <Search size={12} />
                         <input
                           type="text"
                           class="search-input"
                           style={{ padding: "6px 10px 6px 30px", "font-size": "0.78rem" }}
-                          placeholder="Filter list..."
+                          placeholder="Filter impacted tests..."
                           value={affectedSearch()}
                           onInput={(e) => {
                             setAffectedSearch(e.currentTarget.value);
-                            setPage(1);
                             setExpandedCaseId(null);
                           }}
                         />
@@ -335,7 +308,7 @@ export function IssuesTab(props: IssuesTabProps) {
 
                     <div class="affected-list">
                       <For
-                        each={paginatedTestCases()}
+                        each={matchingTestCases()}
                         fallback={
                           <div class="empty-state" style={{ padding: "20px" }}>
                             <h3>No Matching Testcases</h3>
@@ -344,7 +317,7 @@ export function IssuesTab(props: IssuesTabProps) {
                         }
                       >
                         {(c) => {
-                          const singleTestRerun = () => getSingleTestCaseCommand(issue.suite, c.id, props.parserMode);
+                          const singleTestRerun = () => getSingleTestCaseCommand(issue.suite, c.id, issue.parser);
                           const isSingleCopied = () => props.copiedKey === c.id;
 
                           return (
@@ -431,17 +404,39 @@ export function IssuesTab(props: IssuesTabProps) {
                                   </Show>
 
                                   <Show when={c.query} fallback={<p style={{ margin: "4px 0 0 0", "font-size": "0.75rem", color: "var(--muted)" }}>No query text available</p>}>
-                                    <div style={{ display: "flex", "flex-direction": "column", gap: "6px", width: "100%" }}>
-                                      <div style={{ background: "#0f172a", border: "1px solid #1e293b", padding: "10px", "border-radius": "6px", overflow: "auto" }}>
-                                        <pre style={{ margin: "0", "font-family": "var(--font-mono)", "font-size": "0.78rem", color: "#a5b4fc", "white-space": "pre-wrap", "word-break": "break-all" }}>
-                                          <HighlightText text={c.query} query={affectedSearch()} />
+                                    <div style={{ display: "flex", "flex-direction": "column", gap: "6px", width: "100%", "margin-top": "4px" }}>
+                                      <div style={{ display: "flex", "justify-content": "space-between", "align-items": "center" }}>
+                                        <span style={{ "font-size": "0.7rem", color: "var(--muted)", "font-weight": "700", "text-transform": "uppercase", "letter-spacing": "0.05em" }}>Test Query:</span>
+                                        <button
+                                          class="btn-copy-sm"
+                                          onClick={(e) => copyText(c.query || "", `query-${c.id}`, e)}
+                                        >
+                                          <Show when={copiedCodeKey() === `query-${c.id}`} fallback={<><Copy size={11} /> Copy Query</>}>
+                                            <Check size={11} /> Copied!
+                                          </Show>
+                                        </button>
+                                      </div>
+                                      <div class="code-box">
+                                        <pre class="code-pre query-pre">
+                                          <HighlightText text={c.query || ""} query={affectedSearch()} />
                                         </pre>
                                       </div>
+
                                       <Show when={c.expected}>
-                                        <div style={{ display: "flex", "flex-direction": "column", gap: "2px" }}>
-                                          <span style={{ "font-size": "0.7rem", color: "var(--muted)", "font-weight": "600", "text-transform": "uppercase", "letter-spacing": "0.05em" }}>Expected Result:</span>
-                                          <div style={{ background: "#1e293b", border: "1px solid #334155", padding: "8px 10px", "border-radius": "6px", overflow: "auto" }}>
-                                            <pre style={{ margin: "0", "font-family": "var(--font-mono)", "font-size": "0.78rem", color: "#cbd5e1", "white-space": "pre-wrap", "word-break": "break-all" }}>
+                                        <div style={{ display: "flex", "flex-direction": "column", gap: "4px", "margin-top": "6px" }}>
+                                          <div style={{ display: "flex", "justify-content": "space-between", "align-items": "center" }}>
+                                            <span style={{ "font-size": "0.7rem", color: "var(--muted)", "font-weight": "700", "text-transform": "uppercase", "letter-spacing": "0.05em" }}>Expected Result:</span>
+                                            <button
+                                              class="btn-copy-sm"
+                                              onClick={(e) => copyText(decodeExpectedResult(c.expected) || "", `exp-${c.id}`, e)}
+                                            >
+                                              <Show when={copiedCodeKey() === `exp-${c.id}`} fallback={<><Copy size={11} /> Copy Expected</>}>
+                                                <Check size={11} /> Copied!
+                                              </Show>
+                                            </button>
+                                          </div>
+                                          <div class="code-box">
+                                            <pre class="code-pre expected-pre">
                                               <HighlightText text={decodeExpectedResult(c.expected) || ""} query={affectedSearch()} />
                                             </pre>
                                           </div>
@@ -456,29 +451,6 @@ export function IssuesTab(props: IssuesTabProps) {
                         }}
                       </For>
                     </div>
-
-                    {/* Pagination controls */}
-                    <Show when={totalPages() > 1}>
-                      <div class="pagination">
-                        <span>Page {page()} of {totalPages()}</span>
-                        <div class="pagination-buttons">
-                          <button
-                            class="pagination-btn"
-                            disabled={page() === 1}
-                            onClick={() => setPage(p => p - 1)}
-                          >
-                            <ChevronLeft size={12} />
-                          </button>
-                          <button
-                            class="pagination-btn"
-                            disabled={page() === totalPages()}
-                            onClick={() => setPage(p => p + 1)}
-                          >
-                            <ChevronRight size={12} />
-                          </button>
-                        </div>
-                      </div>
-                    </Show>
                   </div>
                 </div>
               );

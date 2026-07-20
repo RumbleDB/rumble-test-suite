@@ -2,7 +2,7 @@ import { For, Show } from "solid-js";
 import { PassRateGauge, SuitesBarChart, IssueDistributionChart } from "./DashboardCharts";
 import { formatPercent, formatDuration } from "../lib/analysis";
 import type { ViewModel, StatusFilter } from "../lib/analysis";
-import type { TabType } from "./Sidebar";
+import type { TabType } from "./HeaderNav";
 
 type OverviewTabProps = {
   viewModel: ViewModel;
@@ -180,8 +180,8 @@ export function OverviewTab(props: OverviewTabProps) {
                       )}
                     </For>
                     <Show when={props.viewModel.regressions.length > 3}>
-                      <button class="tab-btn" style={{ padding: "4px", "font-size": "0.8rem" }} onClick={props.onViewAllChanges}>
-                        View all regressions
+                      <button class="btn-view-more" onClick={props.onViewAllChanges}>
+                        View all regressions ({props.viewModel.regressions.length}) →
                       </button>
                     </Show>
                   </div>
@@ -211,8 +211,8 @@ export function OverviewTab(props: OverviewTabProps) {
                       )}
                     </For>
                     <Show when={props.viewModel.improvements.length > 3}>
-                      <button class="tab-btn" style={{ padding: "4px", "font-size": "0.8rem" }} onClick={props.onViewAllChanges}>
-                        View all improvements
+                      <button class="btn-view-more" onClick={props.onViewAllChanges}>
+                        View all improvements ({props.viewModel.improvements.length}) →
                       </button>
                     </Show>
                   </div>
