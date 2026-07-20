@@ -185,6 +185,9 @@ export function percentNumber(value: number, total: number): number {
 
 export function getSuiteClassName(suiteName: string): string {
   if (!suiteName) return "";
+  const lower = suiteName.toLowerCase();
+  if (lower === "prod") return "Prod1Test,Prod2Test";
+  if (lower === "fn") return "Fn1Test,Fn2Test";
   return `${suiteName.charAt(0).toUpperCase()}${suiteName.slice(1)}Test`;
 }
 
