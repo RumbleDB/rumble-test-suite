@@ -8,6 +8,10 @@ from urllib.parse import quote
 
 QT3TESTS_REPO_URL = "https://github.com/w3c/qt3tests/blob/master"
 
+# Because of GitHub comment size limits, we limit the number of regressions displayed in the comment.
+# To see the full list of regressions, users can download the detailed test results from the artifacts.
+DISPLAY_LIMIT = 50
+
 
 def load_analysis(analysis_json: str) -> dict:
     path = Path(analysis_json)
@@ -51,8 +55,11 @@ def render_regression_details(analysis: dict) -> str:
         "| --- | --- | --- | --- | --- |",
     ]
 
+    displayed = 0
     for suite, items in sorted(regressions.items()):
         for item in sorted(items, key=lambda entry: str(entry.get("id", ""))):
+            if displayed >= DISPLAY_LIMIT:
+                break
             raw_test_id = item.get("id", "")
             test_file, test_name = parse_test_id(raw_test_id)
             test_id = table_cell(test_name)
@@ -62,6 +69,16 @@ def render_regression_details(analysis: dict) -> str:
             lines.append(
                 f"| `{table_cell(suite)}` | `{status}` | {test_file_link} | `{test_id}` | `{message}` |"
             )
+            displayed += 1
+        if displayed >= DISPLAY_LIMIT:
+            break
+
+    if total > DISPLAY_LIMIT:
+        lines.append("")
+        lines.append(
+            f"⚠️ Displaying only the first {DISPLAY_LIMIT} regressions. "
+            "Please download the detailed test results from the artifacts to see the full list."
+        )
 
     return "\n".join(lines)
 
@@ -79,13 +96,26 @@ def render_improvement_details(analysis: dict) -> str:
         "| --- | --- | --- |",
     ]
 
+    displayed = 0
     for suite, items in sorted(improvements.items()):
         for raw_test_id in sorted(items, key=str):
+            if displayed >= DISPLAY_LIMIT:
+                break
             test_file, test_name = parse_test_id(raw_test_id)
             test_file_link = render_test_file_link(test_file, test_name)
             lines.append(
                 f"| `{table_cell(suite)}` | {test_file_link} | `{table_cell(test_name)}` |"
             )
+            displayed += 1
+        if displayed >= DISPLAY_LIMIT:
+            break
+
+    if total > DISPLAY_LIMIT:
+        lines.append("")
+        lines.append(
+            f"⚠️ Displaying only the first {DISPLAY_LIMIT} improvements. "
+            "Please download the detailed test results from the artifacts to see the full list."
+        )
 
     return "\n".join(lines)
 

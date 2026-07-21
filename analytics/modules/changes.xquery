@@ -4,12 +4,8 @@ module namespace changes = "urn:analytics:analysis:changes";
 declare namespace map = "http://www.w3.org/2005/xpath-functions/map";
 
 declare function changes:message($case as map(*)) as xs:string {
-    if (string($case?status) = "ERROR") then
-        string($case?errorMessage)
-    else if (string($case?status) = "FAIL") then
-        string($case?failureMessage)
-    else if (string($case?status) = "SKIP") then
-        string($case?skipMessage)
+    if (exists($case?message)) then
+        string($case?message)
     else
         ""
 };

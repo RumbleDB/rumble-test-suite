@@ -5,7 +5,9 @@ import net.sf.saxon.s9api.Axis;
 import net.sf.saxon.s9api.XdmNode;
 import net.sf.saxon.s9api.XdmSequenceIterator;
 import net.sf.saxon.s9api.streams.Steps;
+import org.rumbledb.resources.ResourceResolver;
 
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -14,10 +16,11 @@ import java.util.Map;
 import java.nio.file.Path;
 
 public class Environment {
-    private final Map<String, String> resourceLookup = new HashMap<>();
+    private final Map<String, String> runtimeResourceLookup = new HashMap<>();
     private final Map<String, String> paramLookup = new HashMap<>();
     private final Map<String, String> externalParamLookup = new HashMap<>();
     private final Map<String, String> roleLookup = new HashMap<>();
+    private final Map<URI, URI> importResourceLookup = new HashMap<>();
 
     private final Map<String, String> namespaceLookup = new HashMap<>();
 
@@ -34,6 +37,37 @@ public class Environment {
         initStaticBaseUri(environmentNode);
         initResources(environmentNode, envPath);
         initSources(environmentNode, envPath);
+        addImportResources(collectImportResources(environmentNode, envPath));
+    }
+
+    private Environment() {
+    }
+
+    private Environment(Environment environment) {
+        this.runtimeResourceLookup.putAll(environment.runtimeResourceLookup);
+        this.paramLookup.putAll(environment.paramLookup);
+        this.externalParamLookup.putAll(environment.externalParamLookup);
+        this.roleLookup.putAll(environment.roleLookup);
+        this.importResourceLookup.putAll(environment.importResourceLookup);
+        this.namespaceLookup.putAll(environment.namespaceLookup);
+        this.decimalFormatDeclarations.addAll(environment.decimalFormatDeclarations);
+        this.staticBaseUriUndefined = environment.staticBaseUriUndefined;
+        this.staticBaseUri = environment.staticBaseUri;
+    }
+
+    public static Environment forTestCase(
+            Environment environment,
+            XdmNode testCase,
+            Path testSetDirectory
+    ) {
+        Map<URI, URI> imports = collectImportResources(testCase, testSetDirectory);
+        if (imports.isEmpty()) {
+            return environment;
+        }
+
+        Environment result = environment == null ? new Environment() : new Environment(environment);
+        result.addImportResources(imports);
+        return result;
     }
 
     private void initParams(XdmNode environmentNode) {
@@ -156,7 +190,7 @@ public class Environment {
                 .toUri()
                 .toString();
             String uri = resource.attribute("uri");
-            resourceLookup.put(uri, file);
+            runtimeResourceLookup.put(uri, file);
         }
     }
 
@@ -170,12 +204,48 @@ public class Environment {
             String uri = source.attribute("uri");
             String role = source.attribute("role");
             if (uri != null && !file.equals(uri)) {
-                resourceLookup.put(uri, file);
+                runtimeResourceLookup.put(uri, file);
             }
             if (role != null) {
                 roleLookup.put(role, file);
             }
         }
+    }
+
+    private void addImportResources(Map<URI, URI> imports) {
+        // The compiler currently supports one physical location per logical URI.
+        imports.forEach(importResourceLookup::putIfAbsent);
+    }
+
+    private static Map<URI, URI> collectImportResources(XdmNode node, Path basePath) {
+        Map<URI, URI> imports = new HashMap<>();
+        for (String elementName : List.of("module", "schema")) {
+            for (XdmNode resource : node.select(Steps.descendant(elementName)).asList()) {
+                String uri = resource.attribute("uri");
+                String file = resource.attribute("file");
+                URI logicalUri = parseLogicalUri(uri);
+                if (logicalUri != null && file != null) {
+                    imports.putIfAbsent(logicalUri, basePath.resolve(file).toUri());
+                }
+            }
+        }
+        return imports;
+    }
+
+    private static URI parseLogicalUri(String uri) {
+        if (uri == null) {
+            return null;
+        }
+        try {
+            return URI.create(uri);
+        } catch (IllegalArgumentException ignored) {
+            // Negative tests can deliberately declare malformed logical URIs.
+            return null;
+        }
+    }
+
+    public ResourceResolver getResourceResolver() {
+        return new ResourceResolver(importResourceLookup);
     }
 
     /**
@@ -190,7 +260,7 @@ public class Environment {
             query,
             createDeclarations(),
             externalParamLookup,
-            resourceLookup
+            runtimeResourceLookup
         );
     }
 
