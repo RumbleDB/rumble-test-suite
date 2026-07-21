@@ -303,6 +303,14 @@ public class TestBase {
 
     private void assertExpectedError(XdmNode assertion, QueryEvaluation evaluation) {
         RumbleException error = evaluation.getError();
+        if (error == null && assertion.getNodeName().getLocalName().equals("assert-serialization-error")) {
+            try {
+                evaluation.getSerializedResult();
+                fail("Expected to throw error but ran without error");
+            } catch (RumbleException serializationError) {
+                error = serializationError;
+            }
+        }
         if (error == null) {
             fail("Expected to throw error but ran without error");
         }
