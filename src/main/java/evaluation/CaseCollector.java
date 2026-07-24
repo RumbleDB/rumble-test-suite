@@ -181,7 +181,7 @@ public class CaseCollector {
         ) {
             allTests.add(
                 new CollectedTestCase(
-                        new TestCase(null, null, "Testcase/set on skiplist", null, null, null, false, null),
+                        new TestCase(null, null, "Testcase/set on skiplist", null, null, null, false, null, null),
                         currentTestSet,
                         currentTestCase
                 )
@@ -230,7 +230,8 @@ public class CaseCollector {
                             dependencies.xmlVersion,
                             dependencies.defaultFormattingLanguage,
                             dependencies.staticTyping,
-                            staticBaseUri
+                            staticBaseUri,
+                            testSetDirectory
                     ),
                     currentTestSet,
                     currentTestCase
