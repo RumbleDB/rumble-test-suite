@@ -157,7 +157,7 @@ public class TestBase {
             case "assert-eq":
                 secondQuery = XQueryMainModuleRewriter.rewriteProgram(
                     context.getTestString(),
-                    program -> "boolean(("
+                    program -> "(("
                         + program
                         + ") eq ("
                         + assertion.getStringValue()
