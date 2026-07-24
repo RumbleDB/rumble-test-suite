@@ -155,11 +155,15 @@ public class TestBase {
                 }
                 break;
             case "assert-eq":
-                String assertionQuery = "(" + assertion.getStringValue() + ")";
-                List<Item> testCaseResult = context.getPrimaryResult();
-                List<Item> assertionResult = context.runQuery(assertionQuery);
-
-                assertEquals(testCaseResult, assertionResult);
+                secondQuery = XQueryMainModuleRewriter.rewriteProgram(
+                    context.getTestString(),
+                    program -> "boolean(("
+                        + program
+                        + ") eq ("
+                        + assertion.getStringValue()
+                        + "))"
+                );
+                assertTrueSingleElement(context.runQuery(secondQuery));
                 break;
             case "assert-deep-eq":
                 secondQuery = XQueryMainModuleRewriter.rewriteProgram(
