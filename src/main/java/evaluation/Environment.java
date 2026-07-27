@@ -221,11 +221,16 @@ public class Environment {
         Map<URI, URI> imports = new HashMap<>();
         for (String elementName : List.of("module", "schema")) {
             for (XdmNode resource : node.select(Steps.descendant(elementName)).asList()) {
-                String uri = resource.attribute("uri");
                 String file = resource.attribute("file");
-                URI logicalUri = parseLogicalUri(uri);
-                if (logicalUri != null && file != null) {
-                    imports.putIfAbsent(logicalUri, basePath.resolve(file).toUri());
+                if (file == null) {
+                    continue;
+                }
+                URI physicalUri = basePath.resolve(file).toUri();
+                for (String attributeName : List.of("uri", "location")) {
+                    URI logicalUri = parseLogicalUri(resource.attribute(attributeName));
+                    if (logicalUri != null) {
+                        imports.putIfAbsent(logicalUri, physicalUri);
+                    }
                 }
             }
         }
