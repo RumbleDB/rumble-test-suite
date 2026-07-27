@@ -16,27 +16,17 @@ public class Constants {
     /**
      * Testsets that we decide to skip fully
      */
-    public static final List<String> skippedTestSets = List.of(
-        "fn/subsequence.xml" // contains large testcases that take forever to run
-    );
+    public static final List<String> skippedTestSets = List.of();
 
     /**
      * Individual testcases that we decide to skip
      */
-    public static final List<String> skippedGeneralTestCases = List.of(
-        "fn-distinct-values-2", // does not terminate
-        "cbcl-anyURI-004", // XQ10 version of a testcase that also has newer b version
-        "cbcl-anyURI-006", // XQ10 version of a testcase that also has newer b version
-        "cbcl-anyURI-009", // XQ10 version of a testcase that also has newer b version
-        "cbcl-anyURI-012" // XQ10 version of a testcase that also has newer b version
-    );
+    public static final List<String> skippedGeneralTestCases = List.of();
 
     /**
      * Individual testcases that we decide to skip only in JSONiq
      */
-    public static final List<String> skippedJSONIQTestCases = List.of(
-        "K-CodepointToStringFunc-13" // JSONiq does not support XQuery XML character references in string literals
-    );
+    public static final List<String> skippedJSONIQTestCases = List.of();
 
     /**
      * Error codes that we assume indicate a skip reason. When such a exception is thrown we mark the testcase as

@@ -17,6 +17,9 @@ public final class XQueryMainModuleRewriter {
         }
 
         XQueryParser.ProgramContext program = module.module().main.program();
+        if (program.getStart() == null || program.getStop() == null) {
+            throw new IllegalArgumentException("Expected an XQuery main module with a source-backed program");
+        }
         ConversionContext context = new ConversionContext(query, module);
         context.replace(program, programRewriter.apply(context.text(program)));
         return context.result();
