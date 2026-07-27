@@ -7,6 +7,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -102,7 +103,7 @@ public class CaseCollector {
 
     }
 
-    private void processCatalog(String testFolder) throws SaxonApiException {
+    private void processCatalog(String testFolder) throws IOException, SaxonApiException {
         File catalogFile = new File(testsRepositoryDirectoryPath.resolve("catalog.xml").toString());
         Processor testDriverProcessor = new Processor(false);
         DocumentBuilder catalogBuilder = testDriverProcessor.newDocumentBuilder();
@@ -134,7 +135,8 @@ public class CaseCollector {
     }
 
     private void processTestSet(DocumentBuilder catalogBuilder, XPathCompiler xpc, XdmNode testSetNode)
-            throws SaxonApiException {
+            throws IOException,
+                SaxonApiException {
 
         String testSetFileName = testSetNode.attribute("file");
         this.currentTestSet = testSetFileName;
@@ -165,7 +167,7 @@ public class CaseCollector {
 
     }
 
-    private void processTestCase(XdmNode testCase, XPathCompiler xpc) throws SaxonApiException {
+    private void processTestCase(XdmNode testCase, XPathCompiler xpc) throws IOException, SaxonApiException {
         String currentTestCase = testCase.attribute("name");
         if (!this.testCaseSelection.shouldRun(currentTestCase)) {
             return;
@@ -179,7 +181,7 @@ public class CaseCollector {
         ) {
             allTests.add(
                 new CollectedTestCase(
-                        new TestCase(null, null, "Testcase/set on skiplist", null, null, null, false, null),
+                        new TestCase(null, null, "Testcase/set on skiplist", null, null, null, false, null, null),
                         currentTestSet,
                         currentTestCase
                 )
@@ -212,7 +214,11 @@ public class CaseCollector {
         }
 
         XdmNode assertion = (XdmNode) xpc.evaluateSingle("result/*[1]", testCase);
-        String testString = testCase.select(Steps.child("test")).asNode().getStringValue();
+        XdmNode test = testCase.select(Steps.child("test")).asNode();
+        String testFile = test.attribute("file");
+        String testString = testFile == null
+            ? test.getStringValue()
+            : Files.readString(testSetDirectory.resolve(testFile));
 
         allTests.add(
             new CollectedTestCase(
@@ -224,7 +230,8 @@ public class CaseCollector {
                             dependencies.xmlVersion,
                             dependencies.defaultFormattingLanguage,
                             dependencies.staticTyping,
-                            staticBaseUri
+                            staticBaseUri,
+                            testSetDirectory
                     ),
                     currentTestSet,
                     currentTestCase
