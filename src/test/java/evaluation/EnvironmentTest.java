@@ -47,7 +47,7 @@ public class EnvironmentTest {
         Path module = Files.writeString(this.directory.resolve("module.xq"), "module namespace m = \"urn:module\";");
         Environment environment = environmentWithImports(
             "<test-case>"
-                + "<module uri="urn:module" location="http://example.com/module.xq" file="module.xq"/>"
+                + "<module uri=\"urn:module\" location=\"http://example.com/module.xq\" file=\"module.xq\"/>"
                 + "</test-case>"
         );
 
