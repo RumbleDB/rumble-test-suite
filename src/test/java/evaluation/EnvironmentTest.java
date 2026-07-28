@@ -44,7 +44,7 @@ public class EnvironmentTest {
 
     @Test
     public void resolvesExplicitModuleLocationHintsToLocalFiles() throws Exception {
-        Path module = Files.writeString(this.directory.resolve("module.xq"), "module namespace m = "urn:module";");
+        Path module = Files.writeString(this.directory.resolve("module.xq"), "module namespace m = \"urn:module\";");
         Environment environment = environmentWithImports(
             "<test-case>"
                 + "<module uri="urn:module" location="http://example.com/module.xq" file="module.xq"/>"
