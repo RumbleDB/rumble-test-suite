@@ -220,7 +220,10 @@ public class Environment {
         // The compiler currently supports one physical location per logical URI.
         imports.logicalToPhysical().forEach(importResourceLookup::putIfAbsent);
         imports.moduleLocationHints().forEach((namespace, locations) -> {
-            List<String> knownLocations = this.moduleLocationHints.computeIfAbsent(namespace, ignored -> new ArrayList<>());
+            List<String> knownLocations = this.moduleLocationHints.computeIfAbsent(
+                namespace,
+                ignored -> new ArrayList<>()
+            );
             for (String location : locations) {
                 if (!knownLocations.contains(location)) {
                     knownLocations.add(location);
@@ -237,9 +240,10 @@ public class Environment {
                 String uri = resource.attribute("uri");
                 String file = resource.attribute("file");
                 if ("module".equals(elementName) && uri != null && file != null) {
-                    moduleLocationHints.computeIfAbsent(uri, ignored -> new ArrayList<>()).add(
-                        basePath.resolve(file).toUri().toString()
-                    );
+                    moduleLocationHints.computeIfAbsent(uri, ignored -> new ArrayList<>())
+                        .add(
+                            basePath.resolve(file).toUri().toString()
+                        );
                 }
                 URI logicalUri = parseLogicalUri(uri);
                 if (logicalUri != null && file != null) {
