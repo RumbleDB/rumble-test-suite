@@ -18,7 +18,8 @@ public class EnvironmentQueryRewriterTest {
                 query,
                 "",
                 Map.of(),
-                Map.of("urn:test", "file:///resource.xml")
+                Map.of("urn:test", "file:///resource.xml"),
+                Map.of()
             )
         );
     }
@@ -35,7 +36,7 @@ public class EnvironmentQueryRewriterTest {
                 + "declare variable $value external := (42);\n"
                 + "declare variable $value-more external;\n"
                 + "\"declare variable $value external;\"",
-            EnvironmentQueryRewriter.rewrite(query, "", Map.of("value", "42"), Map.of())
+            EnvironmentQueryRewriter.rewrite(query, "", Map.of("value", "42"), Map.of(), Map.of())
         );
     }
 
@@ -45,7 +46,7 @@ public class EnvironmentQueryRewriterTest {
 
         assertEquals(
             query,
-            EnvironmentQueryRewriter.rewrite(query, "", Map.of("value", "42"), Map.of())
+            EnvironmentQueryRewriter.rewrite(query, "", Map.of("value", "42"), Map.of(), Map.of())
         );
     }
 
@@ -68,6 +69,7 @@ public class EnvironmentQueryRewriterTest {
                 query,
                 "declare variable $environment := 1;",
                 Map.of(),
+                Map.of(),
                 Map.of()
             )
         );
@@ -84,7 +86,8 @@ public class EnvironmentQueryRewriterTest {
                 query,
                 "declare variable $environment := \"urn:test\";",
                 Map.of("external", "\"urn:test\""),
-                Map.of("urn:test", "file:///resource.xml")
+                Map.of("urn:test", "file:///resource.xml"),
+                Map.of()
             )
         );
     }
@@ -99,7 +102,24 @@ public class EnvironmentQueryRewriterTest {
                 query,
                 "declare variable $environment := 1;",
                 Map.of(),
-                Map.of("urn:test", "file:///resource.xml")
+                Map.of("urn:test", "file:///resource.xml"),
+                Map.of()
+            )
+        );
+    }
+
+    @Test
+    public void injectsEnvironmentModuleLocationsIntoModuleImports() {
+        String query = "import module namespace m=\"urn:module\"; 1";
+
+        assertEquals(
+            "import module namespace m=\"urn:module\" at \"file:///module1.xq\", \"file:///module2.xq\"; 1",
+            EnvironmentQueryRewriter.rewrite(
+                query,
+                "",
+                Map.of(),
+                Map.of(),
+                Map.of("urn:module", java.util.List.of("file:///module1.xq", "file:///module2.xq"))
             )
         );
     }
