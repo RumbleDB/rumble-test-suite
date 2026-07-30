@@ -12,6 +12,10 @@ import org.xmlunit.diff.Diff;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.stream.Collectors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -110,7 +114,8 @@ public class TestBase {
                         testCase.defaultFormattingLanguage,
                         testCase.staticTyping,
                         testCase.staticBaseUri
-                )
+                ),
+                testCase.testSetDirectory
             );
         } catch (RumbleException e) {
             if (isSkipErrorCode(e.getErrorCode().toString())) {
@@ -125,7 +130,7 @@ public class TestBase {
         }
     }
 
-    private void checkAssertion(XdmNode assertion, AssertionContext context) {
+    private void checkAssertion(XdmNode assertion, AssertionContext context, Path testSetDirectory) {
         String tag = assertion.getNodeName().getLocalName();
         String secondQuery;
         List<Item> results;
@@ -150,7 +155,7 @@ public class TestBase {
                 if (!nestedAssertions.isEmpty()) {
                     assertEquals(1, nestedAssertions.size(), "not assertion must contain exactly one nested assertion");
                     try {
-                        checkAssertion(nestedAssertions.get(0), context);
+                        checkAssertion(nestedAssertions.get(0), context, testSetDirectory);
                         fail("Nested assertion inside not succeeded");
                     } catch (AssertionError e) {
                         // Expected: the nested assertion should fail.
@@ -164,11 +169,15 @@ public class TestBase {
                 }
                 break;
             case "assert-eq":
-                String assertionQuery = "(" + assertion.getStringValue() + ")";
-                List<Item> testCaseResult = context.getPrimaryResult();
-                List<Item> assertionResult = context.runQuery(assertionQuery);
-
-                assertEquals(testCaseResult, assertionResult);
+                secondQuery = XQueryMainModuleRewriter.rewriteProgram(
+                    context.getTestString(),
+                    program -> "(("
+                        + program
+                        + ") eq ("
+                        + assertion.getStringValue()
+                        + "))"
+                );
+                assertTrueSingleElement(context.runQuery(secondQuery));
                 break;
             case "assert-deep-eq":
                 secondQuery = XQueryMainModuleRewriter.rewriteProgram(
@@ -206,7 +215,7 @@ public class TestBase {
                 break;
             case "all-of":
                 for (XdmNode individualAssertion : assertion.children("*")) {
-                    checkAssertion(individualAssertion, context);
+                    checkAssertion(individualAssertion, context, testSetDirectory);
                 }
                 break;
             case "any-of":
@@ -214,7 +223,7 @@ public class TestBase {
                 List<Throwable> errors = new ArrayList<>();
                 for (XdmNode individualAssertion : assertion.children("*")) {
                     try {
-                        checkAssertion(individualAssertion, context);
+                        checkAssertion(individualAssertion, context, testSetDirectory);
                         success = true;
                     } catch (RumbleException e) {
                         if (isSkipErrorCode(e.getErrorCode().toString())) {
@@ -257,7 +266,7 @@ public class TestBase {
                 String actualXml = "<assert-xml>"
                     + results.stream().map(Item::serialize).collect(Collectors.joining(""))
                     + "</assert-xml>";
-                String expectedXml = "<assert-xml>" + assertion.getStringValue() + "</assert-xml>";
+                String expectedXml = "<assert-xml>" + assertionText(assertion, testSetDirectory) + "</assert-xml>";
 
                 Diff diff = DiffBuilder.compare(expectedXml)
                     .withTest(actualXml)
@@ -310,8 +319,29 @@ public class TestBase {
         }
     }
 
+    static String assertionText(XdmNode assertion, Path testSetDirectory) {
+        String file = assertion.attribute("file");
+        if (file == null) {
+            return assertion.getStringValue();
+        }
+        Path filePath = testSetDirectory.resolve(file);
+        try {
+            return Files.readString(filePath);
+        } catch (IOException exception) {
+            throw new UncheckedIOException("Unable to read expected assertion file: " + filePath, exception);
+        }
+    }
+
     private void assertExpectedError(XdmNode assertion, QueryEvaluation evaluation) {
         RumbleException error = evaluation.getError();
+        if (error == null && assertion.getNodeName().getLocalName().equals("assert-serialization-error")) {
+            try {
+                evaluation.getSerializedResult();
+                fail("Expected to throw error but ran without error");
+            } catch (RumbleException serializationError) {
+                error = serializationError;
+            }
+        }
         if (error == null) {
             fail("Expected to throw error but ran without error");
         }

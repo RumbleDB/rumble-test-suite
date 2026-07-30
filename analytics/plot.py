@@ -121,9 +121,10 @@ def issues_to_df(issue_map):
         return pd.DataFrame(columns=["suite", "case", "msg"])
     return pd.DataFrame(
         [
-            {"suite": suite, "case": issue["id"], "msg": issue["message"]}
+            {"suite": suite, "case": case_id, "msg": issue["message"]}
             for suite, issues in issue_map.items()
             for issue in issues
+            for case_id in issue["cases"]
         ]
     )
 
