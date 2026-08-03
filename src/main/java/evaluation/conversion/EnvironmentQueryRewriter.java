@@ -72,7 +72,7 @@ public final class EnvironmentQueryRewriter {
 
         @Override
         public Void visitVarDecl(XQueryParser.VarDeclContext varDecl) {
-            String name = this.context.text(varDecl.varRef().eqName());
+            String name = this.context.text(varDecl.varBinding().eqName());
             String defaultValue = this.externalParams.get(name);
             if (defaultValue != null && varDecl.external != null && varDecl.COLON_EQ() == null) {
                 this.context.insertAfter(varDecl.external, " := (" + defaultValue + ")");
