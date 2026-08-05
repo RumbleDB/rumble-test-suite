@@ -5,6 +5,7 @@ import evaluation.conversion.XQueryMainModuleRewriter;
 import net.sf.saxon.s9api.XdmNode;
 import org.opentest4j.TestAbortedException;
 import org.rumbledb.api.Item;
+import org.rumbledb.config.RumbleConfiguration;
 import org.rumbledb.exceptions.RumbleException;
 import org.xmlunit.builder.DiffBuilder;
 import org.xmlunit.diff.Diff;
@@ -46,9 +47,16 @@ public class TestBase {
             """;
 
     private final boolean useXQueryParser;
+    /** The configuration for the Rumble runtimes spinned up for this test case. */
+    private final RumbleConfiguration rumbleConfig;
 
     protected TestBase() {
         this.useXQueryParser = useXQueryParserFromConfiguration();
+        this.rumbleConfig = RumbleConfiguration.builder()
+            .configureOutput(o -> o.outputFormat("json"))
+            .configureRuntime(r -> r.materializationCap(1000000000))
+            .configureSemantics(s -> s.queryLanguage(this.useXQueryParser ? "xquery31" : "jsoniq40"))
+            .build();
     }
 
     public static List<CollectedTestCase> getData(String testSuite) throws Exception {
@@ -101,6 +109,7 @@ public class TestBase {
                         testString,
                         environment,
                         useXQueryParser,
+                        this.rumbleConfig,
                         testCase.xmlVersion,
                         testCase.defaultFormattingLanguage,
                         testCase.staticTyping,

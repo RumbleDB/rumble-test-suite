@@ -16,7 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.rumbledb.api.Rumble;
 import org.rumbledb.config.CompilationConfiguration;
-import org.rumbledb.config.RumbleRuntimeConfiguration;
+import org.rumbledb.config.RumbleConfiguration;
 import org.rumbledb.exceptions.ExceptionMetadata;
 import org.rumbledb.resources.ResolvedResource;
 
@@ -75,9 +75,9 @@ public class EnvironmentTest {
         Environment environment = environmentWithImports(
             "<test-case><module uri=\"urn:module\" file=\"module.xq\"/></test-case>"
         );
-        RumbleRuntimeConfiguration runtimeConfiguration = new RumbleRuntimeConfiguration(
-                new String[] { "--default-language", "xquery31" }
-        );
+        RumbleConfiguration runtimeConfiguration = RumbleConfiguration.builder()
+            .configureSemantics(semantics -> semantics.queryLanguage("xquery31"))
+            .build();
 
         int value = new Rumble(
                 new CompilationConfiguration(runtimeConfiguration, environment.getResourceResolver())
@@ -130,7 +130,7 @@ public class EnvironmentTest {
             throws Exception {
         try (
             ResolvedResource resource = environment.getResourceResolver()
-                .resolve(logicalUri, new RumbleRuntimeConfiguration(), ExceptionMetadata.EMPTY_METADATA)
+                .resolve(logicalUri, RumbleConfiguration.defaultConfiguration(), ExceptionMetadata.EMPTY_METADATA)
         ) {
             assertEquals(expected.toUri(), resource.getSystemId());
             resource.getInputStream().readAllBytes();
