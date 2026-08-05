@@ -6,12 +6,10 @@ import org.rumbledb.api.Item;
 import org.rumbledb.api.Rumble;
 import org.rumbledb.api.SequenceOfItems;
 import org.rumbledb.config.CompilationConfiguration;
-import org.rumbledb.config.RumbleRuntimeConfiguration;
+import org.rumbledb.config.RumbleConfiguration;
 import org.rumbledb.exceptions.RumbleException;
 import org.rumbledb.resources.ResourceResolver;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -24,6 +22,7 @@ class AssertionContext {
     private final String testString;
     private final Environment environment;
     private final boolean useXQueryParser;
+    private final RumbleConfiguration rumbleConfig;
     private final String xmlVersion;
     private final String defaultFormattingLanguage;
     private final boolean staticTyping;
@@ -34,6 +33,7 @@ class AssertionContext {
             String testString,
             Environment environment,
             boolean useXQueryParser,
+            RumbleConfiguration rumbleConfig,
             String xmlVersion,
             String defaultFormattingLanguage,
             boolean staticTyping,
@@ -43,6 +43,7 @@ class AssertionContext {
         this.testString = testString;
         this.environment = environment;
         this.useXQueryParser = useXQueryParser;
+        this.rumbleConfig = rumbleConfig;
         this.xmlVersion = xmlVersion;
         this.defaultFormattingLanguage = defaultFormattingLanguage;
         this.staticTyping = staticTyping;
@@ -91,35 +92,18 @@ class AssertionContext {
             query = Converter.convert(query);
         }
 
-        RumbleRuntimeConfiguration rumbleConfig = createRumbleConfig();
-        applyDependenciesToConfig(rumbleConfig);
+        RumbleConfiguration updatedConfig = applyDependenciesToConfig(this.rumbleConfig);
         ResourceResolver resourceResolver = this.environment == null
             ? new ResourceResolver()
             : this.environment.getResourceResolver();
-        CompilationConfiguration compilationConfig = new CompilationConfiguration(rumbleConfig, resourceResolver);
+        CompilationConfiguration compilationConfig = new CompilationConfiguration(updatedConfig, resourceResolver);
         return new Rumble(compilationConfig).runQuery(query);
     }
 
-    private RumbleRuntimeConfiguration createRumbleConfig() {
-        List<String> arguments = new ArrayList<>(
-                Arrays.asList(
-                    "--output-format",
-                    "json",
-                    "--materialization-cap",
-                    "1000000000",
-                    "--default-language",
-                    this.useXQueryParser ? "xquery31" : "jsoniq40"
-                )
-        );
-        if (this.staticTyping) {
-            arguments.add("--static-typing");
-            arguments.add("yes");
-        }
-        return new RumbleRuntimeConfiguration(arguments.toArray(new String[0]));
-    }
+    private RumbleConfiguration applyDependenciesToConfig(RumbleConfiguration config) {
+        RumbleConfiguration.RumbleConfigurationBuilder builder = config.toBuilder();
 
-    private void applyDependenciesToConfig(RumbleRuntimeConfiguration rumbleConfig) {
-        rumbleConfig.setXmlVersion("1.0");
+        builder.configureSemantics(s -> s.xmlVersion("1.0"));
 
         String v = this.xmlVersion;
         if (v != null) {
@@ -127,17 +111,22 @@ class AssertionContext {
         }
 
         if ("1.1".equals(v)) {
-            rumbleConfig.setXmlVersion("1.1");
+            builder.configureSemantics(s -> s.xmlVersion("1.1"));
         } else if ("1.0".equals(v)) {
-            rumbleConfig.setXmlVersion("1.0");
+            builder.configureSemantics(s -> s.xmlVersion("1.0"));
         }
 
         if (this.defaultFormattingLanguage != null) {
-            rumbleConfig.setDefaultFormattingLanguage(this.defaultFormattingLanguage);
+            builder.configureFormatting(f -> f.defaultFormattingLanguage(this.defaultFormattingLanguage));
+        }
+
+        if (this.staticTyping) {
+            builder.configureAnalysis(a -> a.enableStaticTyping(true));
         }
 
         if (this.staticBaseUri != null) {
-            rumbleConfig.setStaticBaseUri(this.staticBaseUri);
+            builder.configureSemantics(s -> s.staticBaseUri(this.staticBaseUri));
         }
+        return builder.build();
     }
 }
