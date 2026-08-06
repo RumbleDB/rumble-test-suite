@@ -1,5 +1,8 @@
 package evaluation.conversion;
 
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 
 import org.antlr.v4.runtime.Token;
@@ -16,7 +19,8 @@ public final class EnvironmentQueryRewriter {
             String query,
             String declarations,
             Map<String, String> externalParams,
-            Map<String, String> resources
+            Map<String, String> resources,
+            Map<String, List<String>> moduleLocationHints
     ) {
         XQueryParser.ModuleAndThisIsItContext module = XQueryParsing.parseValidModule(query);
         if (module == null) {
@@ -25,6 +29,7 @@ public final class EnvironmentQueryRewriter {
 
         ConversionContext context = new ConversionContext(query, module);
         new ExternalParamVisitor(context, externalParams).visit(module);
+        new ModuleImportVisitor(context, moduleLocationHints).visit(module);
         insertDeclarations(context, module, declarations);
         String queryWithDeclarations = context.result();
 
@@ -99,6 +104,64 @@ public final class EnvironmentQueryRewriter {
             if (replacement != null) {
                 this.context.replace(stringLiteral, XQueryStringLiteral.serialize(replacement, source.charAt(0)));
             }
+            return null;
+        }
+    }
+
+    private static final class ModuleImportVisitor extends XQueryParserBaseVisitor<Void> {
+
+        private final ConversionContext context;
+        private final Map<String, List<String>> moduleLocationHints;
+
+        private ModuleImportVisitor(ConversionContext context, Map<String, List<String>> moduleLocationHints) {
+            this.context = context;
+            this.moduleLocationHints = moduleLocationHints;
+        }
+
+        @Override
+        public Void visitModuleImport(XQueryParser.ModuleImportContext moduleImport) {
+            String source = this.context.text(moduleImport.targetNamespace);
+            String namespace = XQueryStringLiteral.parse(source);
+            if (namespace == null) {
+                return null;
+            }
+            List<String> environmentLocations = this.moduleLocationHints.get(namespace);
+            if (environmentLocations == null || environmentLocations.isEmpty()) {
+                return null;
+            }
+
+            LinkedHashSet<String> mergedLocations = new LinkedHashSet<>();
+            for (XQueryParser.UriLiteralContext location : moduleImport.locations) {
+                mergedLocations.add(XQueryStringLiteral.parse(this.context.text(location)));
+            }
+            mergedLocations.addAll(environmentLocations);
+
+            if (mergedLocations.isEmpty()) {
+                return null;
+            }
+
+            List<String> serializedLocations = new ArrayList<>();
+            for (String location : mergedLocations) {
+                if (location != null) {
+                    serializedLocations.add(XQueryStringLiteral.serialize(location, '"'));
+                }
+            }
+            if (serializedLocations.isEmpty()) {
+                return null;
+            }
+
+            StringBuilder replacement = new StringBuilder("import module ");
+            if (moduleImport.ncName() != null) {
+                replacement.append("namespace ")
+                    .append(moduleImport.ncName().getText())
+                    .append("=")
+                    .append(source);
+            } else {
+                replacement.append(source);
+            }
+            replacement.append(" at ")
+                .append(String.join(", ", serializedLocations));
+            this.context.replace(moduleImport, replacement.toString());
             return null;
         }
     }

@@ -26,7 +26,7 @@ public class EnvironmentTest {
     Path directory;
 
     @Test
-    public void resolvesModulesAndSchemasWithoutRewritingTheirLogicalUris() throws Exception {
+    public void rewritesEnvironmentModulesToExplicitLocationHints() throws Exception {
         Path module = Files.writeString(this.directory.resolve("module.xq"), "module namespace m = \"urn:module\";");
         Path schema = Files.writeString(this.directory.resolve("schema.xsd"), "<schema/>");
         Environment environment = environmentWithImports(
@@ -37,9 +37,33 @@ public class EnvironmentTest {
         );
 
         String query = "import module namespace m = \"urn:module\"; 1";
-        assertEquals(query, environment.applyToQuery(query));
+        assertEquals(
+            "import module namespace m=\"urn:module\" at \"" + module.toUri() + "\"; 1",
+            environment.applyToQuery(query)
+        );
         assertResolvedLocation(environment, URI.create("urn:module"), module);
         assertResolvedLocation(environment, URI.create("urn:schema"), schema);
+    }
+
+    @Test
+    public void rewritesSameNamespaceEnvironmentModulesIntoMultipleLocationHints() throws Exception {
+        Files.writeString(this.directory.resolve("module1.xq"), "module namespace m = \"urn:module\";");
+        Files.writeString(this.directory.resolve("module2.xq"), "module namespace m = \"urn:module\";");
+        Environment environment = environmentWithImports(
+            "<test-case>"
+                + "<module uri=\"urn:module\" file=\"module1.xq\"/>"
+                + "<module uri=\"urn:module\" file=\"module2.xq\"/>"
+                + "</test-case>"
+        );
+
+        assertEquals(
+            "import module namespace m=\"urn:module\" at \""
+                + this.directory.resolve("module1.xq").toUri()
+                + "\", \""
+                + this.directory.resolve("module2.xq").toUri()
+                + "\"; 1",
+            environment.applyToQuery("import module namespace m=\"urn:module\"; 1")
+        );
     }
 
     @Test

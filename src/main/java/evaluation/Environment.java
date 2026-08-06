@@ -21,6 +21,7 @@ public class Environment {
     private final Map<String, String> externalParamLookup = new HashMap<>();
     private final Map<String, String> roleLookup = new HashMap<>();
     private final Map<URI, URI> importResourceLookup = new HashMap<>();
+    private final Map<String, List<String>> moduleLocationHints = new HashMap<>();
 
     private final Map<String, String> namespaceLookup = new HashMap<>();
 
@@ -49,6 +50,9 @@ public class Environment {
         this.externalParamLookup.putAll(environment.externalParamLookup);
         this.roleLookup.putAll(environment.roleLookup);
         this.importResourceLookup.putAll(environment.importResourceLookup);
+        environment.moduleLocationHints.forEach((namespace, locations) -> {
+            this.moduleLocationHints.put(namespace, new ArrayList<>(locations));
+        });
         this.namespaceLookup.putAll(environment.namespaceLookup);
         this.decimalFormatDeclarations.addAll(environment.decimalFormatDeclarations);
         this.staticBaseUriUndefined = environment.staticBaseUriUndefined;
@@ -60,7 +64,7 @@ public class Environment {
             XdmNode testCase,
             Path testSetDirectory
     ) {
-        Map<URI, URI> imports = collectImportResources(testCase, testSetDirectory);
+        ImportResources imports = collectImportResources(testCase, testSetDirectory);
         if (imports.isEmpty()) {
             return environment;
         }
@@ -212,24 +216,42 @@ public class Environment {
         }
     }
 
-    private void addImportResources(Map<URI, URI> imports) {
+    private void addImportResources(ImportResources imports) {
         // The compiler currently supports one physical location per logical URI.
-        imports.forEach(importResourceLookup::putIfAbsent);
+        imports.logicalToPhysical().forEach(importResourceLookup::putIfAbsent);
+        imports.moduleLocationHints().forEach((namespace, locations) -> {
+            List<String> knownLocations = this.moduleLocationHints.computeIfAbsent(
+                namespace,
+                ignored -> new ArrayList<>()
+            );
+            for (String location : locations) {
+                if (!knownLocations.contains(location)) {
+                    knownLocations.add(location);
+                }
+            }
+        });
     }
 
-    private static Map<URI, URI> collectImportResources(XdmNode node, Path basePath) {
+    private static ImportResources collectImportResources(XdmNode node, Path basePath) {
         Map<URI, URI> imports = new HashMap<>();
+        Map<String, List<String>> moduleLocationHints = new HashMap<>();
         for (String elementName : List.of("module", "schema")) {
             for (XdmNode resource : node.select(Steps.descendant(elementName)).asList()) {
                 String uri = resource.attribute("uri");
                 String file = resource.attribute("file");
+                if ("module".equals(elementName) && uri != null && file != null) {
+                    moduleLocationHints.computeIfAbsent(uri, ignored -> new ArrayList<>())
+                        .add(
+                            basePath.resolve(file).toUri().toString()
+                        );
+                }
                 URI logicalUri = parseLogicalUri(uri);
                 if (logicalUri != null && file != null) {
                     imports.putIfAbsent(logicalUri, basePath.resolve(file).toUri());
                 }
             }
         }
-        return imports;
+        return new ImportResources(imports, moduleLocationHints);
     }
 
     private static URI parseLogicalUri(String uri) {
@@ -260,7 +282,8 @@ public class Environment {
             query,
             createDeclarations(),
             externalParamLookup,
-            runtimeResourceLookup
+            runtimeResourceLookup,
+            moduleLocationHints
         );
     }
 
@@ -303,6 +326,12 @@ public class Environment {
             prolog.append(decimalFormatDeclaration).append("\n");
         }
         return prolog.toString();
+    }
+
+    private record ImportResources(Map<URI, URI> logicalToPhysical, Map<String, List<String>> moduleLocationHints) {
+        private boolean isEmpty() {
+            return this.logicalToPhysical.isEmpty() && this.moduleLocationHints.isEmpty();
+        }
     }
 
 }
