@@ -173,22 +173,6 @@ public class CaseCollector {
             return;
         }
 
-        // check if testcase is skipped
-        if (
-            Constants.skippedTestSets.contains(this.currentTestSet)
-                || Constants.skippedGeneralTestCases.contains(currentTestCase)
-                || (!useXQueryParser && Constants.skippedJSONIQTestCases.contains(currentTestCase))
-        ) {
-            allTests.add(
-                new CollectedTestCase(
-                        new TestCase(null, null, "Testcase/set on skiplist", null, null, null, false, null, null),
-                        currentTestSet,
-                        currentTestCase
-                )
-            );
-            return;
-        }
-
         // the directory containing this test-set's own XML file; relative resource
         // hrefs in the test query must resolve against this
         Path testSetDirectory = testsRepositoryDirectoryPath.resolve(currentTestSet).getParent();
