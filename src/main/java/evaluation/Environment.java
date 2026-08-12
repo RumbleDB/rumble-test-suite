@@ -1,19 +1,20 @@
 package evaluation;
 
-import evaluation.conversion.EnvironmentQueryRewriter;
-import net.sf.saxon.s9api.Axis;
-import net.sf.saxon.s9api.XdmNode;
-import net.sf.saxon.s9api.XdmSequenceIterator;
-import net.sf.saxon.s9api.streams.Steps;
-import org.rumbledb.resources.ResourceResolver;
-
 import java.net.URI;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.nio.file.Path;
+
+import evaluation.conversion.EnvironmentQueryRewriter;
+import net.sf.saxon.s9api.Axis;
+import net.sf.saxon.s9api.XdmNode;
+import net.sf.saxon.s9api.XdmSequenceIterator;
+import net.sf.saxon.s9api.streams.Steps;
+
+import org.rumbledb.resources.ResourceResolver;
 
 public class Environment {
     private final Map<String, String> runtimeResourceLookup = new HashMap<>();
@@ -24,7 +25,6 @@ public class Environment {
     private final Map<String, List<String>> moduleLocationHints = new HashMap<>();
 
     private final Map<String, String> namespaceLookup = new HashMap<>();
-
 
     private final List<String> decimalFormatDeclarations = new ArrayList<>();
 
@@ -41,8 +41,7 @@ public class Environment {
         addImportResources(collectImportResources(environmentNode, envPath));
     }
 
-    private Environment() {
-    }
+    private Environment() {}
 
     private Environment(Environment environment) {
         this.runtimeResourceLookup.putAll(environment.runtimeResourceLookup);
@@ -59,11 +58,7 @@ public class Environment {
         this.staticBaseUri = environment.staticBaseUri;
     }
 
-    public static Environment forTestCase(
-            Environment environment,
-            XdmNode testCase,
-            Path testSetDirectory
-    ) {
+    public static Environment forTestCase(Environment environment, XdmNode testCase, Path testSetDirectory) {
         ImportResources imports = collectImportResources(testCase, testSetDirectory);
         if (imports.isEmpty()) {
             return environment;
@@ -96,7 +91,6 @@ public class Environment {
             }
         }
     }
-
 
     private void initDecimalFormats(XdmNode environmentNode) {
         for (XdmNode decimalFormat : environmentNode.children("decimal-format")) {
@@ -135,21 +129,16 @@ public class Environment {
         }
     }
 
-
     private void appendDecimalFormatAttribute(XdmNode decimalFormat, StringBuilder sb, String attributeName) {
         String value = decimalFormat.attribute(attributeName);
         if (value != null) {
-            sb.append(" ")
-                .append(attributeName)
-                .append(" = ")
-                .append(toXQueryStringLiteral(value));
+            sb.append(" ").append(attributeName).append(" = ").append(toXQueryStringLiteral(value));
         }
     }
 
     private String toXQueryStringLiteral(String s) {
         return "\"" + s.replace("\"", "\"\"") + "\"";
     }
-
 
     private String resolveNamespaceUri(XdmNode node, String prefix) {
         XdmSequenceIterator<XdmNode> namespaces = node.axisIterator(Axis.NAMESPACE);
@@ -165,9 +154,9 @@ public class Environment {
         return null;
     }
 
-
     private void initStaticBaseUri(XdmNode environmentNode) {
-        Iterator<XdmNode> staticBaseUriNodes = environmentNode.children("static-base-uri").iterator();
+        Iterator<XdmNode> staticBaseUriNodes =
+                environmentNode.children("static-base-uri").iterator();
         if (staticBaseUriNodes.hasNext()) {
             String uri = staticBaseUriNodes.next().attribute("uri");
             if ("#UNDEFINED".equals(uri)) {
@@ -187,24 +176,20 @@ public class Environment {
     }
 
     private void initResources(XdmNode environmentNode, Path envPath) {
-        List<XdmNode> resources = environmentNode.select(Steps.descendant("resource")).asList();
+        List<XdmNode> resources =
+                environmentNode.select(Steps.descendant("resource")).asList();
         for (XdmNode resource : resources) {
-            String file = envPath
-                .resolve(resource.attribute("file"))
-                .toUri()
-                .toString();
+            String file = envPath.resolve(resource.attribute("file")).toUri().toString();
             String uri = resource.attribute("uri");
             runtimeResourceLookup.put(uri, file);
         }
     }
 
     private void initSources(XdmNode environmentNode, Path envPath) {
-        List<XdmNode> sources = environmentNode.select(Steps.descendant("source")).asList();
+        List<XdmNode> sources =
+                environmentNode.select(Steps.descendant("source")).asList();
         for (XdmNode source : sources) {
-            String file = envPath
-                .resolve(source.attribute("file"))
-                .toUri()
-                .toString();
+            String file = envPath.resolve(source.attribute("file")).toUri().toString();
             String uri = source.attribute("uri");
             String role = source.attribute("role");
             if (uri != null && !file.equals(uri)) {
@@ -220,10 +205,8 @@ public class Environment {
         // The compiler currently supports one physical location per logical URI.
         imports.logicalToPhysical().forEach(importResourceLookup::putIfAbsent);
         imports.moduleLocationHints().forEach((namespace, locations) -> {
-            List<String> knownLocations = this.moduleLocationHints.computeIfAbsent(
-                namespace,
-                ignored -> new ArrayList<>()
-            );
+            List<String> knownLocations =
+                    this.moduleLocationHints.computeIfAbsent(namespace, ignored -> new ArrayList<>());
             for (String location : locations) {
                 if (!knownLocations.contains(location)) {
                     knownLocations.add(location);
@@ -240,10 +223,9 @@ public class Environment {
                 String uri = resource.attribute("uri");
                 String file = resource.attribute("file");
                 if ("module".equals(elementName) && uri != null && file != null) {
-                    moduleLocationHints.computeIfAbsent(uri, ignored -> new ArrayList<>())
-                        .add(
-                            basePath.resolve(file).toUri().toString()
-                        );
+                    moduleLocationHints
+                            .computeIfAbsent(uri, ignored -> new ArrayList<>())
+                            .add(basePath.resolve(file).toUri().toString());
                 }
                 URI logicalUri = parseLogicalUri(uri);
                 if (logicalUri != null && file != null) {
@@ -279,12 +261,7 @@ public class Environment {
      */
     public String applyToQuery(String query) {
         return EnvironmentQueryRewriter.rewrite(
-            query,
-            createDeclarations(),
-            externalParamLookup,
-            runtimeResourceLookup,
-            moduleLocationHints
-        );
+                query, createDeclarations(), externalParamLookup, runtimeResourceLookup, moduleLocationHints);
     }
 
     private String createDeclarations() {
@@ -294,15 +271,28 @@ public class Environment {
             String role = r.getKey();
             String file = r.getValue();
             if (role.equals(".")) {
-                declarations.append("declare context item := doc(\"").append(file).append("\"); ");
+                declarations
+                        .append("declare context item := doc(\"")
+                        .append(file)
+                        .append("\"); ");
             } else {
-                declarations.append("declare variable ").append(role).append(" := doc(\"").append(file).append("\"); ");
+                declarations
+                        .append("declare variable ")
+                        .append(role)
+                        .append(" := doc(\"")
+                        .append(file)
+                        .append("\"); ");
             }
         }
         for (Map.Entry<String, String> param : paramLookup.entrySet()) {
             String name = param.getKey();
             String select = param.getValue();
-            declarations.append("declare variable $").append(name).append(" := ").append(select).append(";");
+            declarations
+                    .append("declare variable $")
+                    .append(name)
+                    .append(" := ")
+                    .append(select)
+                    .append(";");
         }
         return declarations.toString();
     }
@@ -316,10 +306,10 @@ public class Environment {
 
         for (Map.Entry<String, String> namespace : namespaceLookup.entrySet()) {
             prolog.append("declare namespace ")
-                .append(namespace.getKey())
-                .append(" = ")
-                .append(toXQueryStringLiteral(namespace.getValue()))
-                .append(";\n");
+                    .append(namespace.getKey())
+                    .append(" = ")
+                    .append(toXQueryStringLiteral(namespace.getValue()))
+                    .append(";\n");
         }
 
         for (String decimalFormatDeclaration : decimalFormatDeclarations) {
@@ -333,5 +323,4 @@ public class Environment {
             return this.logicalToPhysical.isEmpty() && this.moduleLocationHints.isEmpty();
         }
     }
-
 }

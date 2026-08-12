@@ -9,14 +9,10 @@ import org.rumbledb.parser.xquery.XQueryParser;
  */
 public final class Converter {
 
-    private static final List<ConversionPass> CONVERSION_PASSES = List.of(
-        new ContextItemConversion(),
-        new StringLiteralConversion(),
-        new SimpleReplacementConversion()
-    );
+    private static final List<ConversionPass> CONVERSION_PASSES =
+            List.of(new ContextItemConversion(), new StringLiteralConversion(), new SimpleReplacementConversion());
 
-    private Converter() {
-    }
+    private Converter() {}
 
     /**
      * Converts an XQuery expression into a JSONiq++ expression.

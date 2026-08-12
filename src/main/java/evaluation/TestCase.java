@@ -1,8 +1,8 @@
 package evaluation;
 
-import net.sf.saxon.s9api.XdmNode;
-
 import java.nio.file.Path;
+
+import net.sf.saxon.s9api.XdmNode;
 
 /**
  * class that represents one testcase used to create a list of testcases in the driver that get evaluated in the
@@ -28,8 +28,7 @@ public class TestCase {
             String defaultFormattingLanguage,
             boolean staticTyping,
             String staticBaseUri,
-            Path testSetDirectory
-    ) {
+            Path testSetDirectory) {
         this.testString = testString;
         this.assertion = assertion;
         this.skipReason = skipReason;

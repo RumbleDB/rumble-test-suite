@@ -2,6 +2,7 @@ package evaluation.conversion;
 
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.Token;
+
 import org.rumbledb.parser.xquery.XQueryParser;
 
 /** Shared parse tree and source editor for one XQuery-to-JSONiq conversion. */

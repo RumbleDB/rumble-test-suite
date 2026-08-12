@@ -1,49 +1,52 @@
 package iq.base;
 
-import evaluation.*;
-import evaluation.conversion.XQueryMainModuleRewriter;
-import net.sf.saxon.s9api.XdmNode;
-import org.rumbledb.api.Item;
-import org.rumbledb.config.RumbleConfiguration;
-import org.rumbledb.exceptions.RumbleException;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+
 import org.xmlunit.builder.DiffBuilder;
 import org.xmlunit.diff.Diff;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.util.stream.Collectors;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import evaluation.*;
+import evaluation.conversion.XQueryMainModuleRewriter;
+import net.sf.saxon.s9api.XdmNode;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
+import org.rumbledb.api.Item;
+import org.rumbledb.config.RumbleConfiguration;
+import org.rumbledb.exceptions.RumbleException;
+
 public class TestBase {
-    private static final String PERMUTATION_ASSERTION_QUERY = """
-            let $actual := (
-            %s
-            )
-            let $expected := (
-            %s
-            )
-            return count($actual) eq count($expected)
-              and (
-                every $item in $actual
-                satisfies count(
-                  for $candidate in $actual
-                  where deep-equal($candidate, $item)
-                  return $candidate
-                ) eq count(
-                  for $candidate in $expected
-                  where deep-equal($candidate, $item)
-                  return $candidate
+    private static final String PERMUTATION_ASSERTION_QUERY =
+            """
+                let $actual := (
+                %s
                 )
-              )
-            """;
+                let $expected := (
+                %s
+                )
+                return count($actual) eq count($expected)
+                  and (
+                    every $item in $actual
+                    satisfies count(
+                      for $candidate in $actual
+                      where deep-equal($candidate, $item)
+                      return $candidate
+                    ) eq count(
+                      for $candidate in $expected
+                      where deep-equal($candidate, $item)
+                      return $candidate
+                    )
+                  )
+                """;
 
     private final boolean useXQueryParser;
     /** The configuration for the Rumble runtimes spinned up for this test case. */
@@ -52,10 +55,10 @@ public class TestBase {
     protected TestBase() {
         this.useXQueryParser = useXQueryParserFromConfiguration();
         this.rumbleConfig = RumbleConfiguration.builder()
-            .configureOutput(o -> o.outputFormat("json"))
-            .configureRuntime(r -> r.materializationCap(1000000000))
-            .configureSemantics(s -> s.queryLanguage(this.useXQueryParser ? "xquery31" : "jsoniq40"))
-            .build();
+                .configureOutput(o -> o.outputFormat("json"))
+                .configureRuntime(r -> r.materializationCap(1000000000))
+                .configureSemantics(s -> s.queryLanguage(this.useXQueryParser ? "xquery31" : "jsoniq40"))
+                .build();
     }
 
     public static List<CollectedTestCase> getData(String testSuite) throws Exception {
@@ -63,10 +66,8 @@ public class TestBase {
     }
 
     public static List<CollectedTestCase> getData(String testSuite, boolean useXQueryParser) throws Exception {
-        CaseCollector testDriver = new CaseCollector(
-                useXQueryParserFromConfiguration(),
-                TestCaseSelection.fromSystemProperties()
-        );
+        CaseCollector testDriver =
+                new CaseCollector(useXQueryParserFromConfiguration(), TestCaseSelection.fromSystemProperties());
         testDriver.execute(testSuite);
         return testDriver.getAllTests();
     }
@@ -84,10 +85,7 @@ public class TestBase {
                 return true;
             default:
                 throw new IllegalArgumentException(
-                        "Unsupported parser selection '"
-                            + configuredParser
-                            + "'. Use jsoniq or xquery."
-                );
+                        "Unsupported parser selection '" + configuredParser + "'. Use jsoniq or xquery.");
         }
     }
 
@@ -102,19 +100,17 @@ public class TestBase {
         XdmNode assertion = testCase.assertion;
         Environment environment = testCase.environment;
         checkAssertion(
-            assertion,
-            new AssertionContext(
-                    testString,
-                    environment,
-                    useXQueryParser,
-                    this.rumbleConfig,
-                    testCase.xmlVersion,
-                    testCase.defaultFormattingLanguage,
-                    testCase.staticTyping,
-                    testCase.staticBaseUri
-            ),
-            testCase.testSetDirectory
-        );
+                assertion,
+                new AssertionContext(
+                        testString,
+                        environment,
+                        useXQueryParser,
+                        this.rumbleConfig,
+                        testCase.xmlVersion,
+                        testCase.defaultFormattingLanguage,
+                        testCase.staticTyping,
+                        testCase.staticBaseUri),
+                testCase.testSetDirectory);
     }
 
     private void checkAssertion(XdmNode assertion, AssertionContext context, Path testSetDirectory) {
@@ -128,10 +124,8 @@ public class TestBase {
                 assertTrue(results.isEmpty());
                 break;
             case "assert":
-                secondQuery = declareResultVariableFromTestExpression(
-                    context.getTestString(),
-                    assertion.getStringValue()
-                );
+                secondQuery =
+                        declareResultVariableFromTestExpression(context.getTestString(), assertion.getStringValue());
                 assertTrueSingleElement(context.runQuery(secondQuery));
                 break;
             case "not":
@@ -149,32 +143,20 @@ public class TestBase {
                     }
                 } else {
                     secondQuery = declareResultVariableFromTestExpression(
-                        context.getTestString(),
-                        assertion.getStringValue()
-                    );
+                            context.getTestString(), assertion.getStringValue());
                     assertFalseSingleElement(context.runQuery(secondQuery));
                 }
                 break;
             case "assert-eq":
                 secondQuery = XQueryMainModuleRewriter.rewriteProgram(
-                    context.getTestString(),
-                    program -> "(("
-                        + program
-                        + ") eq ("
-                        + assertion.getStringValue()
-                        + "))"
-                );
+                        context.getTestString(),
+                        program -> "((" + program + ") eq (" + assertion.getStringValue() + "))");
                 assertTrueSingleElement(context.runQuery(secondQuery));
                 break;
             case "assert-deep-eq":
                 secondQuery = XQueryMainModuleRewriter.rewriteProgram(
-                    context.getTestString(),
-                    program -> "deep-equal(("
-                        + program
-                        + "), ("
-                        + assertion.getStringValue()
-                        + "))"
-                );
+                        context.getTestString(),
+                        program -> "deep-equal((" + program + "), (" + assertion.getStringValue() + "))");
                 assertTrueSingleElement(context.runQuery(secondQuery));
                 break;
             case "assert-true":
@@ -224,9 +206,8 @@ public class TestBase {
                 break;
             case "assert-type":
                 secondQuery = XQueryMainModuleRewriter.rewriteProgram(
-                    context.getTestString(),
-                    program -> "(" + program + ") instance of " + assertion.getStringValue()
-                );
+                        context.getTestString(),
+                        program -> "(" + program + ") instance of " + assertion.getStringValue());
                 assertTrueSingleElement(context.runQuery(secondQuery));
                 break;
             case "assert-count":
@@ -243,14 +224,14 @@ public class TestBase {
             case "assert-xml":
                 results = context.getPrimaryResult();
                 String actualXml = "<assert-xml>"
-                    + results.stream().map(Item::serialize).collect(Collectors.joining(""))
-                    + "</assert-xml>";
+                        + results.stream().map(Item::serialize).collect(Collectors.joining(""))
+                        + "</assert-xml>";
                 String expectedXml = "<assert-xml>" + assertionText(assertion, testSetDirectory) + "</assert-xml>";
 
                 Diff diff = DiffBuilder.compare(expectedXml)
-                    .withTest(actualXml)
-                    .ignoreWhitespace()
-                    .build();
+                        .withTest(actualXml)
+                        .ignoreWhitespace()
+                        .build();
 
                 assertFalse(diff.hasDifferences(), "Expected vs actual XML are different:\n" + diff.toString());
                 break;
@@ -349,14 +330,10 @@ public class TestBase {
         return context.getPrimarySerialization();
     }
 
-    private void assertPermutation(
-            XdmNode assertion,
-            AssertionContext context
-    ) {
+    private void assertPermutation(XdmNode assertion, AssertionContext context) {
         String assertExpression = XQueryMainModuleRewriter.rewriteProgram(
-            context.getTestString(),
-            program -> PERMUTATION_ASSERTION_QUERY.formatted(program, assertion.getStringValue())
-        );
+                context.getTestString(),
+                program -> PERMUTATION_ASSERTION_QUERY.formatted(program, assertion.getStringValue()));
         List<Item> results = context.runQuery(assertExpression);
         assertTrueSingleElement(results);
     }
@@ -368,16 +345,9 @@ public class TestBase {
         return s.replaceAll("\\s+", " ").trim();
     }
 
-
     private static String declareResultVariableFromTestExpression(String query, String assertionExpression) {
         return XQueryMainModuleRewriter.rewriteProgram(
-            query,
-            program -> "declare variable $result := ("
-                + program
-                + ");\nboolean("
-                + assertionExpression
-                + ")"
-        );
+                query,
+                program -> "declare variable $result := (" + program + ");\nboolean(" + assertionExpression + ")");
     }
-
 }

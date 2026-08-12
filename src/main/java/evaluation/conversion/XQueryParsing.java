@@ -6,14 +6,14 @@ import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.RecognitionException;
 import org.antlr.v4.runtime.Recognizer;
 import org.antlr.v4.runtime.misc.ParseCancellationException;
+
 import org.rumbledb.parser.xquery.XQueryLexer;
 import org.rumbledb.parser.xquery.XQueryParser;
 
 /** Parses XQuery source without reporting syntax errors to stderr. */
 final class XQueryParsing {
 
-    private XQueryParsing() {
-    }
+    private XQueryParsing() {}
 
     static XQueryParser.ModuleAndThisIsItContext parseModule(String source) {
         ParseResult result = parse(source);
@@ -55,8 +55,7 @@ final class XQueryParsing {
                 int line,
                 int charPositionInLine,
                 String message,
-                RecognitionException exception
-        ) {
+                RecognitionException exception) {
             this.hasError = true;
         }
 
@@ -65,6 +64,5 @@ final class XQueryParsing {
         }
     }
 
-    private record ParseResult(XQueryParser.ModuleAndThisIsItContext module, boolean hasErrors) {
-    }
+    private record ParseResult(XQueryParser.ModuleAndThisIsItContext module, boolean hasErrors) {}
 }

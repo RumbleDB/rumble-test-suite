@@ -7,8 +7,7 @@ import org.rumbledb.parser.xquery.XQueryParser;
 /** Rewrites the program expression of a valid XQuery main module while preserving its prolog. */
 public final class XQueryMainModuleRewriter {
 
-    private XQueryMainModuleRewriter() {
-    }
+    private XQueryMainModuleRewriter() {}
 
     public static String rewriteProgram(String query, UnaryOperator<String> programRewriter) {
         XQueryParser.ModuleAndThisIsItContext module = XQueryParsing.parseValidModule(query);

@@ -1,10 +1,10 @@
 package iq.base;
 
+import java.util.List;
+
 import org.rumbledb.api.Item;
 import org.rumbledb.api.SequenceOfItems;
 import org.rumbledb.exceptions.RumbleException;
-
-import java.util.List;
 
 /**
  * Class used to save the result of a query evaluation
