@@ -91,12 +91,10 @@ final class SourceTextRewriter {
             SourceEdit current = edits.get(i);
             if (current.start() < previous.endExclusive()) {
                 throw new IllegalStateException(
-                        "Overlapping source edits at offsets " + previous.start() + " and " + current.start()
-                );
+                        "Overlapping source edits at offsets " + previous.start() + " and " + current.start());
             }
         }
     }
 
-    private record SourceEdit(int start, int endExclusive, String replacement) {
-    }
+    private record SourceEdit(int start, int endExclusive, String replacement) {}
 }

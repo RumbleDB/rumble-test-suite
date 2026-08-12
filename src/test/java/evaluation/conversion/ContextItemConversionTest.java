@@ -1,8 +1,8 @@
 package evaluation.conversion;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
 import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class ContextItemConversionTest {
 
@@ -28,9 +28,8 @@ public class ContextItemConversionTest {
         assertEquals(query, Converter.convert(query));
 
         assertEquals(
-            "<word count=\"{count($words[$$ = $word])}\"/>",
-            Converter.convert("<word count=\"{count($words[. = $word])}\"/>")
-        );
+                "<word count=\"{count($words[$$ = $word])}\"/>",
+                Converter.convert("<word count=\"{count($words[. = $word])}\"/>"));
     }
 
     @Test

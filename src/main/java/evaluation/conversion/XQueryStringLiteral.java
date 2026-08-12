@@ -3,8 +3,7 @@ package evaluation.conversion;
 /** Parses and serializes XQuery string literal source text. */
 final class XQueryStringLiteral {
 
-    private XQueryStringLiteral() {
-    }
+    private XQueryStringLiteral() {}
 
     static String parse(String source) {
         if (source.length() < 2) {

@@ -6,22 +6,21 @@ import java.util.List;
 import java.util.Map;
 
 import org.antlr.v4.runtime.Token;
+
 import org.rumbledb.parser.xquery.XQueryParser;
 import org.rumbledb.parser.xquery.XQueryParserBaseVisitor;
 
 /** Applies an environment to parser-identified parts of an XQuery query. */
 public final class EnvironmentQueryRewriter {
 
-    private EnvironmentQueryRewriter() {
-    }
+    private EnvironmentQueryRewriter() {}
 
     public static String rewrite(
             String query,
             String declarations,
             Map<String, String> externalParams,
             Map<String, String> resources,
-            Map<String, List<String>> moduleLocationHints
-    ) {
+            Map<String, List<String>> moduleLocationHints) {
         XQueryParser.ModuleAndThisIsItContext module = XQueryParsing.parseValidModule(query);
         if (module == null) {
             return query;
@@ -34,9 +33,8 @@ public final class EnvironmentQueryRewriter {
         String queryWithDeclarations = context.result();
 
         // Parse the intermediate query so resource URIs inside injected parameter values are rewritten too.
-        XQueryParser.ModuleAndThisIsItContext queryWithDeclarationsModule = XQueryParsing.parseValidModule(
-            queryWithDeclarations
-        );
+        XQueryParser.ModuleAndThisIsItContext queryWithDeclarationsModule =
+                XQueryParsing.parseValidModule(queryWithDeclarations);
         if (queryWithDeclarationsModule == null) {
             return queryWithDeclarations;
         }
@@ -47,10 +45,7 @@ public final class EnvironmentQueryRewriter {
     }
 
     private static void insertDeclarations(
-            ConversionContext context,
-            XQueryParser.ModuleAndThisIsItContext module,
-            String declarations
-    ) {
+            ConversionContext context, XQueryParser.ModuleAndThisIsItContext module, String declarations) {
         if (declarations.isEmpty() || module.module().main == null) {
             return;
         }
@@ -152,18 +147,17 @@ public final class EnvironmentQueryRewriter {
 
             StringBuilder replacement = new StringBuilder("import module ");
             if (moduleImport.ncName() != null) {
-                replacement.append("namespace ")
-                    .append(moduleImport.ncName().getText())
-                    .append("=")
-                    .append(source);
+                replacement
+                        .append("namespace ")
+                        .append(moduleImport.ncName().getText())
+                        .append("=")
+                        .append(source);
             } else {
                 replacement.append(source);
             }
-            replacement.append(" at ")
-                .append(String.join(", ", serializedLocations));
+            replacement.append(" at ").append(String.join(", ", serializedLocations));
             this.context.replace(moduleImport, replacement.toString());
             return null;
         }
     }
-
 }

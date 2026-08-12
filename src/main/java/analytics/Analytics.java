@@ -1,5 +1,11 @@
 package analytics;
 
+import java.io.FileWriter;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
 import net.sf.saxon.s9api.Processor;
 import net.sf.saxon.s9api.QName;
 import net.sf.saxon.s9api.SaxonApiException;
@@ -8,12 +14,6 @@ import net.sf.saxon.s9api.XQueryCompiler;
 import net.sf.saxon.s9api.XQueryEvaluator;
 import net.sf.saxon.s9api.XdmAtomicValue;
 import net.sf.saxon.s9api.XdmEmptySequence;
-
-import java.io.FileWriter;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 
 /**
  * Generates a single analysis JSON from one or two Surefire XML report directories.
@@ -43,8 +43,7 @@ public class Analytics {
                     break;
                 default:
                     throw new IllegalArgumentException(
-                            "Expected zero, one, or two arguments: [candidate-surefire-dir] or <baseline-surefire-dir> <candidate-surefire-dir>"
-                    );
+                            "Expected zero, one, or two arguments: [candidate-surefire-dir] or <baseline-surefire-dir> <candidate-surefire-dir>");
             }
         } catch (IOException | SaxonApiException e) {
             throw new RuntimeException("Failed to generate analysis report", e);

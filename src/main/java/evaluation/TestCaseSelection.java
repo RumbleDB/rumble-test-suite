@@ -22,9 +22,7 @@ public final class TestCaseSelection {
 
         String trimmedTestCase = configuredTestCase.trim();
         if (trimmedTestCase.isEmpty()) {
-            throw new IllegalArgumentException(
-                    "System property '" + TEST_CASE_PROPERTY + "' must not be blank."
-            );
+            throw new IllegalArgumentException("System property '" + TEST_CASE_PROPERTY + "' must not be blank.");
         }
         return trimmedTestCase;
     }

@@ -1,7 +1,10 @@
 package iq.base;
 
+import java.util.List;
+
 import evaluation.Environment;
 import evaluation.conversion.Converter;
+
 import org.rumbledb.api.Item;
 import org.rumbledb.api.Rumble;
 import org.rumbledb.api.SequenceOfItems;
@@ -9,8 +12,6 @@ import org.rumbledb.config.CompilationConfiguration;
 import org.rumbledb.config.RumbleConfiguration;
 import org.rumbledb.exceptions.RumbleException;
 import org.rumbledb.resources.ResourceResolver;
-
-import java.util.List;
 
 /**
  * Class to keep the test case string, execution environment, and a cached primary result
@@ -37,8 +38,7 @@ class AssertionContext {
             String xmlVersion,
             String defaultFormattingLanguage,
             boolean staticTyping,
-            String staticBaseUri
-    ) {
+            String staticBaseUri) {
         /// This is the test
         this.testString = testString;
         this.environment = environment;
@@ -93,9 +93,8 @@ class AssertionContext {
         }
 
         RumbleConfiguration updatedConfig = applyDependenciesToConfig(this.rumbleConfig);
-        ResourceResolver resourceResolver = this.environment == null
-            ? new ResourceResolver()
-            : this.environment.getResourceResolver();
+        ResourceResolver resourceResolver =
+                this.environment == null ? new ResourceResolver() : this.environment.getResourceResolver();
         CompilationConfiguration compilationConfig = new CompilationConfiguration(updatedConfig, resourceResolver);
         return new Rumble(compilationConfig).runQuery(query);
     }

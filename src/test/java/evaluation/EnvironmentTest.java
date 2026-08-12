@@ -1,19 +1,21 @@
 package evaluation;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.io.StringReader;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
-
 import javax.xml.transform.stream.StreamSource;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import net.sf.saxon.s9api.DocumentBuilder;
 import net.sf.saxon.s9api.Processor;
 import net.sf.saxon.s9api.SaxonApiException;
 import net.sf.saxon.s9api.XdmNode;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import org.rumbledb.api.Rumble;
 import org.rumbledb.config.CompilationConfiguration;
 import org.rumbledb.config.RumbleConfiguration;
@@ -29,18 +31,15 @@ public class EnvironmentTest {
     public void rewritesEnvironmentModulesToExplicitLocationHints() throws Exception {
         Path module = Files.writeString(this.directory.resolve("module.xq"), "module namespace m = \"urn:module\";");
         Path schema = Files.writeString(this.directory.resolve("schema.xsd"), "<schema/>");
-        Environment environment = environmentWithImports(
-            "<test-case>"
+        Environment environment = environmentWithImports("<test-case>"
                 + "<module uri=\"urn:module\" file=\"module.xq\"/>"
                 + "<schema uri=\"urn:schema\" file=\"schema.xsd\"/>"
-                + "</test-case>"
-        );
+                + "</test-case>");
 
         String query = "import module namespace m = \"urn:module\"; 1";
         assertEquals(
-            "import module namespace m=\"urn:module\" at \"" + module.toUri() + "\"; 1",
-            environment.applyToQuery(query)
-        );
+                "import module namespace m=\"urn:module\" at \"" + module.toUri() + "\"; 1",
+                environment.applyToQuery(query));
         assertResolvedLocation(environment, URI.create("urn:module"), module);
         assertResolvedLocation(environment, URI.create("urn:schema"), schema);
     }
@@ -49,42 +48,36 @@ public class EnvironmentTest {
     public void rewritesSameNamespaceEnvironmentModulesIntoMultipleLocationHints() throws Exception {
         Files.writeString(this.directory.resolve("module1.xq"), "module namespace m = \"urn:module\";");
         Files.writeString(this.directory.resolve("module2.xq"), "module namespace m = \"urn:module\";");
-        Environment environment = environmentWithImports(
-            "<test-case>"
+        Environment environment = environmentWithImports("<test-case>"
                 + "<module uri=\"urn:module\" file=\"module1.xq\"/>"
                 + "<module uri=\"urn:module\" file=\"module2.xq\"/>"
-                + "</test-case>"
-        );
+                + "</test-case>");
 
         assertEquals(
-            "import module namespace m=\"urn:module\" at \""
-                + this.directory.resolve("module1.xq").toUri()
-                + "\", \""
-                + this.directory.resolve("module2.xq").toUri()
-                + "\"; 1",
-            environment.applyToQuery("import module namespace m=\"urn:module\"; 1")
-        );
+                "import module namespace m=\"urn:module\" at \""
+                        + this.directory.resolve("module1.xq").toUri()
+                        + "\", \""
+                        + this.directory.resolve("module2.xq").toUri()
+                        + "\"; 1",
+                environment.applyToQuery("import module namespace m=\"urn:module\"; 1"));
     }
 
     @Test
     public void usesTheEnvironmentResolverWhenCompilingAnImportedModule() throws Exception {
         Files.writeString(
-            this.directory.resolve("module.xq"),
-            "module namespace m = \"urn:module\"; declare function m:value() { 42 };"
-        );
-        Environment environment = environmentWithImports(
-            "<test-case><module uri=\"urn:module\" file=\"module.xq\"/></test-case>"
-        );
+                this.directory.resolve("module.xq"),
+                "module namespace m = \"urn:module\"; declare function m:value() { 42 };");
+        Environment environment =
+                environmentWithImports("<test-case><module uri=\"urn:module\" file=\"module.xq\"/></test-case>");
         RumbleConfiguration runtimeConfiguration = RumbleConfiguration.builder()
-            .configureSemantics(semantics -> semantics.queryLanguage("xquery31"))
-            .build();
+                .configureSemantics(semantics -> semantics.queryLanguage("xquery31"))
+                .build();
 
-        int value = new Rumble(
-                new CompilationConfiguration(runtimeConfiguration, environment.getResourceResolver())
-        ).runQuery("import module namespace m = \"urn:module\"; m:value()")
-            .getAsList()
-            .get(0)
-            .getIntValue();
+        int value = new Rumble(new CompilationConfiguration(runtimeConfiguration, environment.getResourceResolver()))
+                .runQuery("import module namespace m = \"urn:module\"; m:value()")
+                .getAsList()
+                .get(0)
+                .getIntValue();
 
         assertEquals(42, value);
     }
@@ -92,8 +85,7 @@ public class EnvironmentTest {
     @Test
     public void acceptsMalformedLogicalUrisUsedByNegativeTests() throws Exception {
         environmentWithImports(
-            "<test-case><module uri=\"http://example.com/invalid uri\" file=\"module.xq\"/></test-case>"
-        );
+                "<test-case><module uri=\"http://example.com/invalid uri\" file=\"module.xq\"/></test-case>");
     }
 
     @Test
@@ -102,11 +94,8 @@ public class EnvironmentTest {
         Path replacement = Files.writeString(this.directory.resolve("replacement.xq"), "replacement");
         Environment shared = new Environment(element("<environment/>", "environment"), this.directory);
         XdmNode testCase = element(
-            "<test-case><module uri=\""
-                + fallback.toUri()
-                + "\" file=\"replacement.xq\"/></test-case>",
-            "test-case"
-        );
+                "<test-case><module uri=\"" + fallback.toUri() + "\" file=\"replacement.xq\"/></test-case>",
+                "test-case");
 
         Environment extended = Environment.forTestCase(shared, testCase, this.directory);
 
@@ -128,10 +117,9 @@ public class EnvironmentTest {
 
     private static void assertResolvedLocation(Environment environment, URI logicalUri, Path expected)
             throws Exception {
-        try (
-            ResolvedResource resource = environment.getResourceResolver()
-                .resolve(logicalUri, RumbleConfiguration.defaultConfiguration(), ExceptionMetadata.EMPTY_METADATA)
-        ) {
+        try (ResolvedResource resource = environment
+                .getResourceResolver()
+                .resolve(logicalUri, RumbleConfiguration.defaultConfiguration(), ExceptionMetadata.EMPTY_METADATA)) {
             assertEquals(expected.toUri(), resource.getSystemId());
             resource.getInputStream().readAllBytes();
         }

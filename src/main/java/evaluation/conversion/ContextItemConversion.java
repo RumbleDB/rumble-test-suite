@@ -25,5 +25,4 @@ final class ContextItemConversion implements ConversionPass {
             return null;
         }
     }
-
 }

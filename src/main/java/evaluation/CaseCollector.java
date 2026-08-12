@@ -1,8 +1,5 @@
 package evaluation;
 
-import net.sf.saxon.s9api.*;
-import net.sf.saxon.s9api.streams.Steps;
-
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -12,6 +9,9 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import net.sf.saxon.s9api.*;
+import net.sf.saxon.s9api.streams.Steps;
 
 public class CaseCollector {
     // Features intentionally omitted from this set include:
@@ -25,20 +25,14 @@ public class CaseCollector {
     // typedData, and schema-location-hint.
     // olson-timezone is partially supported by the date/time formatting functions.
     private static final Set<String> SUPPORTED_FEATURES = Set.of(
-        "arbitraryPrecisionDecimal",
-        "higherOrderFunctions",
-        "moduleImport",
-        "olson-timezone",
-        "serialization",
-        "staticTyping"
-    );
+            "arbitraryPrecisionDecimal",
+            "higherOrderFunctions",
+            "moduleImport",
+            "olson-timezone",
+            "serialization",
+            "staticTyping");
 
-    private static final Set<String> SUPPORTED_SPECS = Set.of(
-        "XQ10+",
-        "XQ30+",
-        "XQ31",
-        "XQ31+"
-    );
+    private static final Set<String> SUPPORTED_SPECS = Set.of("XQ10+", "XQ30+", "XQ31", "XQ31+");
     private Path testsRepositoryDirectoryPath;
     private String currentTestSet;
     private final List<CollectedTestCase> allTests = new ArrayList<>();
@@ -80,9 +74,9 @@ public class CaseCollector {
      */
     public void getTestsRepository() throws IOException, InterruptedException {
         String testsRepositoryScriptFileName = "get-tests-repository.sh";
-        ProcessBuilder pb = new ProcessBuilder(
-                Constants.WORKING_DIRECTORY_PATH.resolve(testsRepositoryScriptFileName).toString()
-        );
+        ProcessBuilder pb = new ProcessBuilder(Constants.WORKING_DIRECTORY_PATH
+                .resolve(testsRepositoryScriptFileName)
+                .toString());
 
         Process p = pb.start();
         final int exitValue = p.waitFor();
@@ -98,11 +92,11 @@ public class CaseCollector {
             }
             throw new IOException("Error with get-tests-repository.sh script" + result);
         }
-
     }
 
     private void processCatalog(String testFolder) throws IOException, SaxonApiException {
-        File catalogFile = new File(testsRepositoryDirectoryPath.resolve("catalog.xml").toString());
+        File catalogFile =
+                new File(testsRepositoryDirectoryPath.resolve("catalog.xml").toString());
         Processor testDriverProcessor = new Processor(false);
         DocumentBuilder catalogBuilder = testDriverProcessor.newDocumentBuilder();
         catalogBuilder.setLineNumbering(true);
@@ -113,7 +107,8 @@ public class CaseCollector {
         xpc.setCaching(true);
         xpc.declareNamespace("", "http://www.w3.org/2010/09/qt-fots-catalog");
 
-        List<XdmNode> environments = catalogNode.select(Steps.descendant("environment")).asList();
+        List<XdmNode> environments =
+                catalogNode.select(Steps.descendant("environment")).asList();
         for (XdmNode environment : environments) {
             String envName = environment.attribute("name");
             Environment env = new Environment(environment, testsRepositoryDirectoryPath);
@@ -133,17 +128,18 @@ public class CaseCollector {
     }
 
     private void processTestSet(DocumentBuilder catalogBuilder, XPathCompiler xpc, XdmNode testSetNode)
-            throws IOException,
-                SaxonApiException {
+            throws IOException, SaxonApiException {
 
         String testSetFileName = testSetNode.attribute("file");
         this.currentTestSet = testSetFileName;
-        File testSetFile = new File(testsRepositoryDirectoryPath.resolve(testSetFileName).toString());
+        File testSetFile =
+                new File(testsRepositoryDirectoryPath.resolve(testSetFileName).toString());
         XdmNode testSetDocNode = catalogBuilder.build(testSetFile);
 
         prepareTestSetEnvironments(testSetDocNode, testSetFileName.split("/")[0]);
 
-        for (XdmNode testCase : testSetDocNode.select(Steps.descendant("test-case")).asList()) {
+        for (XdmNode testCase :
+                testSetDocNode.select(Steps.descendant("test-case")).asList()) {
             this.processTestCase(testCase, xpc);
         }
     }
@@ -153,16 +149,16 @@ public class CaseCollector {
      */
     private void prepareTestSetEnvironments(XdmNode testSetDocNode, String testSet) {
         testSetEnvironments.clear();
-        List<XdmNode> environments = testSetDocNode.select(Steps.child("test-set"))
-            .asNode()
-            .select(Steps.child("environment"))
-            .asList();
+        List<XdmNode> environments = testSetDocNode
+                .select(Steps.child("test-set"))
+                .asNode()
+                .select(Steps.child("environment"))
+                .asList();
         for (XdmNode environment : environments) {
             Environment env = new Environment(environment, testsRepositoryDirectoryPath.resolve(testSet));
             String envName = environment.attribute("name");
             testSetEnvironments.put(envName, env);
         }
-
     }
 
     private void processTestCase(XdmNode testCase, XPathCompiler xpc) throws IOException, SaxonApiException {
@@ -173,7 +169,8 @@ public class CaseCollector {
 
         // the directory containing this test-set's own XML file; relative resource
         // hrefs in the test query must resolve against this
-        Path testSetDirectory = testsRepositoryDirectoryPath.resolve(currentTestSet).getParent();
+        Path testSetDirectory =
+                testsRepositoryDirectoryPath.resolve(currentTestSet).getParent();
         String staticBaseUri = toDirectoryUri(testSetDirectory);
 
         Environment environment = prepareEnvironment(testCase, testSetDirectory);
@@ -198,34 +195,28 @@ public class CaseCollector {
         XdmNode assertion = (XdmNode) xpc.evaluateSingle("result/*[1]", testCase);
         XdmNode test = testCase.select(Steps.child("test")).asNode();
         String testFile = test.attribute("file");
-        String testString = testFile == null
-            ? test.getStringValue()
-            : Files.readString(testSetDirectory.resolve(testFile));
+        String testString =
+                testFile == null ? test.getStringValue() : Files.readString(testSetDirectory.resolve(testFile));
 
-        allTests.add(
-            new CollectedTestCase(
-                    new TestCase(
-                            testString,
-                            assertion,
-                            skipReason,
-                            environment,
-                            dependencies.xmlVersion,
-                            dependencies.defaultFormattingLanguage,
-                            dependencies.staticTyping,
-                            staticBaseUri,
-                            testSetDirectory
-                    ),
-                    currentTestSet,
-                    currentTestCase
-            )
-        );
+        allTests.add(new CollectedTestCase(
+                new TestCase(
+                        testString,
+                        assertion,
+                        skipReason,
+                        environment,
+                        dependencies.xmlVersion,
+                        dependencies.defaultFormattingLanguage,
+                        dependencies.staticTyping,
+                        staticBaseUri,
+                        testSetDirectory),
+                currentTestSet,
+                currentTestCase));
     }
 
     private Environment prepareEnvironment(XdmNode testCase, Path testSetDirectory) {
         List<XdmNode> environments = testCase.select(Steps.child("environment")).asList();
-        Environment environment = environments.isEmpty()
-            ? null
-            : resolveEnvironment(environments.get(0), testSetDirectory);
+        Environment environment =
+                environments.isEmpty() ? null : resolveEnvironment(environments.get(0), testSetDirectory);
         return Environment.forTestCase(environment, testCase, testSetDirectory);
     }
 
@@ -257,7 +248,8 @@ public class CaseCollector {
     private DependencyCheckResult checkDependencies(XdmNode testCase) {
         String testCaseName = testCase.attribute("name");
         List<XdmNode> dependencies = testCase.select(Steps.child("dependency")).asList();
-        dependencies.addAll(testCase.getParent().select(Steps.child("dependency")).asList());
+        dependencies.addAll(
+                testCase.getParent().select(Steps.child("dependency")).asList());
 
         DependencyCheckResult result = new DependencyCheckResult();
         if (dependencies.isEmpty()) {
@@ -329,7 +321,7 @@ public class CaseCollector {
                 case "language": {
                     break;
                 }
-                // Check if not the XSLT (isApplicable original method)
+                    // Check if not the XSLT (isApplicable original method)
                 case "spec": {
                     if (!isSupportedSpecDependency(value)) {
                         result.skipReason = type + " " + value;
@@ -344,8 +336,7 @@ public class CaseCollector {
                 }
                 default: {
                     System.out.println(
-                        "WARNING: unconsidered dependency " + type + " in " + testCaseName + "; removing testcase"
-                    );
+                            "WARNING: unconsidered dependency " + type + " in " + testCaseName + "; removing testcase");
                     result.skipReason = type + " " + value;
                     return result;
                 }
