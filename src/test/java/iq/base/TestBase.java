@@ -3,7 +3,6 @@ package iq.base;
 import evaluation.*;
 import evaluation.conversion.XQueryMainModuleRewriter;
 import net.sf.saxon.s9api.XdmNode;
-import org.opentest4j.TestAbortedException;
 import org.rumbledb.api.Item;
 import org.rumbledb.config.RumbleConfiguration;
 import org.rumbledb.exceptions.RumbleException;
@@ -102,32 +101,20 @@ public class TestBase {
 
         XdmNode assertion = testCase.assertion;
         Environment environment = testCase.environment;
-        try {
-            checkAssertion(
-                assertion,
-                new AssertionContext(
-                        testString,
-                        environment,
-                        useXQueryParser,
-                        this.rumbleConfig,
-                        testCase.xmlVersion,
-                        testCase.defaultFormattingLanguage,
-                        testCase.staticTyping,
-                        testCase.staticBaseUri
-                ),
-                testCase.testSetDirectory
-            );
-        } catch (RumbleException e) {
-            if (isSkipErrorCode(e.getErrorCode().toString())) {
-                assumeTrue(false, "Skip errorcode: " + e.getErrorCode().toString() + ", reason: " + e.getMessage());
-            } else {
-                throw e;
-            }
-        } catch (AssertionError e) {
-            throw e;
-        } catch (Exception e) {
-            throw e;
-        }
+        checkAssertion(
+            assertion,
+            new AssertionContext(
+                    testString,
+                    environment,
+                    useXQueryParser,
+                    this.rumbleConfig,
+                    testCase.xmlVersion,
+                    testCase.defaultFormattingLanguage,
+                    testCase.staticTyping,
+                    testCase.staticBaseUri
+            ),
+            testCase.testSetDirectory
+        );
     }
 
     private void checkAssertion(XdmNode assertion, AssertionContext context, Path testSetDirectory) {
@@ -225,16 +212,8 @@ public class TestBase {
                     try {
                         checkAssertion(individualAssertion, context, testSetDirectory);
                         success = true;
-                    } catch (RumbleException e) {
-                        if (isSkipErrorCode(e.getErrorCode().toString())) {
-                            // we want these to be caught outside so we skip the testcase
-                            throw e;
-                        } else {
-                            errors.add(e);
-                        }
-                    } catch (TestAbortedException e) {
-                        // specific assertion has skip reason, we want to pass that on and skip the
-                        // whole test
+                    } catch (UnsupportedOperationException e) {
+                        // A harness limitation is an error, not a failed alternative assertion.
                         throw e;
                     } catch (AssertionError | Exception e) {
                         // specific assertion has failed
@@ -313,9 +292,7 @@ public class TestBase {
                 assertExpectedError(assertion, context.getPrimaryEvaluation());
                 break;
             default:
-                // should never happen unless they add a new assertion type
-                assumeTrue(false, tag + " assertion is new and not implemented");
-                break;
+                throw new UnsupportedOperationException(tag + " assertion is not implemented by the test harness");
         }
     }
 
@@ -344,11 +321,6 @@ public class TestBase {
         }
         if (error == null) {
             fail("Expected to throw error but ran without error");
-        }
-
-        if (isSkipErrorCode(error.getErrorCode().toString())) {
-            // we want these to be caught outside so we skip the testcase
-            throw error;
         }
 
         String expectedErrorCode = assertion.attribute("code");
@@ -387,19 +359,6 @@ public class TestBase {
         );
         List<Item> results = context.runQuery(assertExpression);
         assertTrueSingleElement(results);
-    }
-
-    /**
-     * Returns true if the error code is a skip error code.
-     *
-     * @param errorCode The error code to check.
-     * @return True if the error code is a skip error code, false otherwise.
-     */
-    private boolean isSkipErrorCode(String errorCode) {
-        // use the xQuery skip reason error codes if we are using the XQuery parser
-        return (this.useXQueryParser ? Constants.xQuerySkipReasonErrorCodes : Constants.skipReasonErrorCodes).contains(
-            errorCode
-        );
     }
 
     private static String normalizeSpace(String s) {

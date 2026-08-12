@@ -27,15 +27,10 @@ The most important keys and the meaning of their values are:
 - ``category`` can be 
   - ``PASS`` testcase passed
   - ``FAIL`` testcase ran but output didnt fullfill assertion
-  - ``ERROR`` testcase threw error that is not a part of the skip reasons
-  - ``SKIP`` testcase was skipped due to a skip reason
+  - ``ERROR`` testcase or test harness threw an unexpected error
+  - ``SKIP`` testcase was not applicable because of a QT3 dependency
 
-The current skip reasons are:
-- Parser error XPST0003 (we assume that an unimplemented feature was encountered)
-- Method or type constructor not implemented error XPST0017
-- Type not implemented error XPST0051
-- Unsupported errorcode in assertion (based on hardcoded list in Constants.java)
-- Testcase or Testset is on list of Testcases/Testsets to skip (hardcoded list in Constants.java)
+Tests are skipped only when their QT3 dependency metadata says that they do not apply to the current implementation or configuration. Runtime errors, unsupported harness assertions, timeouts, and other implementation-specific problems are reported as failures or errors rather than skips.
 
 # View Analytics
 There are some analytics that are run after the tests are evaluated. You can view the resulting plots (and the complete JSON files) by browsing the artifacts of the *plot* job.

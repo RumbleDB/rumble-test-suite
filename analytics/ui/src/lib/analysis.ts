@@ -130,7 +130,7 @@ export function buildViewModel(analysis: AnalysisPayload, sourceName: string): V
     .map((suite) => ({
       ...suite,
       total: suite.pass + suite.fail + suite.error + suite.skip,
-      passRate: percentNumber(suite.pass, suite.pass + suite.fail + suite.error + suite.skip),
+      passRate: percentNumber(suite.pass, suite.pass + suite.fail + suite.error),
     }))
     .sort((left, right) => right.total - left.total || left.name.localeCompare(right.name));
 
@@ -152,7 +152,7 @@ export function buildViewModel(analysis: AnalysisPayload, sourceName: string): V
     suites,
     totals: {
       ...totals,
-      passRate: percentNumber(totals.pass, totals.total),
+      passRate: percentNumber(totals.pass, totals.pass + totals.fail + totals.error),
     },
     issueRows: flattenIssues(analysis.issues || {}, analysis.cases || {}),
     regressions: flattenRegressions(analysis.regressions || {}, analysis.cases || {}),

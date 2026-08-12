@@ -41,12 +41,10 @@ public class CaseCollector {
     );
     private Path testsRepositoryDirectoryPath;
     private String currentTestSet;
-    private final boolean useXQueryParser;
     private final List<CollectedTestCase> allTests = new ArrayList<>();
     private final TestCaseSelection testCaseSelection;
 
     public CaseCollector(boolean useXQueryParser, TestCaseSelection testCaseSelection) {
-        this.useXQueryParser = useXQueryParser;
         this.testCaseSelection = testCaseSelection;
     }
 
@@ -170,22 +168,6 @@ public class CaseCollector {
     private void processTestCase(XdmNode testCase, XPathCompiler xpc) throws IOException, SaxonApiException {
         String currentTestCase = testCase.attribute("name");
         if (!this.testCaseSelection.shouldRun(currentTestCase)) {
-            return;
-        }
-
-        // check if testcase is skipped
-        if (
-            Constants.skippedTestSets.contains(this.currentTestSet)
-                || Constants.skippedGeneralTestCases.contains(currentTestCase)
-                || (!useXQueryParser && Constants.skippedJSONIQTestCases.contains(currentTestCase))
-        ) {
-            allTests.add(
-                new CollectedTestCase(
-                        new TestCase(null, null, "Testcase/set on skiplist", null, null, null, false, null, null),
-                        currentTestSet,
-                        currentTestCase
-                )
-            );
             return;
         }
 
