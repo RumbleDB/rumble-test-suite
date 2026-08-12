@@ -41,12 +41,10 @@ public class CaseCollector {
     );
     private Path testsRepositoryDirectoryPath;
     private String currentTestSet;
-    private final boolean useXQueryParser;
     private final List<CollectedTestCase> allTests = new ArrayList<>();
     private final TestCaseSelection testCaseSelection;
 
     public CaseCollector(boolean useXQueryParser, TestCaseSelection testCaseSelection) {
-        this.useXQueryParser = useXQueryParser;
         this.testCaseSelection = testCaseSelection;
     }
 
