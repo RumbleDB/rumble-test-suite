@@ -90,7 +90,8 @@ export function SuitesBarChart(props: SuitesBarChartProps) {
                   <span class="pill pill-parser" style={{ "font-size": "0.6rem", "padding": "2px 6px" }}>{suite.parser}</span>
                 </div>
                 <span style={{ "font-size": "0.78rem", color: "var(--muted)" }}>
-                  {suite.pass}/{suite.total} passed ({formatPercent(suite.passRate)}) &middot; {formatDuration(suite.time)}
+                  {suite.pass}/{suite.total - suite.skip} applicable tests passed ({formatPercent(suite.passRate)})
+                  &middot; {formatDuration(suite.time)}
                 </span>
               </div>
               
