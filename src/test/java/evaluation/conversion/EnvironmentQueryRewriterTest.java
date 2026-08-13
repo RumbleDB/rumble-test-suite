@@ -16,7 +16,14 @@ public class EnvironmentQueryRewriterTest {
         assertEquals(
                 "\"file:///resource.xml\", \"prefix urn:test\", (: \"urn:test\" :) <e>urn:test</e>",
                 EnvironmentQueryRewriter.rewrite(
-                        query, Map.of(), "", Map.of(), Map.of("urn:test", "file:///resource.xml"), Map.of(), Map.of()));
+                        query,
+                        Map.of(),
+                        "",
+                        Map.of(),
+                        Map.of("urn:test", "file:///resource.xml"),
+                        Map.of(),
+                        Map.of(),
+                        false));
     }
 
     @Test
@@ -32,7 +39,7 @@ public class EnvironmentQueryRewriterTest {
                         + "declare variable $value-more external;\n"
                         + "\"declare variable $value external;\"",
                 EnvironmentQueryRewriter.rewrite(
-                        query, Map.of(), "", Map.of("value", "42"), Map.of(), Map.of(), Map.of()));
+                        query, Map.of(), "", Map.of("value", "42"), Map.of(), Map.of(), Map.of(), false));
     }
 
     @Test
@@ -42,7 +49,7 @@ public class EnvironmentQueryRewriterTest {
         assertEquals(
                 query,
                 EnvironmentQueryRewriter.rewrite(
-                        query, Map.of(), "", Map.of("value", "42"), Map.of(), Map.of(), Map.of()));
+                        query, Map.of(), "", Map.of("value", "42"), Map.of(), Map.of(), Map.of(), false));
     }
 
     @Test
@@ -67,7 +74,8 @@ public class EnvironmentQueryRewriterTest {
                         Map.of(),
                         Map.of(),
                         Map.of(),
-                        Map.of()));
+                        Map.of(),
+                        false));
     }
 
     @Test
@@ -84,7 +92,8 @@ public class EnvironmentQueryRewriterTest {
                         Map.of("external", "\"urn:test\""),
                         Map.of("urn:test", "file:///resource.xml"),
                         Map.of(),
-                        Map.of()));
+                        Map.of(),
+                        false));
     }
 
     @Test
@@ -100,7 +109,8 @@ public class EnvironmentQueryRewriterTest {
                         Map.of(),
                         Map.of("urn:test", "file:///resource.xml"),
                         Map.of(),
-                        Map.of()));
+                        Map.of(),
+                        false));
     }
 
     @Test
@@ -116,7 +126,8 @@ public class EnvironmentQueryRewriterTest {
                         Map.of(),
                         Map.of(),
                         Map.of("urn:module", java.util.List.of("file:///module1.xq", "file:///module2.xq")),
-                        Map.of()));
+                        Map.of(),
+                        false));
     }
 
     @Test
@@ -133,15 +144,16 @@ public class EnvironmentQueryRewriterTest {
                         Map.of(),
                         Map.of(),
                         Map.of(),
-                        Map.of()));
+                        Map.of(),
+                        false));
     }
 
     @Test
-    public void doesNotDuplicateEnvironmentSchemaImportsAlreadyPresentInTheQuery() {
+    public void replacesExistingSchemaImportLocationsWithoutInjectingAnotherImport() {
         String query = "import schema namespace s = \"urn:schema\"; 1";
 
         assertEquals(
-                query,
+                "import schema namespace s = \"urn:schema\" at \"file:///schema.xsd\"; 1",
                 EnvironmentQueryRewriter.rewrite(
                         query,
                         Map.of(),
@@ -149,7 +161,23 @@ public class EnvironmentQueryRewriterTest {
                         Map.of(),
                         Map.of(),
                         Map.of(),
-                        Map.of("urn:schema", java.util.List.of("file:///schema.xsd"))));
+                        Map.of("urn:schema", java.util.List.of("file:///schema.xsd")),
+                        false));
+    }
+
+    @Test
+    public void doesNotInjectEnvironmentSchemaWithoutAValidatedSource() {
+        assertEquals(
+                "1",
+                EnvironmentQueryRewriter.rewrite(
+                        "1",
+                        Map.of(),
+                        "",
+                        Map.of(),
+                        Map.of(),
+                        Map.of(),
+                        Map.of("urn:schema", java.util.List.of("file:///schema.xsd")),
+                        false));
     }
 
     @Test
@@ -159,7 +187,7 @@ public class EnvironmentQueryRewriterTest {
         assertEquals(
                 query,
                 EnvironmentQueryRewriter.rewrite(
-                        query, Map.of("module", "urn:module"), "", Map.of(), Map.of(), Map.of(), Map.of()));
+                        query, Map.of("module", "urn:module"), "", Map.of(), Map.of(), Map.of(), Map.of(), false));
     }
 
     @Test
@@ -173,7 +201,8 @@ public class EnvironmentQueryRewriterTest {
                         Map.of(),
                         Map.of(),
                         Map.of(),
-                        Map.of()));
+                        Map.of(),
+                        false));
 
         assertEquals(
                 "QT3 environment binds prefix atomic to urn:environment, but the query binds it to urn:query.",
