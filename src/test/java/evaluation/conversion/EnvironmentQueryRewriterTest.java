@@ -5,6 +5,7 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class EnvironmentQueryRewriterTest {
 
@@ -15,7 +16,7 @@ public class EnvironmentQueryRewriterTest {
         assertEquals(
                 "\"file:///resource.xml\", \"prefix urn:test\", (: \"urn:test\" :) <e>urn:test</e>",
                 EnvironmentQueryRewriter.rewrite(
-                        query, "", Map.of(), Map.of("urn:test", "file:///resource.xml"), Map.of()));
+                        query, Map.of(), "", Map.of(), Map.of("urn:test", "file:///resource.xml"), Map.of(), Map.of()));
     }
 
     @Test
@@ -30,14 +31,18 @@ public class EnvironmentQueryRewriterTest {
                         + "declare variable $value external := (42);\n"
                         + "declare variable $value-more external;\n"
                         + "\"declare variable $value external;\"",
-                EnvironmentQueryRewriter.rewrite(query, "", Map.of("value", "42"), Map.of(), Map.of()));
+                EnvironmentQueryRewriter.rewrite(
+                        query, Map.of(), "", Map.of("value", "42"), Map.of(), Map.of(), Map.of()));
     }
 
     @Test
     public void preservesAnExistingExternalDefault() {
         String query = "declare variable $value external := 1; $value";
 
-        assertEquals(query, EnvironmentQueryRewriter.rewrite(query, "", Map.of("value", "42"), Map.of(), Map.of()));
+        assertEquals(
+                query,
+                EnvironmentQueryRewriter.rewrite(
+                        query, Map.of(), "", Map.of("value", "42"), Map.of(), Map.of(), Map.of()));
     }
 
     @Test
@@ -56,7 +61,13 @@ public class EnvironmentQueryRewriterTest {
                         + "declare variable $existing external;\n"
                         + "$existing",
                 EnvironmentQueryRewriter.rewrite(
-                        query, "declare variable $environment := 1;", Map.of(), Map.of(), Map.of()));
+                        query,
+                        Map.of(),
+                        "declare variable $environment := 1;",
+                        Map.of(),
+                        Map.of(),
+                        Map.of(),
+                        Map.of()));
     }
 
     @Test
@@ -68,9 +79,11 @@ public class EnvironmentQueryRewriterTest {
                         + "declare variable $external external := (\"file:///resource.xml\"); $external",
                 EnvironmentQueryRewriter.rewrite(
                         query,
+                        Map.of(),
                         "declare variable $environment := \"urn:test\";",
                         Map.of("external", "\"urn:test\""),
                         Map.of("urn:test", "file:///resource.xml"),
+                        Map.of(),
                         Map.of()));
     }
 
@@ -82,9 +95,11 @@ public class EnvironmentQueryRewriterTest {
                 query,
                 EnvironmentQueryRewriter.rewrite(
                         query,
+                        Map.of(),
                         "declare variable $environment := 1;",
                         Map.of(),
                         Map.of("urn:test", "file:///resource.xml"),
+                        Map.of(),
                         Map.of()));
     }
 
@@ -96,9 +111,72 @@ public class EnvironmentQueryRewriterTest {
                 "import module namespace m=\"urn:module\" at \"file:///module1.xq\", \"file:///module2.xq\"; 1",
                 EnvironmentQueryRewriter.rewrite(
                         query,
+                        Map.of(),
                         "",
                         Map.of(),
                         Map.of(),
-                        Map.of("urn:module", java.util.List.of("file:///module1.xq", "file:///module2.xq"))));
+                        Map.of("urn:module", java.util.List.of("file:///module1.xq", "file:///module2.xq")),
+                        Map.of()));
+    }
+
+    @Test
+    public void doesNotDuplicateNamespaceBoundBySchemaImport() {
+        String query = "import schema namespace atomic=\"urn:atomic\"; \"ABC\"";
+
+        assertEquals(
+                "import schema namespace atomic=\"urn:atomic\"; "
+                        + "declare context item := doc(\"file:///atomic.xml\"); \"ABC\"",
+                EnvironmentQueryRewriter.rewrite(
+                        query,
+                        Map.of("atomic", "urn:atomic"),
+                        "declare context item := doc(\"file:///atomic.xml\"); ",
+                        Map.of(),
+                        Map.of(),
+                        Map.of(),
+                        Map.of()));
+    }
+
+    @Test
+    public void doesNotDuplicateEnvironmentSchemaImportsAlreadyPresentInTheQuery() {
+        String query = "import schema namespace s = \"urn:schema\"; 1";
+
+        assertEquals(
+                query,
+                EnvironmentQueryRewriter.rewrite(
+                        query,
+                        Map.of(),
+                        "",
+                        Map.of(),
+                        Map.of(),
+                        Map.of(),
+                        Map.of("urn:schema", java.util.List.of("file:///schema.xsd"))));
+    }
+
+    @Test
+    public void doesNotDuplicateNamespaceBoundByModuleImport() {
+        String query = "import module namespace module=\"urn:module\"; \"ABC\"";
+
+        assertEquals(
+                query,
+                EnvironmentQueryRewriter.rewrite(
+                        query, Map.of("module", "urn:module"), "", Map.of(), Map.of(), Map.of(), Map.of()));
+    }
+
+    @Test
+    public void rejectsConflictingEnvironmentAndQueryNamespaceBindings() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> EnvironmentQueryRewriter.rewrite(
+                        "import schema namespace atomic=\"urn:query\"; \"ABC\"",
+                        Map.of("atomic", "urn:environment"),
+                        "",
+                        Map.of(),
+                        Map.of(),
+                        Map.of(),
+                        Map.of()));
+
+        assertEquals(
+                "QT3 environment binds prefix atomic to urn:environment, but the query binds it to urn:query.",
+                exception.getMessage());
     }
 }

@@ -89,6 +89,50 @@ public class EnvironmentTest {
     }
 
     @Test
+    public void preservesSourceValidationModesInInjectedDeclarations() throws Exception {
+        Path strict = Files.writeString(this.directory.resolve("strict.xml"), "<root/>");
+        Path lax = Files.writeString(this.directory.resolve("lax.xml"), "<root/>");
+        Environment environment = new Environment(
+                element(
+                        "<environment>"
+                                + "<source role=\".\" file=\"strict.xml\" validation=\"strict\"/>"
+                                + "<source role=\"$other\" file=\"lax.xml\" validation=\"lax\"/>"
+                                + "</environment>",
+                        "environment"),
+                this.directory);
+
+        assertEquals(
+                "declare context item := validate strict { doc(\""
+                        + strict.toUri()
+                        + "\") }; declare variable $other := validate lax { doc(\""
+                        + lax.toUri()
+                        + "\") }; 1",
+                environment.applyToQuery("1"));
+    }
+
+    @Test
+    public void importsEnvironmentSchemasWithoutBindingTheirNamespaces() throws Exception {
+        Path schema = Files.writeString(this.directory.resolve("schema.xsd"), "<schema/>");
+        Environment environment = new Environment(
+                element(
+                        "<environment>"
+                                + "<schema uri=\"urn:schema\" file=\"schema.xsd\"/>"
+                                + "<source role=\".\" file=\"document.xml\" validation=\"strict\"/>"
+                                + "</environment>",
+                        "environment"),
+                this.directory);
+
+        assertEquals(
+                "import schema \"urn:schema\" at \""
+                        + schema.toUri()
+                        + "\";\n"
+                        + "declare context item := validate strict { doc(\""
+                        + this.directory.resolve("document.xml").toUri()
+                        + "\") }; 1",
+                environment.applyToQuery("1"));
+    }
+
+    @Test
     public void doesNotMutateASharedEnvironment() throws Exception {
         Path fallback = Files.writeString(this.directory.resolve("fallback.xq"), "fallback");
         Path replacement = Files.writeString(this.directory.resolve("replacement.xq"), "replacement");
