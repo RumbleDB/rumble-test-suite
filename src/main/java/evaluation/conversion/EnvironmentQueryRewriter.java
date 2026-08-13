@@ -23,7 +23,8 @@ public final class EnvironmentQueryRewriter {
             Map<String, String> externalParams,
             Map<String, String> resources,
             Map<String, List<String>> moduleLocationHints,
-            Map<String, List<String>> schemaLocationHints) {
+            Map<String, List<String>> schemaLocationHints,
+            boolean injectEnvironmentSchemaImports) {
         XQueryParser.ModuleAndThisIsItContext module = XQueryParsing.parseValidModule(query);
         if (module == null) {
             return query;
@@ -32,10 +33,11 @@ public final class EnvironmentQueryRewriter {
         ConversionContext context = new ConversionContext(query, module);
         new ExternalParamVisitor(context, externalParams).visit(module);
         new ModuleImportVisitor(context, moduleLocationHints).visit(module);
+        new SchemaImportVisitor(context, schemaLocationHints).visit(module);
         insertDeclarations(
                 context,
                 module,
-                environmentSchemaImports(schemaLocationHints, module)
+                environmentSchemaImports(injectEnvironmentSchemaImports ? schemaLocationHints : Map.of(), module)
                         + environmentNamespaceDeclarations(environmentNamespaces, module)
                         + declarations);
         String queryWithDeclarations = context.result();
@@ -284,6 +286,46 @@ public final class EnvironmentQueryRewriter {
                     .append(String.join(", ", serializedLocations))
                     .append(";");
             this.context.replace(moduleImport, replacement.toString());
+            return null;
+        }
+    }
+
+    private static final class SchemaImportVisitor extends XQueryParserBaseVisitor<Void> {
+
+        private final ConversionContext context;
+        private final Map<String, List<String>> schemaLocationHints;
+
+        private SchemaImportVisitor(ConversionContext context, Map<String, List<String>> schemaLocationHints) {
+            this.context = context;
+            this.schemaLocationHints = schemaLocationHints;
+        }
+
+        @Override
+        public Void visitSchemaImport(XQueryParser.SchemaImportContext schemaImport) {
+            String source = this.context.text(schemaImport.nsURI);
+            String namespace = XQueryStringLiteral.parse(source);
+            List<String> environmentLocations = this.schemaLocationHints.get(namespace);
+            if (environmentLocations == null || environmentLocations.isEmpty()) {
+                return null;
+            }
+
+            List<String> serializedLocations = new ArrayList<>();
+            for (String location : environmentLocations) {
+                serializedLocations.add(XQueryStringLiteral.serialize(location, '"'));
+            }
+
+            StringBuilder replacement = new StringBuilder("import schema ");
+            if (schemaImport.schemaPrefix() != null) {
+                replacement
+                        .append(this.context.text(schemaImport.schemaPrefix()))
+                        .append(" ");
+            }
+            replacement
+                    .append(source)
+                    .append(" at ")
+                    .append(String.join(", ", serializedLocations))
+                    .append(";");
+            this.context.replace(schemaImport, replacement.toString());
             return null;
         }
     }

@@ -284,7 +284,8 @@ public class Environment {
                 this.externalParamLookup,
                 this.runtimeResourceLookup,
                 this.moduleLocationHints,
-                hasSchemaValidatedSource() ? this.schemaLocationHints : Map.of());
+                this.schemaLocationHints,
+                hasSchemaValidatedSource());
     }
 
     private boolean hasSchemaValidatedSource() {
