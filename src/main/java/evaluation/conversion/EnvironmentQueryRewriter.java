@@ -18,20 +18,12 @@ public final class EnvironmentQueryRewriter {
 
     public static String rewrite(
             String query,
-            String declarations,
-            Map<String, String> externalParams,
-            Map<String, String> resources,
-            Map<String, List<String>> moduleLocationHints) {
-        return rewrite(query, Map.of(), declarations, externalParams, resources, moduleLocationHints);
-    }
-
-    public static String rewrite(
-            String query,
             Map<String, String> environmentNamespaces,
             String declarations,
             Map<String, String> externalParams,
             Map<String, String> resources,
-            Map<String, List<String>> moduleLocationHints) {
+            Map<String, List<String>> moduleLocationHints,
+            Map<String, List<String>> schemaLocationHints) {
         XQueryParser.ModuleAndThisIsItContext module = XQueryParsing.parseValidModule(query);
         if (module == null) {
             return query;
@@ -41,7 +33,11 @@ public final class EnvironmentQueryRewriter {
         new ExternalParamVisitor(context, externalParams).visit(module);
         new ModuleImportVisitor(context, moduleLocationHints).visit(module);
         insertDeclarations(
-                context, module, environmentNamespaceDeclarations(environmentNamespaces, module) + declarations);
+                context,
+                module,
+                environmentSchemaImports(schemaLocationHints, module)
+                        + environmentNamespaceDeclarations(environmentNamespaces, module)
+                        + declarations);
         String queryWithDeclarations = context.result();
 
         // Parse the intermediate query so resource URIs inside injected parameter values are rewritten too.
@@ -54,6 +50,43 @@ public final class EnvironmentQueryRewriter {
         ConversionContext resourceContext = new ConversionContext(queryWithDeclarations, queryWithDeclarationsModule);
         new ResourceVisitor(resourceContext, resources).visit(queryWithDeclarationsModule);
         return resourceContext.result();
+    }
+
+    private static String environmentSchemaImports(
+            Map<String, List<String>> schemaLocationHints, XQueryParser.ModuleAndThisIsItContext module) {
+        if (schemaLocationHints.isEmpty() || module.module().main == null) {
+            return "";
+        }
+
+        LinkedHashSet<String> importedNamespaces = new LinkedHashSet<>();
+        for (XQueryParser.SchemaImportContext schemaImport :
+                module.module().main.prolog().schemaImport()) {
+            String namespace = XQueryStringLiteral.parse(schemaImport.nsURI.getText());
+            if (namespace != null) {
+                importedNamespaces.add(namespace);
+            }
+        }
+
+        StringBuilder declarations = new StringBuilder();
+        for (Map.Entry<String, List<String>> schema : schemaLocationHints.entrySet()) {
+            if (importedNamespaces.contains(schema.getKey())) {
+                continue;
+            }
+            List<String> locations = new ArrayList<>();
+            for (String location : schema.getValue()) {
+                locations.add(XQueryStringLiteral.serialize(location, '"'));
+            }
+            if (locations.isEmpty()) {
+                continue;
+            }
+            declarations
+                    .append("import schema ")
+                    .append(XQueryStringLiteral.serialize(schema.getKey(), '"'))
+                    .append(" at ")
+                    .append(String.join(", ", locations))
+                    .append(";\n");
+        }
+        return declarations.toString();
     }
 
     private static String environmentNamespaceDeclarations(

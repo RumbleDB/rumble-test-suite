@@ -24,6 +24,7 @@ public class Environment {
     private final Map<String, SourceBinding> roleLookup = new LinkedHashMap<>();
     private final Map<URI, URI> importResourceLookup = new HashMap<>();
     private final Map<String, List<String>> moduleLocationHints = new HashMap<>();
+    private final Map<String, List<String>> schemaLocationHints = new LinkedHashMap<>();
 
     private final Map<String, String> namespaceLookup = new HashMap<>();
 
@@ -52,6 +53,9 @@ public class Environment {
         this.importResourceLookup.putAll(environment.importResourceLookup);
         environment.moduleLocationHints.forEach((namespace, locations) -> {
             this.moduleLocationHints.put(namespace, new ArrayList<>(locations));
+        });
+        environment.schemaLocationHints.forEach((namespace, locations) -> {
+            this.schemaLocationHints.put(namespace, new ArrayList<>(locations));
         });
         this.namespaceLookup.putAll(environment.namespaceLookup);
         this.decimalFormatDeclarations.addAll(environment.decimalFormatDeclarations);
@@ -206,9 +210,14 @@ public class Environment {
     private void addImportResources(ImportResources imports) {
         // The compiler currently supports one physical location per logical URI.
         imports.logicalToPhysical().forEach(importResourceLookup::putIfAbsent);
-        imports.moduleLocationHints().forEach((namespace, locations) -> {
-            List<String> knownLocations =
-                    this.moduleLocationHints.computeIfAbsent(namespace, ignored -> new ArrayList<>());
+        mergeLocationHints(this.moduleLocationHints, imports.moduleLocationHints());
+        mergeLocationHints(this.schemaLocationHints, imports.schemaLocationHints());
+    }
+
+    private void mergeLocationHints(
+            Map<String, List<String>> target, Map<String, List<String>> additionalLocationHints) {
+        additionalLocationHints.forEach((namespace, locations) -> {
+            List<String> knownLocations = target.computeIfAbsent(namespace, ignored -> new ArrayList<>());
             for (String location : locations) {
                 if (!knownLocations.contains(location)) {
                     knownLocations.add(location);
@@ -220,6 +229,7 @@ public class Environment {
     private static ImportResources collectImportResources(XdmNode node, Path basePath) {
         Map<URI, URI> imports = new HashMap<>();
         Map<String, List<String>> moduleLocationHints = new HashMap<>();
+        Map<String, List<String>> schemaLocationHints = new LinkedHashMap<>();
         for (String elementName : List.of("module", "schema")) {
             for (XdmNode resource : node.select(Steps.descendant(elementName)).asList()) {
                 String uri = resource.attribute("uri");
@@ -229,13 +239,18 @@ public class Environment {
                             .computeIfAbsent(uri, ignored -> new ArrayList<>())
                             .add(basePath.resolve(file).toUri().toString());
                 }
+                if ("schema".equals(elementName) && uri != null && file != null) {
+                    schemaLocationHints
+                            .computeIfAbsent(uri, ignored -> new ArrayList<>())
+                            .add(basePath.resolve(file).toUri().toString());
+                }
                 URI logicalUri = parseLogicalUri(uri);
                 if (logicalUri != null && file != null) {
                     imports.putIfAbsent(logicalUri, basePath.resolve(file).toUri());
                 }
             }
         }
-        return new ImportResources(imports, moduleLocationHints);
+        return new ImportResources(imports, moduleLocationHints, schemaLocationHints);
     }
 
     private static URI parseLogicalUri(String uri) {
@@ -268,7 +283,12 @@ public class Environment {
                 createDeclarations(),
                 this.externalParamLookup,
                 this.runtimeResourceLookup,
-                this.moduleLocationHints);
+                this.moduleLocationHints,
+                hasSchemaValidatedSource() ? this.schemaLocationHints : Map.of());
+    }
+
+    private boolean hasSchemaValidatedSource() {
+        return this.roleLookup.values().stream().anyMatch(SourceBinding::requiresSchemaValidation);
     }
 
     private String createDeclarations() {
@@ -312,16 +332,25 @@ public class Environment {
         return prolog.toString();
     }
 
-    private record ImportResources(Map<URI, URI> logicalToPhysical, Map<String, List<String>> moduleLocationHints) {
+    private record ImportResources(
+            Map<URI, URI> logicalToPhysical,
+            Map<String, List<String>> moduleLocationHints,
+            Map<String, List<String>> schemaLocationHints) {
         private boolean isEmpty() {
-            return this.logicalToPhysical.isEmpty() && this.moduleLocationHints.isEmpty();
+            return this.logicalToPhysical.isEmpty()
+                    && this.moduleLocationHints.isEmpty()
+                    && this.schemaLocationHints.isEmpty();
         }
     }
 
     private record SourceBinding(String file, String validation) {
+        private boolean requiresSchemaValidation() {
+            return "strict".equals(this.validation) || "lax".equals(this.validation);
+        }
+
         private String documentExpression() {
             String document = "doc(\"" + file + "\")";
-            if ("strict".equals(validation) || "lax".equals(validation)) {
+            if (requiresSchemaValidation()) {
                 return "validate " + validation + " { " + document + " }";
             }
             return document;
