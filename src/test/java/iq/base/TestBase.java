@@ -11,6 +11,8 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.xmlunit.builder.DiffBuilder;
+import org.xmlunit.diff.ComparisonResult;
+import org.xmlunit.diff.ComparisonType;
 import org.xmlunit.diff.Diff;
 
 import evaluation.*;
@@ -228,10 +230,13 @@ public class TestBase {
                         + "</assert-xml>";
                 String expectedXml = "<assert-xml>" + assertionText(assertion, testSetDirectory) + "</assert-xml>";
 
-                Diff diff = DiffBuilder.compare(expectedXml)
-                        .withTest(actualXml)
-                        .ignoreWhitespace()
-                        .build();
+                DiffBuilder diffBuilder =
+                        DiffBuilder.compare(expectedXml).withTest(actualXml).ignoreWhitespace();
+                if ("true".equals(assertion.attribute("ignore-prefixes"))) {
+                    diffBuilder.withDifferenceEvaluator((comparison, outcome) ->
+                            comparison.getType() == ComparisonType.NAMESPACE_PREFIX ? ComparisonResult.EQUAL : outcome);
+                }
+                Diff diff = diffBuilder.build();
 
                 assertFalse(diff.hasDifferences(), "Expected vs actual XML are different:\n" + diff.toString());
                 break;
