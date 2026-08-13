@@ -239,9 +239,9 @@ public class Environment {
                             .computeIfAbsent(uri, ignored -> new ArrayList<>())
                             .add(basePath.resolve(file).toUri().toString());
                 }
-                if ("schema".equals(elementName) && uri != null && file != null) {
+                if ("schema".equals(elementName) && file != null) {
                     schemaLocationHints
-                            .computeIfAbsent(uri, ignored -> new ArrayList<>())
+                            .computeIfAbsent(uri == null ? "" : uri, ignored -> new ArrayList<>())
                             .add(basePath.resolve(file).toUri().toString());
                 }
                 URI logicalUri = parseLogicalUri(uri);

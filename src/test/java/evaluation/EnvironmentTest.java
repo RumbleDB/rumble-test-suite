@@ -113,10 +113,12 @@ public class EnvironmentTest {
     @Test
     public void importsEnvironmentSchemasWithoutBindingTheirNamespaces() throws Exception {
         Path schema = Files.writeString(this.directory.resolve("schema.xsd"), "<schema/>");
+        Path noNamespaceSchema = Files.writeString(this.directory.resolve("no-namespace-schema.xsd"), "<schema/>");
         Environment environment = new Environment(
                 element(
                         "<environment>"
                                 + "<schema uri=\"urn:schema\" file=\"schema.xsd\"/>"
+                                + "<schema file=\"no-namespace-schema.xsd\"/>"
                                 + "<source role=\".\" file=\"document.xml\" validation=\"strict\"/>"
                                 + "</environment>",
                         "environment"),
@@ -125,6 +127,9 @@ public class EnvironmentTest {
         assertEquals(
                 "import schema \"urn:schema\" at \""
                         + schema.toUri()
+                        + "\";\n"
+                        + "import schema \"\" at \""
+                        + noNamespaceSchema.toUri()
                         + "\";\n"
                         + "declare context item := validate strict { doc(\""
                         + this.directory.resolve("document.xml").toUri()
