@@ -1,6 +1,7 @@
 package evaluation.conversion;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -21,6 +22,16 @@ public final class EnvironmentQueryRewriter {
             Map<String, String> externalParams,
             Map<String, String> resources,
             Map<String, List<String>> moduleLocationHints) {
+        return rewrite(query, Map.of(), declarations, externalParams, resources, moduleLocationHints);
+    }
+
+    public static String rewrite(
+            String query,
+            Map<String, String> environmentNamespaces,
+            String declarations,
+            Map<String, String> externalParams,
+            Map<String, String> resources,
+            Map<String, List<String>> moduleLocationHints) {
         XQueryParser.ModuleAndThisIsItContext module = XQueryParsing.parseValidModule(query);
         if (module == null) {
             return query;
@@ -29,7 +40,8 @@ public final class EnvironmentQueryRewriter {
         ConversionContext context = new ConversionContext(query, module);
         new ExternalParamVisitor(context, externalParams).visit(module);
         new ModuleImportVisitor(context, moduleLocationHints).visit(module);
-        insertDeclarations(context, module, declarations);
+        insertDeclarations(
+                context, module, environmentNamespaceDeclarations(environmentNamespaces, module) + declarations);
         String queryWithDeclarations = context.result();
 
         // Parse the intermediate query so resource URIs inside injected parameter values are rewritten too.
@@ -42,6 +54,85 @@ public final class EnvironmentQueryRewriter {
         ConversionContext resourceContext = new ConversionContext(queryWithDeclarations, queryWithDeclarationsModule);
         new ResourceVisitor(resourceContext, resources).visit(queryWithDeclarationsModule);
         return resourceContext.result();
+    }
+
+    private static String environmentNamespaceDeclarations(
+            Map<String, String> environmentNamespaces, XQueryParser.ModuleAndThisIsItContext module) {
+        if (environmentNamespaces.isEmpty()) {
+            return "";
+        }
+
+        Map<String, String> queryNamespaces = queryNamespaces(module);
+        StringBuilder declarations = new StringBuilder();
+        for (Map.Entry<String, String> environmentNamespace : environmentNamespaces.entrySet()) {
+            String prefix = environmentNamespace.getKey();
+            String uri = environmentNamespace.getValue();
+            String queryUri = queryNamespaces.get(prefix);
+            if (queryUri == null) {
+                appendNamespaceDeclaration(declarations, prefix, uri);
+            } else if (!queryUri.equals(uri)) {
+                throw new IllegalArgumentException("QT3 environment binds prefix "
+                        + prefix
+                        + " to "
+                        + uri
+                        + ", but the query binds it to "
+                        + queryUri
+                        + ".");
+            }
+        }
+        return declarations.toString();
+    }
+
+    private static void appendNamespaceDeclaration(StringBuilder declarations, String prefix, String uri) {
+        if (prefix.isEmpty()) {
+            declarations.append("declare default element namespace ");
+        } else {
+            declarations.append("declare namespace ").append(prefix).append(" = ");
+        }
+        declarations.append(XQueryStringLiteral.serialize(uri, '"')).append(";\n");
+    }
+
+    private static Map<String, String> queryNamespaces(XQueryParser.ModuleAndThisIsItContext module) {
+        if (module.module().main == null) {
+            return Map.of();
+        }
+
+        Map<String, String> result = new HashMap<>();
+        XQueryParser.PrologContext prolog = module.module().main.prolog();
+        for (XQueryParser.NamespaceDeclContext namespaceDeclaration : prolog.namespaceDecl()) {
+            addNamespace(
+                    result,
+                    namespaceDeclaration.ncName().getText(),
+                    namespaceDeclaration.uriLiteral().getText());
+        }
+        for (XQueryParser.DefaultNamespaceDeclContext namespaceDeclaration : prolog.defaultNamespaceDecl()) {
+            if (namespaceDeclaration.type.getText().equals("element")) {
+                addNamespace(result, "", namespaceDeclaration.uri.getText());
+            }
+        }
+        for (XQueryParser.SchemaImportContext schemaImport : prolog.schemaImport()) {
+            if (schemaImport.schemaPrefix() == null) {
+                continue;
+            }
+            if (schemaImport.schemaPrefix().ncName() == null) {
+                addNamespace(result, "", schemaImport.nsURI.getText());
+            } else {
+                addNamespace(result, schemaImport.schemaPrefix().ncName().getText(), schemaImport.nsURI.getText());
+            }
+        }
+        for (XQueryParser.ModuleImportContext moduleImport : prolog.moduleImport()) {
+            if (moduleImport.ncName() != null) {
+                addNamespace(result, moduleImport.ncName().getText(), moduleImport.targetNamespace.getText());
+            }
+        }
+        return result;
+    }
+
+    private static void addNamespace(Map<String, String> namespaces, String prefix, String uriLiteral) {
+        String uri = XQueryStringLiteral.parse(uriLiteral);
+        if (uri != null) {
+            namespaces.put(prefix, uri);
+        }
     }
 
     private static void insertDeclarations(
@@ -155,7 +246,10 @@ public final class EnvironmentQueryRewriter {
             } else {
                 replacement.append(source);
             }
-            replacement.append(" at ").append(String.join(", ", serializedLocations));
+            replacement
+                    .append(" at ")
+                    .append(String.join(", ", serializedLocations))
+                    .append(";");
             this.context.replace(moduleImport, replacement.toString());
             return null;
         }

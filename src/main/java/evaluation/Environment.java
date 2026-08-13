@@ -261,12 +261,17 @@ public class Environment {
      */
     public String applyToQuery(String query) {
         return EnvironmentQueryRewriter.rewrite(
-                query, createDeclarations(), externalParamLookup, runtimeResourceLookup, moduleLocationHints);
+                query,
+                this.namespaceLookup,
+                createDeclarations(),
+                this.externalParamLookup,
+                this.runtimeResourceLookup,
+                this.moduleLocationHints);
     }
 
     private String createDeclarations() {
         StringBuilder declarations = new StringBuilder();
-        declarations.append(createDecimalFormatAndNamespaceProlog());
+        declarations.append(createDecimalFormatProlog());
         for (Map.Entry<String, String> r : roleLookup.entrySet()) {
             String role = r.getKey();
             String file = r.getValue();
@@ -297,22 +302,9 @@ public class Environment {
         return declarations.toString();
     }
 
-    public String createDecimalFormatAndNamespaceProlog() {
-        if (namespaceLookup.isEmpty() && decimalFormatDeclarations.isEmpty()) {
-            return "";
-        }
-
+    private String createDecimalFormatProlog() {
         StringBuilder prolog = new StringBuilder();
-
-        for (Map.Entry<String, String> namespace : namespaceLookup.entrySet()) {
-            prolog.append("declare namespace ")
-                    .append(namespace.getKey())
-                    .append(" = ")
-                    .append(toXQueryStringLiteral(namespace.getValue()))
-                    .append(";\n");
-        }
-
-        for (String decimalFormatDeclaration : decimalFormatDeclarations) {
+        for (String decimalFormatDeclaration : this.decimalFormatDeclarations) {
             prolog.append(decimalFormatDeclaration).append("\n");
         }
         return prolog.toString();
