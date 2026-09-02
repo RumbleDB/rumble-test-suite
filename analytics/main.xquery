@@ -8,8 +8,8 @@ import module namespace changes = "urn:analytics:analysis:changes" at "modules/c
 declare variable $baseline as xs:string? external;
 declare variable $candidate as xs:string external;
 
-let $baseline-cases := cases:cases-by-id($baseline)
-let $candidate-cases := cases:cases-by-id($candidate)
+let $baseline-cases := cases:cases-by-id($baseline, false())
+let $candidate-cases := cases:cases-by-id($candidate, true())
 let $candidate-values := cases:values($candidate-cases)
 
 return map:merge((

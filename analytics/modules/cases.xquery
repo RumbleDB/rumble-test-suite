@@ -25,16 +25,31 @@ declare function cases:node-text($nodes as node()*) as xs:string? {
     cases:safe-string(string-join($nodes/text(), ""))
 };
 
+declare function cases:translated-query-values($output as xs:string) as xs:string* {
+    if (not(contains($output, $cases:translated-query-start))) then
+        ()
+    else
+        let $after-start := substring-after($output, $cases:translated-query-start)
+        return
+            if (not(contains($after-start, $cases:translated-query-end))) then
+                ()
+            else
+                let $query := substring-before($after-start, $cases:translated-query-end)
+                let $without-leading-newline := replace($query, '^\r?\n', '')
+                let $trimmed-query := replace($without-leading-newline, '\r?\n$', '')
+                let $remaining-output := substring-after($after-start, $cases:translated-query-end)
+                return (
+                    if (normalize-space($trimmed-query) ne "") then
+                        cases:safe-string($trimmed-query)
+                    else
+                        (),
+                    cases:translated-query-values($remaining-output)
+                )
+};
+
 declare function cases:translated-queries($case as element(testcase)) as array(*) {
-    let $output := string($case/system-out)
-    return array {
-        for $part in subsequence(tokenize($output, $cases:translated-query-start), 2)
-        where contains($part, $cases:translated-query-end)
-        let $query := substring-before($part, $cases:translated-query-end)
-        let $without-leading-newline := replace($query, '^\r?\n', '')
-        let $trimmed-query := replace($without-leading-newline, '\r?\n$', '')
-        where normalize-space($trimmed-query) ne ""
-        return cases:safe-string($trimmed-query)
+    array {
+        cases:translated-query-values(string-join($case/system-out/text(), ""))
     }
 };
 
@@ -87,7 +102,10 @@ declare function cases:lookup-testcase($id as xs:string) as map(*)? {
         ()
 };
 
-declare function cases:case-data($case as element(testcase)) as map(*) {
+declare function cases:case-data(
+    $case as element(testcase),
+    $include-translated-queries as xs:boolean
+) as map(*) {
     let $id := cases:normalize-id(string($case/@name))
     let $parser := ($case/../properties/property[@name = 'parser']/@value/string(), "jsoniq")[1]
     let $time := (xs:double($case/@time), 0.0)[1]
@@ -107,21 +125,27 @@ declare function cases:case-data($case as element(testcase)) as map(*) {
             "time": $time,
             "type": ($case/error/@type, $case/failure/@type)[1] ! string(.) ! cases:safe-string(.) ! normalize-space(.),
             "message": ($error-fail-msg, $skip-msg, $skip-text)[1],
-            "detail": ($case/error, $case/failure, $case/skipped)[1] ! cases:node-text(.),
-            "translatedQueries": cases:translated-queries($case)
+            "detail": ($case/error, $case/failure, $case/skipped)[1] ! cases:node-text(.)
         },
+        if ($include-translated-queries) then
+            map { "translatedQueries": cases:translated-queries($case) }
+        else
+            map {},
         if (exists($details)) then $details else map {}
     ))
 };
 
-declare function cases:cases-by-id($dir as xs:string?) as map(*) {
+declare function cases:cases-by-id(
+    $dir as xs:string?,
+    $include-translated-queries as xs:boolean
+) as map(*) {
     if (empty($dir)) then
         map {}
     else
         map:merge(
             for $case in collection($dir || "?select=TEST-*.xml")/testsuite/testcase
             let $id := cases:normalize-id(string($case/@name))
-            return map:entry($id, cases:case-data($case)),
+            return map:entry($id, cases:case-data($case, $include-translated-queries)),
             map { "duplicates": "use-last" }
         )
 };
