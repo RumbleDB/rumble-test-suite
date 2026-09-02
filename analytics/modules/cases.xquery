@@ -25,31 +25,15 @@ declare function cases:node-text($nodes as node()*) as xs:string? {
     cases:safe-string(string-join($nodes/text(), ""))
 };
 
-declare function cases:translated-query-values($output as xs:string) as xs:string* {
-    if (not(contains($output, $cases:translated-query-start))) then
-        ()
-    else
-        let $after-start := substring-after($output, $cases:translated-query-start)
-        return
-            if (not(contains($after-start, $cases:translated-query-end))) then
-                ()
-            else
-                let $query := substring-before($after-start, $cases:translated-query-end)
-                let $without-leading-newline := replace($query, '^\r?\n', '')
-                let $trimmed-query := replace($without-leading-newline, '\r?\n$', '')
-                let $remaining-output := substring-after($after-start, $cases:translated-query-end)
-                return (
-                    if (normalize-space($trimmed-query) ne "") then
-                        cases:safe-string($trimmed-query)
-                    else
-                        (),
-                    cases:translated-query-values($remaining-output)
-                )
-};
-
 declare function cases:translated-queries($case as element(testcase)) as array(*) {
-    array {
-        cases:translated-query-values(string-join($case/system-out/text(), ""))
+    let $output := string-join($case/system-out/text(), "")
+    return array {
+        for $part in subsequence(tokenize($output, $cases:translated-query-start), 2)
+        where contains($part, $cases:translated-query-end)
+        let $query := substring-before($part, $cases:translated-query-end)
+        let $trimmed-query := replace(replace($query, '^\r?\n', ''), '\r?\n$', '')
+        where $trimmed-query ne ""
+        return cases:safe-string($trimmed-query)
     }
 };
 
