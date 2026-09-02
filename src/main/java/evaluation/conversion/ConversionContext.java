@@ -28,6 +28,10 @@ final class ConversionContext {
         this.rewriter.replace(token, replacement);
     }
 
+    void replace(Token firstToken, Token lastToken, String replacement) {
+        this.rewriter.replace(firstToken, lastToken, replacement);
+    }
+
     void replace(ParserRuleContext context, String replacement) {
         this.rewriter.replace(context, replacement);
     }

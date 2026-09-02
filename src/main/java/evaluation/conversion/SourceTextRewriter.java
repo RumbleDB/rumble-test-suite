@@ -22,6 +22,10 @@ final class SourceTextRewriter {
         addEdit(token.getStartIndex(), token.getStopIndex(), replacement);
     }
 
+    void replace(Token firstToken, Token lastToken, String replacement) {
+        addEdit(firstToken.getStartIndex(), lastToken.getStopIndex(), replacement);
+    }
+
     void replace(ParserRuleContext context, String replacement) {
         addEdit(context.getStart().getStartIndex(), context.getStop().getStopIndex(), replacement);
     }
