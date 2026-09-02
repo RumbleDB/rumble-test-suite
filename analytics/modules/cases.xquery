@@ -3,6 +3,9 @@ module namespace cases = "urn:analytics:analysis:cases";
 
 declare namespace map = "http://www.w3.org/2005/xpath-functions/map";
 
+declare variable $cases:translated-query-start := "=== Translated JSONiq query ===";
+declare variable $cases:translated-query-end := "=== End translated JSONiq query ===";
+
 declare function cases:safe-string($value as xs:string?) as xs:string? {
     if (empty($value)) then
         $value
@@ -20,6 +23,19 @@ declare function cases:safe-string($value as xs:string?) as xs:string? {
 
 declare function cases:node-text($nodes as node()*) as xs:string? {
     cases:safe-string(string-join($nodes/text(), ""))
+};
+
+declare function cases:translated-queries($case as element(testcase)) as array(*) {
+    let $output := string($case/system-out)
+    return array {
+        for $part in subsequence(tokenize($output, $cases:translated-query-start), 2)
+        where contains($part, $cases:translated-query-end)
+        let $query := substring-before($part, $cases:translated-query-end)
+        let $without-leading-newline := replace($query, '^\r?\n', '')
+        let $trimmed-query := replace($without-leading-newline, '\r?\n$', '')
+        where normalize-space($trimmed-query) ne ""
+        return cases:safe-string($trimmed-query)
+    }
 };
 
 declare function cases:status($case as element(testcase)) as xs:string {
@@ -91,7 +107,8 @@ declare function cases:case-data($case as element(testcase)) as map(*) {
             "time": $time,
             "type": ($case/error/@type, $case/failure/@type)[1] ! string(.) ! cases:safe-string(.) ! normalize-space(.),
             "message": ($error-fail-msg, $skip-msg, $skip-text)[1],
-            "detail": ($case/error, $case/failure, $case/skipped)[1] ! cases:node-text(.)
+            "detail": ($case/error, $case/failure, $case/skipped)[1] ! cases:node-text(.),
+            "translatedQueries": cases:translated-queries($case)
         },
         if (exists($details)) then $details else map {}
     ))

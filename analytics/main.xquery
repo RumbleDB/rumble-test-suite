@@ -27,7 +27,8 @@ return map:merge((
                 "status": $c?status,
                 "type": $c?type,
                 "message": $c?message,
-                "detail": $c?detail
+                "detail": $c?detail,
+                "translatedQueries": $c?translatedQueries
             })
         )
     },
