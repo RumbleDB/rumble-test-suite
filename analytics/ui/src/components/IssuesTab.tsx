@@ -433,7 +433,7 @@ export function IssuesTab(props: IssuesTabProps) {
                                             <div style={{ display: "flex", "flex-direction": "column", gap: "4px", "margin-top": "6px" }}>
                                               <div style={{ display: "flex", "justify-content": "space-between", "align-items": "center" }}>
                                                 <span style={{ "font-size": "0.7rem", color: "var(--muted)", "font-weight": "700", "text-transform": "uppercase", "letter-spacing": "0.05em" }}>
-                                                  Translated JSONiq Query{(c.translatedQueries?.length || 0) > 1 ? ` ${index() + 1}` : ""}:
+                                                  Translated Query{(c.translatedQueries?.length || 0) > 1 ? ` ${index() + 1}` : ""}:
                                                 </span>
                                                 <button
                                                   class="btn-copy-sm"

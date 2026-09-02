@@ -227,7 +227,7 @@ export function ChangesTab(props: ChangesTabProps) {
                             </div>
                           </Show>
 
-                          {/* JSONiq queries produced by the compatibility converter */}
+                          {/* Effective queries executed by Rumble */}
                           <For each={item.translatedQueries || []}>
                             {(translatedQuery, index) => {
                               const copyKey = () => `translated-query-${item.id}-${index()}`;
@@ -235,7 +235,7 @@ export function ChangesTab(props: ChangesTabProps) {
                                 <div class="detail-block">
                                   <div class="detail-block-header">
                                     <span class="detail-label">
-                                      Translated JSONiq Query{(item.translatedQueries?.length || 0) > 1 ? ` ${index() + 1}` : ""}
+                                      Translated Query{(item.translatedQueries?.length || 0) > 1 ? ` ${index() + 1}` : ""}
                                     </span>
                                     <button
                                       class="btn-copy-sm"

@@ -90,10 +90,11 @@ class AssertionContext {
 
         if (!this.useXQueryParser) {
             query = Converter.convert(query);
-            System.out.println("=== Translated JSONiq query ===");
-            System.out.println(query);
-            System.out.println("=== End translated JSONiq query ===");
         }
+
+        System.out.println("=== Translated query ===");
+        System.out.println(query);
+        System.out.println("=== End translated query ===");
 
         RumbleConfiguration updatedConfig = applyDependenciesToConfig(this.rumbleConfig);
         ResourceResolver resourceResolver =

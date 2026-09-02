@@ -3,8 +3,8 @@ module namespace cases = "urn:analytics:analysis:cases";
 
 declare namespace map = "http://www.w3.org/2005/xpath-functions/map";
 
-declare variable $cases:translated-query-start := "=== Translated JSONiq query ===";
-declare variable $cases:translated-query-end := "=== End translated JSONiq query ===";
+declare variable $cases:translated-query-start := "=== Translated query ===";
+declare variable $cases:translated-query-end := "=== End translated query ===";
 
 declare function cases:safe-string($value as xs:string?) as xs:string? {
     if (empty($value)) then
