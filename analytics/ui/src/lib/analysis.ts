@@ -66,6 +66,7 @@ export type Totals = {
 export type TestCaseInfo = {
   id: string;
   query?: string;
+  translatedQueries?: string[];
   description?: string;
   expected?: string;
   status?: Status;
@@ -92,6 +93,7 @@ export type RegressionRow = {
   detail?: string;
   type?: string;
   query?: string;
+  translatedQueries?: string[];
   description?: string;
   expected?: string;
 };
@@ -269,6 +271,7 @@ function flattenIssues(
           return {
             id,
             query: details.query,
+            translatedQueries: details.translatedQueries,
             description: details.description,
             expected: decodeExpectedResult(details.expected),
             status: details.status,
@@ -319,6 +322,7 @@ function flattenRegressions(
         detail: details.detail,
         type: details.type,
         query: details.query,
+        translatedQueries: details.translatedQueries,
         description: details.description,
         expected: decodeExpectedResult(details.expected),
       });

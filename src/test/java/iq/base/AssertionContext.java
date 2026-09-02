@@ -92,6 +92,10 @@ class AssertionContext {
             query = Converter.convert(query);
         }
 
+        System.out.println("=== Translated query ===");
+        System.out.println(query);
+        System.out.println("=== End translated query ===");
+
         RumbleConfiguration updatedConfig = applyDependenciesToConfig(this.rumbleConfig);
         ResourceResolver resourceResolver =
                 this.environment == null ? new ResourceResolver() : this.environment.getResourceResolver();

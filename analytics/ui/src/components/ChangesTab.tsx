@@ -46,6 +46,7 @@ export function ChangesTab(props: ChangesTabProps) {
         item.detail,
         item.description,
         item.query,
+        ...(item.translatedQueries || []),
         item.expected,
       ]
         .filter(Boolean)
@@ -225,6 +226,35 @@ export function ChangesTab(props: ChangesTabProps) {
                               </div>
                             </div>
                           </Show>
+
+                          {/* Effective queries executed by Rumble */}
+                          <For each={item.translatedQueries || []}>
+                            {(translatedQuery, index) => {
+                              const copyKey = () => `translated-query-${item.id}-${index()}`;
+                              return (
+                                <div class="detail-block">
+                                  <div class="detail-block-header">
+                                    <span class="detail-label">
+                                      Translated Query{(item.translatedQueries?.length || 0) > 1 ? ` ${index() + 1}` : ""}
+                                    </span>
+                                    <button
+                                      class="btn-copy-sm"
+                                      onClick={(e) => copyText(translatedQuery, copyKey(), e)}
+                                    >
+                                      <Show when={copiedCodeKey() === copyKey()} fallback={<><Copy size={11} /> Copy Query</>}>
+                                        <Check size={11} /> Copied!
+                                      </Show>
+                                    </button>
+                                  </div>
+                                  <div class="code-box">
+                                    <pre class="code-pre query-pre">
+                                      <HighlightText text={translatedQuery} query={props.searchQuery} />
+                                    </pre>
+                                  </div>
+                                </div>
+                              );
+                            }}
+                          </For>
 
                           {/* Expected Result Code */}
                           <Show when={item.expected}>

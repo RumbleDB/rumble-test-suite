@@ -40,7 +40,9 @@ export function IssuesTab(props: IssuesTabProps) {
       if (!query) {
         return true;
       }
-      const casesSearchText = item.cases.map(c => [c.id, c.description, c.query].filter(Boolean).join("\n")).join("\n");
+      const casesSearchText = item.cases
+        .map(c => [c.id, c.description, c.query, ...(c.translatedQueries || [])].filter(Boolean).join("\n"))
+        .join("\n");
       return [item.suite, item.status, item.message, casesSearchText].join("\n").toLowerCase().includes(query);
     });
 
@@ -210,7 +212,8 @@ export function IssuesTab(props: IssuesTabProps) {
                 const matchesAny = issue.cases.some(c =>
                   c.id.toLowerCase().includes(q) ||
                   (c.description && c.description.toLowerCase().includes(q)) ||
-                  (c.query && c.query.toLowerCase().includes(q))
+                  (c.query && c.query.toLowerCase().includes(q)) ||
+                  (c.translatedQueries || []).some(query => query.toLowerCase().includes(q))
                 );
                 return matchesAny ? props.searchQuery : "";
               };
@@ -236,7 +239,8 @@ export function IssuesTab(props: IssuesTabProps) {
                 return issue.cases.filter(c =>
                   c.id.toLowerCase().includes(q) ||
                   (c.description && c.description.toLowerCase().includes(q)) ||
-                  (c.query && c.query.toLowerCase().includes(q))
+                  (c.query && c.query.toLowerCase().includes(q)) ||
+                  (c.translatedQueries || []).some(query => query.toLowerCase().includes(q))
                 );
               });
 
@@ -421,6 +425,34 @@ export function IssuesTab(props: IssuesTabProps) {
                                           <HighlightText text={c.query || ""} query={affectedSearch()} />
                                         </pre>
                                       </div>
+
+                                      <For each={c.translatedQueries || []}>
+                                        {(translatedQuery, index) => {
+                                          const copyKey = () => `translated-query-${c.id}-${index()}`;
+                                          return (
+                                            <div style={{ display: "flex", "flex-direction": "column", gap: "4px", "margin-top": "6px" }}>
+                                              <div style={{ display: "flex", "justify-content": "space-between", "align-items": "center" }}>
+                                                <span style={{ "font-size": "0.7rem", color: "var(--muted)", "font-weight": "700", "text-transform": "uppercase", "letter-spacing": "0.05em" }}>
+                                                  Translated Query{(c.translatedQueries?.length || 0) > 1 ? ` ${index() + 1}` : ""}:
+                                                </span>
+                                                <button
+                                                  class="btn-copy-sm"
+                                                  onClick={(e) => copyText(translatedQuery, copyKey(), e)}
+                                                >
+                                                  <Show when={copiedCodeKey() === copyKey()} fallback={<><Copy size={11} /> Copy Query</>}>
+                                                    <Check size={11} /> Copied!
+                                                  </Show>
+                                                </button>
+                                              </div>
+                                              <div class="code-box">
+                                                <pre class="code-pre query-pre">
+                                                  <HighlightText text={translatedQuery} query={affectedSearch()} />
+                                                </pre>
+                                              </div>
+                                            </div>
+                                          );
+                                        }}
+                                      </For>
 
                                       <Show when={c.expected}>
                                         <div style={{ display: "flex", "flex-direction": "column", gap: "4px", "margin-top": "6px" }}>

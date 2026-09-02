@@ -5,6 +5,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -20,9 +21,10 @@ public class Environment {
     private final Map<String, String> runtimeResourceLookup = new HashMap<>();
     private final Map<String, String> paramLookup = new HashMap<>();
     private final Map<String, String> externalParamLookup = new HashMap<>();
-    private final Map<String, String> roleLookup = new HashMap<>();
+    private final Map<String, SourceBinding> roleLookup = new LinkedHashMap<>();
     private final Map<URI, URI> importResourceLookup = new HashMap<>();
     private final Map<String, List<String>> moduleLocationHints = new HashMap<>();
+    private final Map<String, List<String>> schemaLocationHints = new LinkedHashMap<>();
 
     private final Map<String, String> namespaceLookup = new HashMap<>();
 
@@ -51,6 +53,9 @@ public class Environment {
         this.importResourceLookup.putAll(environment.importResourceLookup);
         environment.moduleLocationHints.forEach((namespace, locations) -> {
             this.moduleLocationHints.put(namespace, new ArrayList<>(locations));
+        });
+        environment.schemaLocationHints.forEach((namespace, locations) -> {
+            this.schemaLocationHints.put(namespace, new ArrayList<>(locations));
         });
         this.namespaceLookup.putAll(environment.namespaceLookup);
         this.decimalFormatDeclarations.addAll(environment.decimalFormatDeclarations);
@@ -192,11 +197,12 @@ public class Environment {
             String file = envPath.resolve(source.attribute("file")).toUri().toString();
             String uri = source.attribute("uri");
             String role = source.attribute("role");
+            String validation = source.attribute("validation");
             if (uri != null && !file.equals(uri)) {
                 runtimeResourceLookup.put(uri, file);
             }
             if (role != null) {
-                roleLookup.put(role, file);
+                roleLookup.put(role, new SourceBinding(file, validation));
             }
         }
     }
@@ -204,9 +210,14 @@ public class Environment {
     private void addImportResources(ImportResources imports) {
         // The compiler currently supports one physical location per logical URI.
         imports.logicalToPhysical().forEach(importResourceLookup::putIfAbsent);
-        imports.moduleLocationHints().forEach((namespace, locations) -> {
-            List<String> knownLocations =
-                    this.moduleLocationHints.computeIfAbsent(namespace, ignored -> new ArrayList<>());
+        mergeLocationHints(this.moduleLocationHints, imports.moduleLocationHints());
+        mergeLocationHints(this.schemaLocationHints, imports.schemaLocationHints());
+    }
+
+    private void mergeLocationHints(
+            Map<String, List<String>> target, Map<String, List<String>> additionalLocationHints) {
+        additionalLocationHints.forEach((namespace, locations) -> {
+            List<String> knownLocations = target.computeIfAbsent(namespace, ignored -> new ArrayList<>());
             for (String location : locations) {
                 if (!knownLocations.contains(location)) {
                     knownLocations.add(location);
@@ -218,6 +229,7 @@ public class Environment {
     private static ImportResources collectImportResources(XdmNode node, Path basePath) {
         Map<URI, URI> imports = new HashMap<>();
         Map<String, List<String>> moduleLocationHints = new HashMap<>();
+        Map<String, List<String>> schemaLocationHints = new LinkedHashMap<>();
         for (String elementName : List.of("module", "schema")) {
             for (XdmNode resource : node.select(Steps.descendant(elementName)).asList()) {
                 String uri = resource.attribute("uri");
@@ -227,13 +239,18 @@ public class Environment {
                             .computeIfAbsent(uri, ignored -> new ArrayList<>())
                             .add(basePath.resolve(file).toUri().toString());
                 }
+                if ("schema".equals(elementName) && file != null) {
+                    schemaLocationHints
+                            .computeIfAbsent(uri == null ? "" : uri, ignored -> new ArrayList<>())
+                            .add(basePath.resolve(file).toUri().toString());
+                }
                 URI logicalUri = parseLogicalUri(uri);
                 if (logicalUri != null && file != null) {
                     imports.putIfAbsent(logicalUri, basePath.resolve(file).toUri());
                 }
             }
         }
-        return new ImportResources(imports, moduleLocationHints);
+        return new ImportResources(imports, moduleLocationHints, schemaLocationHints);
     }
 
     private static URI parseLogicalUri(String uri) {
@@ -261,27 +278,38 @@ public class Environment {
      */
     public String applyToQuery(String query) {
         return EnvironmentQueryRewriter.rewrite(
-                query, createDeclarations(), externalParamLookup, runtimeResourceLookup, moduleLocationHints);
+                query,
+                this.namespaceLookup,
+                createDeclarations(),
+                this.externalParamLookup,
+                this.runtimeResourceLookup,
+                this.moduleLocationHints,
+                this.schemaLocationHints,
+                hasSchemaValidatedSource());
+    }
+
+    private boolean hasSchemaValidatedSource() {
+        return this.roleLookup.values().stream().anyMatch(SourceBinding::requiresSchemaValidation);
     }
 
     private String createDeclarations() {
         StringBuilder declarations = new StringBuilder();
-        declarations.append(createDecimalFormatAndNamespaceProlog());
-        for (Map.Entry<String, String> r : roleLookup.entrySet()) {
+        declarations.append(createDecimalFormatProlog());
+        for (Map.Entry<String, SourceBinding> r : roleLookup.entrySet()) {
             String role = r.getKey();
-            String file = r.getValue();
+            SourceBinding source = r.getValue();
             if (role.equals(".")) {
                 declarations
-                        .append("declare context item := doc(\"")
-                        .append(file)
-                        .append("\"); ");
+                        .append("declare context item := ")
+                        .append(source.documentExpression())
+                        .append("; ");
             } else {
                 declarations
                         .append("declare variable ")
                         .append(role)
-                        .append(" := doc(\"")
-                        .append(file)
-                        .append("\"); ");
+                        .append(" := ")
+                        .append(source.documentExpression())
+                        .append("; ");
             }
         }
         for (Map.Entry<String, String> param : paramLookup.entrySet()) {
@@ -297,30 +325,36 @@ public class Environment {
         return declarations.toString();
     }
 
-    public String createDecimalFormatAndNamespaceProlog() {
-        if (namespaceLookup.isEmpty() && decimalFormatDeclarations.isEmpty()) {
-            return "";
-        }
-
+    private String createDecimalFormatProlog() {
         StringBuilder prolog = new StringBuilder();
-
-        for (Map.Entry<String, String> namespace : namespaceLookup.entrySet()) {
-            prolog.append("declare namespace ")
-                    .append(namespace.getKey())
-                    .append(" = ")
-                    .append(toXQueryStringLiteral(namespace.getValue()))
-                    .append(";\n");
-        }
-
-        for (String decimalFormatDeclaration : decimalFormatDeclarations) {
+        for (String decimalFormatDeclaration : this.decimalFormatDeclarations) {
             prolog.append(decimalFormatDeclaration).append("\n");
         }
         return prolog.toString();
     }
 
-    private record ImportResources(Map<URI, URI> logicalToPhysical, Map<String, List<String>> moduleLocationHints) {
+    private record ImportResources(
+            Map<URI, URI> logicalToPhysical,
+            Map<String, List<String>> moduleLocationHints,
+            Map<String, List<String>> schemaLocationHints) {
         private boolean isEmpty() {
-            return this.logicalToPhysical.isEmpty() && this.moduleLocationHints.isEmpty();
+            return this.logicalToPhysical.isEmpty()
+                    && this.moduleLocationHints.isEmpty()
+                    && this.schemaLocationHints.isEmpty();
+        }
+    }
+
+    private record SourceBinding(String file, String validation) {
+        private boolean requiresSchemaValidation() {
+            return "strict".equals(this.validation) || "lax".equals(this.validation);
+        }
+
+        private String documentExpression() {
+            String document = "doc(\"" + file + "\")";
+            if (requiresSchemaValidation()) {
+                return "validate " + validation + " { " + document + " }";
+            }
+            return document;
         }
     }
 }

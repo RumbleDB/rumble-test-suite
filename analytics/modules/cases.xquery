@@ -3,6 +3,9 @@ module namespace cases = "urn:analytics:analysis:cases";
 
 declare namespace map = "http://www.w3.org/2005/xpath-functions/map";
 
+declare variable $cases:translated-query-start := "=== Translated query ===";
+declare variable $cases:translated-query-end := "=== End translated query ===";
+
 declare function cases:safe-string($value as xs:string?) as xs:string? {
     if (empty($value)) then
         $value
@@ -20,6 +23,18 @@ declare function cases:safe-string($value as xs:string?) as xs:string? {
 
 declare function cases:node-text($nodes as node()*) as xs:string? {
     cases:safe-string(string-join($nodes/text(), ""))
+};
+
+declare function cases:translated-queries($case as element(testcase)) as array(*) {
+    let $output := string-join($case/system-out/text(), "")
+    return array {
+        for $part in subsequence(tokenize($output, $cases:translated-query-start), 2)
+        where contains($part, $cases:translated-query-end)
+        let $query := substring-before($part, $cases:translated-query-end)
+        let $trimmed-query := replace(replace($query, '^\r?\n', ''), '\r?\n$', '')
+        where $trimmed-query ne ""
+        return cases:safe-string($trimmed-query)
+    }
 };
 
 declare function cases:status($case as element(testcase)) as xs:string {
@@ -71,7 +86,10 @@ declare function cases:lookup-testcase($id as xs:string) as map(*)? {
         ()
 };
 
-declare function cases:case-data($case as element(testcase)) as map(*) {
+declare function cases:case-data(
+    $case as element(testcase),
+    $include-translated-queries as xs:boolean
+) as map(*) {
     let $id := cases:normalize-id(string($case/@name))
     let $parser := ($case/../properties/property[@name = 'parser']/@value/string(), "jsoniq")[1]
     let $time := (xs:double($case/@time), 0.0)[1]
@@ -93,18 +111,25 @@ declare function cases:case-data($case as element(testcase)) as map(*) {
             "message": ($error-fail-msg, $skip-msg, $skip-text)[1],
             "detail": ($case/error, $case/failure, $case/skipped)[1] ! cases:node-text(.)
         },
+        if ($include-translated-queries) then
+            map { "translatedQueries": cases:translated-queries($case) }
+        else
+            map {},
         if (exists($details)) then $details else map {}
     ))
 };
 
-declare function cases:cases-by-id($dir as xs:string?) as map(*) {
+declare function cases:cases-by-id(
+    $dir as xs:string?,
+    $include-translated-queries as xs:boolean
+) as map(*) {
     if (empty($dir)) then
         map {}
     else
         map:merge(
             for $case in collection($dir || "?select=TEST-*.xml")/testsuite/testcase
             let $id := cases:normalize-id(string($case/@name))
-            return map:entry($id, cases:case-data($case)),
+            return map:entry($id, cases:case-data($case, $include-translated-queries)),
             map { "duplicates": "use-last" }
         )
 };
