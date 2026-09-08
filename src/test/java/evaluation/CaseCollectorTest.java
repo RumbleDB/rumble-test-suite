@@ -77,4 +77,20 @@ public class CaseCollectorTest {
         assertNotNull(collect("<dependency type='xml-version' value='1.0'/>"
                 + "<dependency type='xml-version' value='1.1'/>").get(0).testCase().skipReason);
     }
+    @Test
+    public void localEnvironmentsShadowCatalogAndDoNotLeakBetweenTestSets() throws Exception {
+        Files.writeString(repository.resolve("catalog.xml"),
+                "<catalog xmlns='http://www.w3.org/2010/09/qt-fots-catalog'>"
+                + "<environment name='shared'><static-base-uri uri='urn:global'/></environment>"
+                + "<test-set name='first' file='first.xml'/><test-set name='second' file='second.xml'/></catalog>");
+        writeTestSet("first.xml", "<environment name='shared'><static-base-uri uri='urn:local'/></environment>"
+                + "<test-case name='first'><environment ref='shared'/><test>1</test>"
+                + "<result><assert-eq>1</assert-eq></result></test-case>");
+        writeTestSet("second.xml", "<test-case name='second'><environment ref='shared'/><test>1</test>"
+                + "<result><assert-eq>1</assert-eq></result></test-case>");
+        CaseCollector collector = new CaseCollector(repository, TestCaseSelection.fromSystemProperties());
+        collector.execute("");
+        assertEquals("urn:local", collector.getAllTests().get(0).testCase().staticBaseUri);
+        assertEquals("urn:global", collector.getAllTests().get(1).testCase().staticBaseUri);
+    }
 }

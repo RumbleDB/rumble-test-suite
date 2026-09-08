@@ -238,11 +238,12 @@ public class CaseCollector {
         if (reference == null) {
             return new Environment(environmentNode, testSetDirectory);
         }
-        if (catalogEnvironments.containsKey(reference)) {
-            return catalogEnvironments.get(reference);
-        }
+        // QT3 local environments shadow catalog definitions with the same name.
         if (testSetEnvironments.containsKey(reference)) {
             return testSetEnvironments.get(reference);
+        }
+        if (catalogEnvironments.containsKey(reference)) {
+            return catalogEnvironments.get(reference);
         }
         throw new IllegalArgumentException("No environment found with name: " + reference);
     }
