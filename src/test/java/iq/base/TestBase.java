@@ -68,10 +68,13 @@ public class TestBase {
     }
 
     public static List<CollectedTestCase> getData(String testSuite, boolean useXQueryParser) throws Exception {
-        CaseCollector testDriver =
-                new CaseCollector(useXQueryParserFromConfiguration(), TestCaseSelection.fromSystemProperties());
+        TestCaseSelection selection = TestCaseSelection.fromSystemProperties();
+        CaseCollector testDriver = new CaseCollector(useXQueryParser, selection);
         testDriver.execute(testSuite);
-        return testDriver.getAllTests();
+        List<CollectedTestCase> cases = testDriver.getAllTests();
+        assumeTrue(!selection.isSpecificCaseSelected() || !cases.isEmpty(),
+                "Selected QT3 case belongs to another suite partition");
+        return cases;
     }
 
     protected static boolean useXQueryParserFromConfiguration() {

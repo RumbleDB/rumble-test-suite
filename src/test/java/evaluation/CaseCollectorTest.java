@@ -93,4 +93,33 @@ public class CaseCollectorTest {
         assertEquals("urn:local", collector.getAllTests().get(0).testCase().staticBaseUri);
         assertEquals("urn:global", collector.getAllTests().get(1).testCase().staticBaseUri);
     }
+    @Test
+    public void selectedCaseCanBelongToAnotherPartition() throws Exception {
+        writeCatalog("");
+        writeTestSet("cases.xml", "<test-case name='selected'><test>1</test>"
+                + "<result><assert-eq>1</assert-eq></result></test-case>");
+        CaseCollector other = new CaseCollector(repository, new TestCaseSelection("selected"));
+        other.execute("other");
+        assertTrue(other.getAllTests().isEmpty());
+        CaseCollector matching = new CaseCollector(repository, new TestCaseSelection("selected"));
+        matching.execute("cases");
+        assertEquals(1, matching.getAllTests().size());
+        assertEquals("selected", matching.getAllTests().get(0).testCaseName());
+    }
+
+    @Test
+    public void selectedCaseMustExistAndBeUniqueAcrossCatalog() throws Exception {
+        writeCatalog("");
+        writeTestSet("cases.xml", "<test-case name='selected'><test>1</test>"
+                + "<result><assert-eq>1</assert-eq></result></test-case>");
+        CaseCollector unknown = new CaseCollector(repository, new TestCaseSelection("typo"));
+        assertThrows(SelectedTestCaseNotFoundException.class, () -> unknown.execute("other"));
+        Files.writeString(repository.resolve("catalog.xml"),
+                "<catalog xmlns='http://www.w3.org/2010/09/qt-fots-catalog'>"
+                + "<test-set name='cases' file='cases.xml'/><test-set name='duplicate' file='duplicate.xml'/></catalog>");
+        writeTestSet("duplicate.xml", "<test-case name='selected'><test>1</test>"
+                + "<result><assert-eq>1</assert-eq></result></test-case>");
+        CaseCollector duplicate = new CaseCollector(repository, new TestCaseSelection("selected"));
+        assertThrows(DuplicateSelectedTestCaseException.class, () -> duplicate.execute("cases"));
+    }
 }
