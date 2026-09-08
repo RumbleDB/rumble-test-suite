@@ -72,7 +72,8 @@ public class TestBase {
         CaseCollector testDriver = new CaseCollector(useXQueryParser, selection);
         testDriver.execute(testSuite);
         List<CollectedTestCase> cases = testDriver.getAllTests();
-        assumeTrue(!selection.isSpecificCaseSelected() || !cases.isEmpty(),
+        assumeTrue(
+                !selection.isSpecificCaseSelected() || !cases.isEmpty(),
                 "Selected QT3 case belongs to another suite partition");
         return cases;
     }

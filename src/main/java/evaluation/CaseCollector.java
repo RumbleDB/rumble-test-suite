@@ -312,8 +312,8 @@ public class CaseCollector {
                 }
                 case "xml-version": {
                     hasXmlDependency = true;
-                    xmlVersions.removeIf(version ->
-                            !matchesDependency(dependencyNode, matchesXmlVersion(value, version)));
+                    xmlVersions.removeIf(
+                            version -> !matchesDependency(dependencyNode, matchesXmlVersion(value, version)));
                     if (xmlVersions.isEmpty()) {
                         result.skipReason = type + " " + value;
                         return result;
@@ -385,7 +385,7 @@ public class CaseCollector {
         return Arrays.stream(value.trim().split("\\s+")).anyMatch(token -> switch (token) {
             case "1.0", "1.0:5+" -> version.equals("1.0");
             case "1.1" -> version.equals("1.1");
-            // The older XML 1.0 name-character rules are not a configurable mode in Rumble.
+                // The older XML 1.0 name-character rules are not a configurable mode in Rumble.
             case "1.0:4-" -> false;
             default -> false;
         });
