@@ -268,6 +268,9 @@ public class CaseCollector {
         if (dependencies.isEmpty()) {
             return result;
         }
+        // Rumble supports XML 1.0 fifth edition and XML 1.1. Separate dependencies are conjunctive.
+        Set<String> xmlVersions = new LinkedHashSet<>(List.of("1.0", "1.1"));
+        boolean hasXmlDependency = false;
         for (XdmNode dependencyNode : dependencies) {
             String type = dependencyNode.attribute("type");
             String value = dependencyNode.attribute("value");
@@ -301,8 +304,12 @@ public class CaseCollector {
                     break;
                 }
                 case "xml-version": {
-                    if ("1.0".equals(value) || "1.1".equals(value)) {
-                        result.xmlVersion = value;
+                    hasXmlDependency = true;
+                    xmlVersions.removeIf(version ->
+                            !matchesDependency(dependencyNode, matchesXmlVersion(value, version)));
+                    if (xmlVersions.isEmpty()) {
+                        result.skipReason = type + " " + value;
+                        return result;
                     }
                     break;
                 }
@@ -359,9 +366,22 @@ public class CaseCollector {
                 }
             }
         }
+        if (hasXmlDependency) {
+            result.xmlVersion = xmlVersions.iterator().next();
+        }
         // all dependencies are okay
 
         return result;
+    }
+
+    private static boolean matchesXmlVersion(String value, String version) {
+        return Arrays.stream(value.trim().split("\\s+")).anyMatch(token -> switch (token) {
+            case "1.0", "1.0:5+" -> version.equals("1.0");
+            case "1.1" -> version.equals("1.1");
+            // The older XML 1.0 name-character rules are not a configurable mode in Rumble.
+            case "1.0:4-" -> false;
+            default -> false;
+        });
     }
 
     private static boolean requiresSupport(XdmNode dependency) {

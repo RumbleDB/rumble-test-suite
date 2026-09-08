@@ -57,4 +57,24 @@ public class CaseCollectorTest {
                 .get(0).testCase().skipReason);
         assertNotNull(collect("<dependency type='spec' value='XQ31' satisfied='0'/>").get(0).testCase().skipReason);
     }
+    @Test
+    public void xmlEditionDependenciesSelectSupportedModes() throws Exception {
+        assertNotNull(collect("<dependency type='xml-version' value='1.0:4-'/>").get(0).testCase().skipReason);
+        TestCase modern = collect("<dependency type='xml-version' value='1.0:5+ 1.1'/>").get(0).testCase();
+        assertNull(modern.skipReason);
+        assertEquals("1.0", modern.xmlVersion);
+        assertEquals("1.1", collect("<dependency type='xml-version' value='1.1'/>").get(0).testCase().xmlVersion);
+        assertEquals("1.1", collect("<dependency type='xml-version' value='1.0' satisfied='false'/>")
+                .get(0).testCase().xmlVersion);
+    }
+
+    @Test
+    public void xmlDependenciesMustHaveACommonSupportedMode() throws Exception {
+        TestCase compatible = collect("<dependency type='xml-version' value='1.0:5+ 1.1'/>"
+                + "<dependency type='xml-version' value='1.1'/>").get(0).testCase();
+        assertNull(compatible.skipReason);
+        assertEquals("1.1", compatible.xmlVersion);
+        assertNotNull(collect("<dependency type='xml-version' value='1.0'/>"
+                + "<dependency type='xml-version' value='1.1'/>").get(0).testCase().skipReason);
+    }
 }
