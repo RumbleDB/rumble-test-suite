@@ -35,6 +35,9 @@ public class CaseCollector {
             "schemaValidation",
             "schema-location-hint");
 
+    private static final Set<String> SUPPORTED_NORMALIZATION_FORMS =
+            Set.of("NFC", "NFD", "NFKC", "NFKD", "FULLY-NORMALIZED");
+
     private static final Set<String> SUPPORTED_SPECS = Set.of("XQ10+", "XQ30+", "XQ31", "XQ31+");
     private Path testsRepositoryDirectoryPath;
     private String currentTestSet;
@@ -42,6 +45,11 @@ public class CaseCollector {
     private final TestCaseSelection testCaseSelection;
 
     public CaseCollector(boolean useXQueryParser, TestCaseSelection testCaseSelection) {
+        this(null, testCaseSelection);
+    }
+
+    CaseCollector(Path repository, TestCaseSelection testCaseSelection) {
+        this.testsRepositoryDirectoryPath = repository;
         this.testCaseSelection = testCaseSelection;
     }
 
@@ -56,7 +64,9 @@ public class CaseCollector {
      * getAllTests() to be called later
      */
     public void execute(String testFolder) throws IOException, SaxonApiException, InterruptedException {
-        getTestsRepository();
+        if (this.testsRepositoryDirectoryPath == null) {
+            getTestsRepository();
+        }
         processCatalog(testFolder);
 
         /// Check if the selected test case was resolved to at least one test. If not, throw an exception.
@@ -276,15 +286,19 @@ public class CaseCollector {
                     break;
                 }
                 case "unicode-normalization-form": {
-                    // NFD,NFKD,NFKC,FULLY-NORMALIZED - We will need to play it by ear.
-                    // LogDependency(testCaseName + type + " " + value);
-                    // return;
+                    if (!matchesDependency(dependencyNode, SUPPORTED_NORMALIZATION_FORMS.contains(value))) {
+                        result.skipReason = type + " " + value;
+                        return result;
+                    }
                     break;
                 }
                 case "format-integer-sequence": {
-                    // ⒈,Α,α - I am not sure what this is, I would need to see the tests.
-                    result.skipReason = type + " " + value;
-                    return result;
+                    // Optional numbering sequences are not supported; decimal fallback is supported.
+                    if (!matchesDependency(dependencyNode, false)) {
+                        result.skipReason = type + " " + value;
+                        return result;
+                    }
+                    break;
                 }
                 case "xml-version": {
                     if ("1.0".equals(value) || "1.1".equals(value)) {
@@ -303,7 +317,7 @@ public class CaseCollector {
                     break;
                 }
                 case "feature": {
-                    boolean expectedToBeSupported = !"false".equals(dependencyNode.attribute("satisfied"));
+                    boolean expectedToBeSupported = requiresSupport(dependencyNode);
                     boolean supported = SUPPORTED_FEATURES.contains(value);
                     if (expectedToBeSupported != supported) {
                         result.skipReason = type + " " + value;
@@ -326,7 +340,7 @@ public class CaseCollector {
                 }
                     // Check if not the XSLT (isApplicable original method)
                 case "spec": {
-                    if (!isSupportedSpecDependency(value)) {
+                    if (!matchesDependency(dependencyNode, isSupportedSpecDependency(value))) {
                         result.skipReason = type + " " + value;
                         return result;
                     }
@@ -348,6 +362,15 @@ public class CaseCollector {
         // all dependencies are okay
 
         return result;
+    }
+
+    private static boolean requiresSupport(XdmNode dependency) {
+        String satisfied = dependency.attribute("satisfied");
+        return !"false".equals(satisfied) && !"0".equals(satisfied);
+    }
+
+    private static boolean matchesDependency(XdmNode dependency, boolean supported) {
+        return requiresSupport(dependency) == supported;
     }
 
     static boolean isSupportedSpecDependency(String value) {
