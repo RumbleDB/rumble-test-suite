@@ -64,12 +64,8 @@ public class TestBase {
     }
 
     public static List<CollectedTestCase> getData(String testSuite) throws Exception {
-        return getData(testSuite, useXQueryParserFromConfiguration());
-    }
-
-    public static List<CollectedTestCase> getData(String testSuite, boolean useXQueryParser) throws Exception {
         TestCaseSelection selection = TestCaseSelection.fromSystemProperties();
-        CaseCollector testDriver = new CaseCollector(useXQueryParser, selection);
+        CaseCollector testDriver = new CaseCollector(selection);
         testDriver.execute(testSuite);
         List<CollectedTestCase> cases = testDriver.getAllTests();
         assumeTrue(

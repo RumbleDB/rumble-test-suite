@@ -44,12 +44,7 @@ public class CaseCollector {
     private final List<CollectedTestCase> allTests = new ArrayList<>();
     private final TestCaseSelection testCaseSelection;
 
-    public CaseCollector(boolean useXQueryParser, TestCaseSelection testCaseSelection) {
-        this(null, testCaseSelection);
-    }
-
-    CaseCollector(Path repository, TestCaseSelection testCaseSelection) {
-        this.testsRepositoryDirectoryPath = repository;
+    public CaseCollector(TestCaseSelection testCaseSelection) {
         this.testCaseSelection = testCaseSelection;
     }
 
@@ -64,9 +59,7 @@ public class CaseCollector {
      * getAllTests() to be called later
      */
     public void execute(String testFolder) throws IOException, SaxonApiException, InterruptedException {
-        if (this.testsRepositoryDirectoryPath == null) {
-            getTestsRepository();
-        }
+        getTestsRepository();
         processCatalog(testFolder);
 
         // Validate against the catalog, not just this JUnit partition.
