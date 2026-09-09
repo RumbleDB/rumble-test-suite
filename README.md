@@ -59,12 +59,6 @@ Or run a single named QT3 test case by passing its test-case name:
 ```
 mvn -Dtest=OpTest -Dtest.case=fn-union-node-args-002 test
 ```
-
-A selected name is validated against the full QT3 catalog. When running multiple JUnit suite
-partitions (for example `-Dtest=Prod1Test,Prod2Test`), partitions without that case are skipped.
-Unknown or duplicate names are errors. Select a partition containing the case to execute it;
-selecting only unrelated partitions produces skips.
-
 Or all the tests at once with
 ```
 mvn test

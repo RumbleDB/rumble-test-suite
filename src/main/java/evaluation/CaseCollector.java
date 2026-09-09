@@ -62,7 +62,7 @@ public class CaseCollector {
         getTestsRepository();
         processCatalog(testFolder);
 
-        // Validate against the catalog, not just this JUnit partition.
+        // Verify that the selected test case was found in this partition.
         this.testCaseSelection.verifyResolved();
     }
 
@@ -127,14 +127,13 @@ public class CaseCollector {
         Pattern pattern = Pattern.compile("^" + testFolder);
         for (XdmNode testSet : catalogNode.select(Steps.descendant("test-set")).asList()) {
             Matcher matcher = pattern.matcher(testSet.attribute("file"));
-            boolean collect = matcher.find();
-            if (collect || this.testCaseSelection.isSpecificCaseSelected()) {
-                this.processTestSet(catalogBuilder, xpc, testSet, collect);
+            if (matcher.find()) {
+                this.processTestSet(catalogBuilder, xpc, testSet);
             }
         }
     }
 
-    private void processTestSet(DocumentBuilder catalogBuilder, XPathCompiler xpc, XdmNode testSetNode, boolean collect)
+    private void processTestSet(DocumentBuilder catalogBuilder, XPathCompiler xpc, XdmNode testSetNode)
             throws IOException, SaxonApiException {
 
         String testSetFileName = testSetNode.attribute("file");
@@ -143,16 +142,11 @@ public class CaseCollector {
                 new File(testsRepositoryDirectoryPath.resolve(testSetFileName).toString());
         XdmNode testSetDocNode = catalogBuilder.build(testSetFile);
 
-        if (collect) {
-            prepareTestSetEnvironments(testSetDocNode, testSetFileName.split("/")[0]);
-        }
+        prepareTestSetEnvironments(testSetDocNode, testSetFileName.split("/")[0]);
 
         for (XdmNode testCase :
                 testSetDocNode.select(Steps.descendant("test-case")).asList()) {
-            this.testCaseSelection.observeCatalogCase(testCase.attribute("name"));
-            if (collect) {
-                this.processTestCase(testCase, xpc);
-            }
+            this.processTestCase(testCase, xpc);
         }
     }
 

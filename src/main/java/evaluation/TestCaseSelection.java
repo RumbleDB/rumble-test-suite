@@ -6,7 +6,7 @@ public final class TestCaseSelection {
     private final String selectedTestCaseName;
     private int matchCount;
 
-    TestCaseSelection(String selectedTestCaseName) {
+    private TestCaseSelection(String selectedTestCaseName) {
         this.selectedTestCaseName = selectedTestCaseName;
     }
 
@@ -27,22 +27,19 @@ public final class TestCaseSelection {
         return trimmedTestCase;
     }
 
-    public boolean isSpecificCaseSelected() {
-        return this.selectedTestCaseName != null;
-    }
-
     public boolean shouldRun(String testCaseName) {
-        return this.selectedTestCaseName == null || this.selectedTestCaseName.equals(testCaseName);
-    }
-
-    public void observeCatalogCase(String testCaseName) {
-        if (this.selectedTestCaseName == null || !this.selectedTestCaseName.equals(testCaseName)) {
-            return;
+        if (this.selectedTestCaseName == null) {
+            return true;
         }
+        if (!this.selectedTestCaseName.equals(testCaseName)) {
+            return false;
+        }
+
         this.matchCount++;
         if (this.matchCount > 1) {
             throw new DuplicateSelectedTestCaseException(this.selectedTestCaseName);
         }
+        return true;
     }
 
     public void verifyResolved() {
