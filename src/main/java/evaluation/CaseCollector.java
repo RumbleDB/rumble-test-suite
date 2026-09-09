@@ -35,13 +35,16 @@ public class CaseCollector {
             "schemaValidation",
             "schema-location-hint");
 
+    private static final Set<String> SUPPORTED_NORMALIZATION_FORMS =
+            Set.of("NFC", "NFD", "NFKC", "NFKD", "FULLY-NORMALIZED");
+
     private static final Set<String> SUPPORTED_SPECS = Set.of("XQ10+", "XQ30+", "XQ31", "XQ31+");
     private Path testsRepositoryDirectoryPath;
     private String currentTestSet;
     private final List<CollectedTestCase> allTests = new ArrayList<>();
     private final TestCaseSelection testCaseSelection;
 
-    public CaseCollector(boolean useXQueryParser, TestCaseSelection testCaseSelection) {
+    public CaseCollector(TestCaseSelection testCaseSelection) {
         this.testCaseSelection = testCaseSelection;
     }
 
@@ -59,7 +62,7 @@ public class CaseCollector {
         getTestsRepository();
         processCatalog(testFolder);
 
-        /// Check if the selected test case was resolved to at least one test. If not, throw an exception.
+        // Verify that the selected test case was found in this partition.
         this.testCaseSelection.verifyResolved();
     }
 
@@ -228,11 +231,12 @@ public class CaseCollector {
         if (reference == null) {
             return new Environment(environmentNode, testSetDirectory);
         }
-        if (catalogEnvironments.containsKey(reference)) {
-            return catalogEnvironments.get(reference);
-        }
+        // QT3 local environments shadow catalog definitions with the same name.
         if (testSetEnvironments.containsKey(reference)) {
             return testSetEnvironments.get(reference);
+        }
+        if (catalogEnvironments.containsKey(reference)) {
+            return catalogEnvironments.get(reference);
         }
         throw new IllegalArgumentException("No environment found with name: " + reference);
     }
@@ -258,6 +262,9 @@ public class CaseCollector {
         if (dependencies.isEmpty()) {
             return result;
         }
+        // Rumble supports XML 1.0 fifth edition and XML 1.1. Separate dependencies are conjunctive.
+        Set<String> xmlVersions = new LinkedHashSet<>(List.of("1.0", "1.1"));
+        boolean hasXmlDependency = false;
         for (XdmNode dependencyNode : dependencies) {
             String type = dependencyNode.attribute("type");
             String value = dependencyNode.attribute("value");
@@ -276,19 +283,27 @@ public class CaseCollector {
                     break;
                 }
                 case "unicode-normalization-form": {
-                    // NFD,NFKD,NFKC,FULLY-NORMALIZED - We will need to play it by ear.
-                    // LogDependency(testCaseName + type + " " + value);
-                    // return;
+                    if (!matchesDependency(dependencyNode, SUPPORTED_NORMALIZATION_FORMS.contains(value))) {
+                        result.skipReason = type + " " + value;
+                        return result;
+                    }
                     break;
                 }
                 case "format-integer-sequence": {
-                    // ⒈,Α,α - I am not sure what this is, I would need to see the tests.
-                    result.skipReason = type + " " + value;
-                    return result;
+                    // Optional numbering sequences are not supported; decimal fallback is supported.
+                    if (!matchesDependency(dependencyNode, false)) {
+                        result.skipReason = type + " " + value;
+                        return result;
+                    }
+                    break;
                 }
                 case "xml-version": {
-                    if ("1.0".equals(value) || "1.1".equals(value)) {
-                        result.xmlVersion = value;
+                    hasXmlDependency = true;
+                    xmlVersions.removeIf(
+                            version -> !matchesDependency(dependencyNode, matchesXmlVersion(value, version)));
+                    if (xmlVersions.isEmpty()) {
+                        result.skipReason = type + " " + value;
+                        return result;
                     }
                     break;
                 }
@@ -303,7 +318,7 @@ public class CaseCollector {
                     break;
                 }
                 case "feature": {
-                    boolean expectedToBeSupported = !"false".equals(dependencyNode.attribute("satisfied"));
+                    boolean expectedToBeSupported = requiresSupport(dependencyNode);
                     boolean supported = SUPPORTED_FEATURES.contains(value);
                     if (expectedToBeSupported != supported) {
                         result.skipReason = type + " " + value;
@@ -326,7 +341,7 @@ public class CaseCollector {
                 }
                     // Check if not the XSLT (isApplicable original method)
                 case "spec": {
-                    if (!isSupportedSpecDependency(value)) {
+                    if (!matchesDependency(dependencyNode, isSupportedSpecDependency(value))) {
                         result.skipReason = type + " " + value;
                         return result;
                     }
@@ -345,9 +360,31 @@ public class CaseCollector {
                 }
             }
         }
+        if (hasXmlDependency) {
+            result.xmlVersion = xmlVersions.iterator().next();
+        }
         // all dependencies are okay
 
         return result;
+    }
+
+    private static boolean matchesXmlVersion(String value, String version) {
+        return Arrays.stream(value.trim().split("\\s+")).anyMatch(token -> switch (token) {
+            case "1.0", "1.0:5+" -> version.equals("1.0");
+            case "1.1" -> version.equals("1.1");
+                // The older XML 1.0 name-character rules are not a configurable mode in Rumble.
+            case "1.0:4-" -> false;
+            default -> false;
+        });
+    }
+
+    private static boolean requiresSupport(XdmNode dependency) {
+        String satisfied = dependency.attribute("satisfied");
+        return !"false".equals(satisfied) && !"0".equals(satisfied);
+    }
+
+    private static boolean matchesDependency(XdmNode dependency, boolean supported) {
+        return requiresSupport(dependency) == supported;
     }
 
     static boolean isSupportedSpecDependency(String value) {
