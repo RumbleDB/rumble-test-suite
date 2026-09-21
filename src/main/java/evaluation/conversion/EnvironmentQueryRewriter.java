@@ -61,8 +61,11 @@ public final class EnvironmentQueryRewriter {
         }
 
         LinkedHashSet<String> importedNamespaces = new LinkedHashSet<>();
-        for (XQueryParser.SchemaImportContext schemaImport :
-                module.module().main.prolog().schemaImport()) {
+        for (XQueryParser.PrologHeaderContext header : module.module().main.prolog().headers) {
+            XQueryParser.SchemaImportContext schemaImport = header.schemaImport();
+            if (schemaImport == null) {
+                continue;
+            }
             String namespace = XQueryStringLiteral.parse(schemaImport.nsURI.getText());
             if (namespace != null) {
                 importedNamespaces.add(namespace);
@@ -134,29 +137,32 @@ public final class EnvironmentQueryRewriter {
 
         Map<String, String> result = new HashMap<>();
         XQueryParser.PrologContext prolog = module.module().main.prolog();
-        for (XQueryParser.NamespaceDeclContext namespaceDeclaration : prolog.namespaceDecl()) {
-            addNamespace(
-                    result,
-                    namespaceDeclaration.ncName().getText(),
-                    namespaceDeclaration.uriLiteral().getText());
-        }
-        for (XQueryParser.DefaultNamespaceDeclContext namespaceDeclaration : prolog.defaultNamespaceDecl()) {
-            if (namespaceDeclaration.type.getText().equals("element")) {
-                addNamespace(result, "", namespaceDeclaration.uri.getText());
+        for (XQueryParser.PrologHeaderContext header : prolog.headers) {
+            XQueryParser.NamespaceDeclContext namespaceDeclaration = header.namespaceDecl();
+            if (namespaceDeclaration != null) {
+                addNamespace(
+                        result,
+                        namespaceDeclaration.ncName().getText(),
+                        namespaceDeclaration.uriLiteral().getText());
             }
-        }
-        for (XQueryParser.SchemaImportContext schemaImport : prolog.schemaImport()) {
-            if (schemaImport.schemaPrefix() == null) {
-                continue;
+
+            XQueryParser.DefaultNamespaceDeclContext defaultNamespaceDeclaration = header.defaultNamespaceDecl();
+            if (defaultNamespaceDeclaration != null
+                    && defaultNamespaceDeclaration.type.getText().equals("element")) {
+                addNamespace(result, "", defaultNamespaceDeclaration.uri.getText());
             }
-            if (schemaImport.schemaPrefix().ncName() == null) {
-                addNamespace(result, "", schemaImport.nsURI.getText());
-            } else {
-                addNamespace(result, schemaImport.schemaPrefix().ncName().getText(), schemaImport.nsURI.getText());
+
+            XQueryParser.SchemaImportContext schemaImport = header.schemaImport();
+            if (schemaImport != null && schemaImport.schemaPrefix() != null) {
+                if (schemaImport.schemaPrefix().ncName() == null) {
+                    addNamespace(result, "", schemaImport.nsURI.getText());
+                } else {
+                    addNamespace(result, schemaImport.schemaPrefix().ncName().getText(), schemaImport.nsURI.getText());
+                }
             }
-        }
-        for (XQueryParser.ModuleImportContext moduleImport : prolog.moduleImport()) {
-            if (moduleImport.ncName() != null) {
+
+            XQueryParser.ModuleImportContext moduleImport = header.moduleImport();
+            if (moduleImport != null && moduleImport.ncName() != null) {
                 addNamespace(result, moduleImport.ncName().getText(), moduleImport.targetNamespace.getText());
             }
         }
@@ -178,8 +184,8 @@ public final class EnvironmentQueryRewriter {
 
         XQueryParser.MainModuleContext mainModule = module.module().main;
         Token insertionToken;
-        if (!mainModule.prolog().annotatedDecl().isEmpty()) {
-            insertionToken = mainModule.prolog().annotatedDecl(0).getStart();
+        if (!mainModule.prolog().declarations.isEmpty()) {
+            insertionToken = mainModule.prolog().declarations.get(0).getStart();
         } else {
             insertionToken = mainModule.program().getStart();
         }
