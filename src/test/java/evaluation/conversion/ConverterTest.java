@@ -30,14 +30,18 @@ public class ConverterTest {
     }
 
     @Test
-    public void unwrapsXQueryValidateExpressions() {
-        assertEquals(" doc(\"input.xml\") ", Converter.convert("validate strict { doc('input.xml') }"));
-        assertEquals(" $$ ", Converter.convert("validate lax { . }"));
+    public void preservesSchemaValidationAndUnwrapsIncompatibleTypeValidation() {
+        assertEquals(
+                "validate strict { doc(\"input.xml\") }",
+                Converter.convert("validate strict { doc('input.xml') }"));
+        assertEquals("validate lax { $$ }", Converter.convert("validate lax { . }"));
         assertEquals(" 1 ", Converter.convert("validate type xs:integer { 1 }"));
     }
 
     @Test
-    public void unwrapsNestedValidateExpressions() {
-        assertEquals("  fn:true()  ", Converter.convert("validate { validate strict { true() } }"));
+    public void preservesNestedSchemaValidation() {
+        assertEquals(
+                "validate { validate strict { fn:true() } }",
+                Converter.convert("validate { validate strict { true() } }"));
     }
 }

@@ -4,15 +4,12 @@ import org.rumbledb.parser.xquery.XQueryParser;
 import org.rumbledb.parser.xquery.XQueryParserBaseVisitor;
 
 /**
- * Unwraps XQuery XML Schema validate expressions for JSONiq compatibility runs.
+ * Converts XQuery validate expressions for JSONiq compatibility runs.
  *
  * <p>
- * JSONiq's similarly named {@code validate type} expression validates a sequence type and therefore cannot
- * represent XQuery's strict, lax, or named-schema-type validation semantics. RumbleDB does not currently execute XML
- * Schema validate expressions, so the compatibility conversion retains the operand without reinterpreting it.
- *
- * Note: this is a temporary solution until JSONiq parser and runtime support for XML Schema validate expressions is
- * implemented.
+ * JSONiq supports XML Schema validation with {@code validate}, {@code validate strict}, and {@code validate lax}.
+ * Its {@code validate type} expression instead validates a sequence type, so XQuery's named-schema-type form is
+ * unwrapped rather than reinterpreted.
  */
 final class ValidateExpressionConversion implements ConversionPass {
 
@@ -31,8 +28,13 @@ final class ValidateExpressionConversion implements ConversionPass {
 
         @Override
         public Void visitValidateExpr(XQueryParser.ValidateExprContext context) {
-            this.conversionContext.replace(context.getStart(), context.LBRACE().getSymbol(), "");
-            this.conversionContext.replace(context.RBRACE().getSymbol(), "");
+            // JSONiq executes validate/strict/lax as XML Schema validation, so keep those forms and
+            // their typed-node results. XQuery's "validate type T" names a schema type, whereas
+            // JSONiq's form takes a sequence type; retain only its operand to avoid changing meaning.
+            if (context.KW_TYPE() != null) {
+                this.conversionContext.replace(context.getStart(), context.LBRACE().getSymbol(), "");
+                this.conversionContext.replace(context.RBRACE().getSymbol(), "");
+            }
             return visitChildren(context);
         }
     }
