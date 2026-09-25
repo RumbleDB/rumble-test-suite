@@ -32,8 +32,7 @@ public class ConverterTest {
     @Test
     public void preservesSchemaValidationAndUnwrapsIncompatibleTypeValidation() {
         assertEquals(
-                "validate strict { doc(\"input.xml\") }",
-                Converter.convert("validate strict { doc('input.xml') }"));
+                "validate strict { doc(\"input.xml\") }", Converter.convert("validate strict { doc('input.xml') }"));
         assertEquals("validate lax { $$ }", Converter.convert("validate lax { . }"));
         assertEquals(" 1 ", Converter.convert("validate type xs:integer { 1 }"));
     }
