@@ -121,8 +121,8 @@ public class TestBase {
                 assertTrue(results.isEmpty());
                 break;
             case "assert":
-                secondQuery =
-                        declareResultVariableFromTestExpression(context.getTestString(), assertion.getStringValue());
+                secondQuery = declareResultVariableFromTestExpression(
+                        context.getTestString(), prepareAssertionExpression(assertion.getStringValue()));
                 assertTrueSingleElement(context.runQuery(secondQuery));
                 break;
             case "not":
@@ -140,20 +140,28 @@ public class TestBase {
                     }
                 } else {
                     secondQuery = declareResultVariableFromTestExpression(
-                            context.getTestString(), assertion.getStringValue());
+                            context.getTestString(), prepareAssertionExpression(assertion.getStringValue()));
                     assertFalseSingleElement(context.runQuery(secondQuery));
                 }
                 break;
             case "assert-eq":
                 secondQuery = XQueryMainModuleRewriter.rewriteProgram(
                         context.getTestString(),
-                        program -> "((" + program + ") eq (" + assertion.getStringValue() + "))");
+                        program -> "(("
+                                + program
+                                + ") eq ("
+                                + prepareAssertionExpression(assertion.getStringValue())
+                                + "))");
                 assertTrueSingleElement(context.runQuery(secondQuery));
                 break;
             case "assert-deep-eq":
                 secondQuery = XQueryMainModuleRewriter.rewriteProgram(
                         context.getTestString(),
-                        program -> "deep-equal((" + program + "), (" + assertion.getStringValue() + "))");
+                        program -> "deep-equal(("
+                                + program
+                                + "), ("
+                                + prepareAssertionExpression(assertion.getStringValue())
+                                + "))");
                 assertTrueSingleElement(context.runQuery(secondQuery));
                 break;
             case "assert-true":
@@ -349,5 +357,82 @@ public class TestBase {
         return XQueryMainModuleRewriter.rewriteProgram(
                 query,
                 program -> "declare variable $result := (" + program + ");\nboolean(" + assertionExpression + ")");
+    }
+
+    /**
+     * Prepares an assertion expression from the QT3 test catalog for evaluation in an XQuery query.
+     *
+     * <p>
+     * According to the W3C QT3 test suite catalog specification, assertion elements (e.g. {@code <assert-eq>},
+     * {@code <assert-deep-eq>}, {@code <assert>}) contain <b>XPath 3.1</b> expressions, not XQuery expressions.
+     *
+     * <p>
+     * In XPath 3.1 (§3.1.1), string literals ({@code "..."} or {@code '...'}) treat characters literally:
+     * predefined entity references and character references (such as {@code &lt;}, {@code &amp;}, {@code &#x003C;})
+     * are <b>not</b> expanded. For example, the XPath literal {@code "&lt;"} evaluates to the 4-character string
+     * {@code "&lt;"}.
+     *
+     * <p>
+     * However, when the harness rewrites the test query into an XQuery module (when {@code useXQueryParser} is true),
+     * the assertion expression is embedded into the module and compiled by the <b>XQuery 3.1</b> parser. In XQuery 3.1
+     * (§3.1.1), string literals <b>do</b> expand entity and character references (e.g. {@code "&lt;"} expands to
+     * {@code "<"}).
+     *
+     * <p>
+     * To preserve the exact semantic value of XPath string literals when parsed as XQuery, any literal ampersand
+     * ({@code &}) inside string literals must be escaped as {@code &amp;} (e.g. {@code "&lt;"} in XPath becomes
+     * {@code "&amp;lt;"} in XQuery).
+     *
+     * @param expression the raw assertion expression from the QT3 catalog
+     * @return the adapted expression safe for parsing under XQuery 3.1
+     */
+    private String prepareAssertionExpression(String expression) {
+        if (!this.useXQueryParser || expression == null || !expression.contains("&")) {
+            return expression;
+        }
+        return escapeAmpersandsInStringLiterals(expression);
+    }
+
+    private static String escapeAmpersandsInStringLiterals(String expression) {
+        StringBuilder sb = new StringBuilder(expression.length() + 8);
+        char inString = 0;
+        int commentDepth = 0;
+        for (int i = 0; i < expression.length(); i++) {
+            char c = expression.charAt(i);
+            if (inString == 0) {
+                if (commentDepth == 0 && (c == '\'' || c == '"')) {
+                    inString = c;
+                    sb.append(c);
+                } else if (c == '(' && i + 1 < expression.length() && expression.charAt(i + 1) == ':') {
+                    commentDepth++;
+                    sb.append("(:");
+                    i++;
+                } else if (commentDepth > 0
+                        && c == ':'
+                        && i + 1 < expression.length()
+                        && expression.charAt(i + 1) == ')') {
+                    commentDepth--;
+                    sb.append(":)");
+                    i++;
+                } else {
+                    sb.append(c);
+                }
+            } else {
+                if (c == inString) {
+                    if (i + 1 < expression.length() && expression.charAt(i + 1) == inString) {
+                        sb.append(c).append(c);
+                        i++;
+                    } else {
+                        inString = 0;
+                        sb.append(c);
+                    }
+                } else if (c == '&') {
+                    sb.append("&amp;");
+                } else {
+                    sb.append(c);
+                }
+            }
+        }
+        return sb.toString();
     }
 }
