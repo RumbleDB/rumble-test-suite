@@ -1,5 +1,8 @@
 package evaluation.conversion;
 
+import org.rumbledb.compiler.utils.XmlCharRefUtils;
+import org.rumbledb.exceptions.ExceptionMetadata;
+
 /** Parses and serializes XQuery string literal source text. */
 final class XQueryStringLiteral {
 
@@ -27,11 +30,15 @@ final class XQueryStringLiteral {
                 value.append(current);
             }
         }
-        return value.toString();
+        // Decode once, after collapsing doubled delimiters. The decoder does not revisit
+        // its output, so &amp;#x20; stays literal &#x20; rather than becoming a space.
+        return XmlCharRefUtils.unescapeXml(value.toString(), null, ExceptionMetadata.EMPTY_METADATA);
     }
 
     static String serialize(String value, char delimiter) {
         String delimiterString = Character.toString(delimiter);
-        return delimiter + value.replace(delimiterString, delimiterString + delimiterString) + delimiter;
+        return delimiter
+                + value.replace("&", "&amp;").replace(delimiterString, delimiterString + delimiterString)
+                + delimiter;
     }
 }

@@ -121,8 +121,8 @@ public class TestBase {
                 assertTrue(results.isEmpty());
                 break;
             case "assert":
-                secondQuery =
-                        declareResultVariableFromTestExpression(context.getTestString(), assertion.getStringValue());
+                secondQuery = declareResultVariableFromTestExpression(
+                        context.getTestString(), prepareAssertionExpression(assertion.getStringValue()));
                 assertTrueSingleElement(context.runQuery(secondQuery));
                 break;
             case "not":
@@ -140,20 +140,28 @@ public class TestBase {
                     }
                 } else {
                     secondQuery = declareResultVariableFromTestExpression(
-                            context.getTestString(), assertion.getStringValue());
+                            context.getTestString(), prepareAssertionExpression(assertion.getStringValue()));
                     assertFalseSingleElement(context.runQuery(secondQuery));
                 }
                 break;
             case "assert-eq":
                 secondQuery = XQueryMainModuleRewriter.rewriteProgram(
                         context.getTestString(),
-                        program -> "((" + program + ") eq (" + assertion.getStringValue() + "))");
+                        program -> "(("
+                                + program
+                                + ") eq ("
+                                + prepareAssertionExpression(assertion.getStringValue())
+                                + "))");
                 assertTrueSingleElement(context.runQuery(secondQuery));
                 break;
             case "assert-deep-eq":
                 secondQuery = XQueryMainModuleRewriter.rewriteProgram(
                         context.getTestString(),
-                        program -> "deep-equal((" + program + "), (" + assertion.getStringValue() + "))");
+                        program -> "deep-equal(("
+                                + program
+                                + "), ("
+                                + prepareAssertionExpression(assertion.getStringValue())
+                                + "))");
                 assertTrueSingleElement(context.runQuery(secondQuery));
                 break;
             case "assert-true":
@@ -349,5 +357,62 @@ public class TestBase {
         return XQueryMainModuleRewriter.rewriteProgram(
                 query,
                 program -> "declare variable $result := (" + program + ");\nboolean(" + assertionExpression + ")");
+    }
+
+    /**
+     * QT3 assertions are XPath expressions, whose string literals do not expand references.
+     * Both execution paths first embed assertions in an XQuery module: the XQuery parser
+     * expands references directly, and the JSONiq converter decodes XQuery literals before
+     * serialization. Escape assertion ampersands in both paths to preserve their XPath value.
+     * See https://dev.w3.org/2011/QT3-test-suite/catalog-schema.html#assert-eq
+     */
+    static String prepareAssertionExpression(String expression) {
+        if (expression == null || !expression.contains("&")) {
+            return expression;
+        }
+        return escapeAmpersandsInStringLiterals(expression);
+    }
+
+    private static String escapeAmpersandsInStringLiterals(String expression) {
+        StringBuilder sb = new StringBuilder(expression.length() + 8);
+        char inString = 0;
+        int commentDepth = 0;
+        for (int i = 0; i < expression.length(); i++) {
+            char c = expression.charAt(i);
+            if (inString == 0) {
+                if (commentDepth == 0 && (c == '\'' || c == '"')) {
+                    inString = c;
+                    sb.append(c);
+                } else if (c == '(' && i + 1 < expression.length() && expression.charAt(i + 1) == ':') {
+                    commentDepth++;
+                    sb.append("(:");
+                    i++;
+                } else if (commentDepth > 0
+                        && c == ':'
+                        && i + 1 < expression.length()
+                        && expression.charAt(i + 1) == ')') {
+                    commentDepth--;
+                    sb.append(":)");
+                    i++;
+                } else {
+                    sb.append(c);
+                }
+            } else {
+                if (c == inString) {
+                    if (i + 1 < expression.length() && expression.charAt(i + 1) == inString) {
+                        sb.append(c).append(c);
+                        i++;
+                    } else {
+                        inString = 0;
+                        sb.append(c);
+                    }
+                } else if (c == '&') {
+                    sb.append("&amp;");
+                } else {
+                    sb.append(c);
+                }
+            }
+        }
+        return sb.toString();
     }
 }

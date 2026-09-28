@@ -11,7 +11,32 @@ public class StringLiteralConversionTest {
         assertEquals("\"a \\\" b\"", Converter.convert("\"a \"\" b\""));
         assertEquals("\"\\\\path\"", Converter.convert("'\\path'"));
         assertEquals("\"a & b\"", Converter.convert("\"a & b\""));
-        assertEquals("\"&amp;\"", Converter.convert("\"&amp;\""));
+        assertEquals("\"&\"", Converter.convert("\"&amp;\""));
+    }
+
+    @Test
+    public void decodesCharacterReferencesBeforeJSONiqEscaping() {
+        assertEquals(
+                "fn:matches(\" \\t\\r\", \"\\\\c+\")", Converter.convert("fn:matches('&#x20;&#x9;&#xD;', '\\c+')"));
+        assertEquals("\" \\t\\r\"", Converter.convert("'&#32;&#9;&#13;'"));
+        assertEquals("\"\ud83d\ude00\ud83d\ude00\"", Converter.convert("'&#x1F600;&#128512;'"));
+        assertEquals("\"&<>\\\"'\"", Converter.convert("'&amp;&lt;&gt;&quot;&apos;'"));
+    }
+
+    @Test
+    public void decodesReferencesOnlyOnce() {
+        assertEquals("\"&#x20;&amp;\"", Converter.convert("'&amp;#x20;&amp;amp;'"));
+        assertEquals("\"&amp;\"", Converter.convert("'&#38;amp;'"));
+    }
+
+    @Test
+    public void roundTripsReferenceLikeTextAndQuotes() {
+        String value = "&#x20; &amp; ' \" \ud83d\ude00";
+        for (char delimiter : new char[] {'\'', '"'}) {
+            String source = XQueryStringLiteral.serialize(value, delimiter);
+            assertEquals(value, XQueryStringLiteral.parse(source));
+            assertEquals("\"&#x20; &amp; ' \\\" \ud83d\ude00\"", Converter.convert(source));
+        }
     }
 
     @Test
