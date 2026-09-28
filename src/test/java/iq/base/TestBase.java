@@ -360,34 +360,14 @@ public class TestBase {
     }
 
     /**
-     * Prepares an assertion expression from the QT3 test catalog for evaluation in an XQuery query.
-     *
-     * <p>
-     * According to the W3C QT3 test suite catalog specification, assertion elements (e.g. {@code <assert-eq>},
-     * {@code <assert-deep-eq>}, {@code <assert>}) contain <b>XPath 3.1</b> expressions, not XQuery expressions.
-     *
-     * <p>
-     * In XPath 3.1 (§3.1.1), string literals ({@code "..."} or {@code '...'}) treat characters literally:
-     * predefined entity references and character references (such as {@code &lt;}, {@code &amp;}, {@code &#x003C;})
-     * are <b>not</b> expanded. For example, the XPath literal {@code "&lt;"} evaluates to the 4-character string
-     * {@code "&lt;"}.
-     *
-     * <p>
-     * However, when the harness rewrites the test query into an XQuery module (when {@code useXQueryParser} is true),
-     * the assertion expression is embedded into the module and compiled by the <b>XQuery 3.1</b> parser. In XQuery 3.1
-     * (§3.1.1), string literals <b>do</b> expand entity and character references (e.g. {@code "&lt;"} expands to
-     * {@code "<"}).
-     *
-     * <p>
-     * To preserve the exact semantic value of XPath string literals when parsed as XQuery, any literal ampersand
-     * ({@code &}) inside string literals must be escaped as {@code &amp;} (e.g. {@code "&lt;"} in XPath becomes
-     * {@code "&amp;lt;"} in XQuery).
-     *
-     * @param expression the raw assertion expression from the QT3 catalog
-     * @return the adapted expression safe for parsing under XQuery 3.1
+     * QT3 assertions are XPath expressions, whose string literals do not expand references.
+     * Both execution paths first embed assertions in an XQuery module: the XQuery parser
+     * expands references directly, and the JSONiq converter decodes XQuery literals before
+     * serialization. Escape assertion ampersands in both paths to preserve their XPath value.
+     * See https://dev.w3.org/2011/QT3-test-suite/catalog-schema.html#assert-eq
      */
-    private String prepareAssertionExpression(String expression) {
-        if (!this.useXQueryParser || expression == null || !expression.contains("&")) {
+    static String prepareAssertionExpression(String expression) {
+        if (expression == null || !expression.contains("&")) {
             return expression;
         }
         return escapeAmpersandsInStringLiterals(expression);
