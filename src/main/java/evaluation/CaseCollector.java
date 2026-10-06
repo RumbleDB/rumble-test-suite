@@ -192,11 +192,7 @@ public class CaseCollector {
         }
 
         // check for possible skip reasons
-        String skipReason = null;
         DependencyCheckResult dependencies = checkDependencies(testCase);
-        if (dependencies.skipReason != null) {
-            skipReason = "dependency " + dependencies.skipReason;
-        }
 
         XdmNode assertion = (XdmNode) xpc.evaluateSingle("result/*[1]", testCase);
         XdmNode test = testCase.select(Steps.child("test")).asNode();
@@ -208,7 +204,7 @@ public class CaseCollector {
                 new TestCase(
                         testString,
                         assertion,
-                        skipReason,
+                        dependencies.skipReason,
                         environment,
                         dependencies.xmlVersion,
                         dependencies.defaultFormattingLanguage,
@@ -250,9 +246,10 @@ public class CaseCollector {
     }
 
     /**
-     * method that takes a testcase and returns dependency-derived skip and configuration information
+     * method that takes a testcase and returns dependency-derived skip and configuration information.
+     * Every unmet dependency is recorded, so that a skipped test case reports all of the reasons it cannot run.
      */
-    private DependencyCheckResult checkDependencies(XdmNode testCase) {
+    static DependencyCheckResult checkDependencies(XdmNode testCase) {
         String testCaseName = testCase.attribute("name");
         List<XdmNode> dependencies = testCase.select(Steps.child("dependency")).asList();
         dependencies.addAll(
@@ -262,15 +259,18 @@ public class CaseCollector {
         if (dependencies.isEmpty()) {
             return result;
         }
+        List<SkipReason.UnmetDependency> unmet = new ArrayList<>();
         // Rumble supports XML 1.0 fifth edition and XML 1.1. Separate dependencies are conjunctive.
         Set<String> xmlVersions = new LinkedHashSet<>(List.of("1.0", "1.1"));
         boolean hasXmlDependency = false;
+        boolean xmlVersionUnmet = false;
         for (XdmNode dependencyNode : dependencies) {
             String type = dependencyNode.attribute("type");
             String value = dependencyNode.attribute("value");
             if (type == null || value == null) {
                 throw new RuntimeException("Empty dependency encountered");
             }
+            boolean satisfied = requiresSupport(dependencyNode);
 
             switch (type) {
                 case "calendar": {
@@ -283,17 +283,16 @@ public class CaseCollector {
                     break;
                 }
                 case "unicode-normalization-form": {
-                    if (!matchesDependency(dependencyNode, SUPPORTED_NORMALIZATION_FORMS.contains(value))) {
-                        result.skipReason = type + " " + value;
-                        return result;
+                    boolean supported = SUPPORTED_NORMALIZATION_FORMS.contains(value);
+                    if (satisfied != supported) {
+                        unmet.add(unmetDependency(type, value, satisfied, supported));
                     }
                     break;
                 }
                 case "format-integer-sequence": {
                     // Optional numbering sequences are not supported; decimal fallback is supported.
-                    if (!matchesDependency(dependencyNode, false)) {
-                        result.skipReason = type + " " + value;
-                        return result;
+                    if (satisfied) {
+                        unmet.add(unmetDependency(type, value, satisfied, false));
                     }
                     break;
                 }
@@ -301,37 +300,36 @@ public class CaseCollector {
                     hasXmlDependency = true;
                     xmlVersions.removeIf(
                             version -> !matchesDependency(dependencyNode, matchesXmlVersion(value, version)));
-                    if (xmlVersions.isEmpty()) {
-                        result.skipReason = type + " " + value;
-                        return result;
+                    if (xmlVersions.isEmpty() && !xmlVersionUnmet) {
+                        // The requested XML versions are alternatives (such as XML 1.0 fourth edition)
+                        // that Rumble deliberately does not implement.
+                        unmet.add(new SkipReason.UnmetDependency(
+                                type, value, satisfied, SkipReason.Category.NOT_APPLICABLE));
+                        xmlVersionUnmet = true;
                     }
                     break;
                 }
                 case "xsd-version": {
-                    // Rumble doesn't care about schema, its XML specific
+                    // Rumble implements XSD 1.1, so tests for XSD 1.0 specific behaviour do not apply.
                     // TODO maybe it influences Saxon environment processor (check 221 in
                     // QT3TestDriverHE)
                     if (value.contains("1.0")) {
-                        result.skipReason = type + " " + value;
-                        return result;
+                        unmet.add(new SkipReason.UnmetDependency(
+                                type, value, satisfied, SkipReason.Category.NOT_APPLICABLE));
                     }
                     break;
                 }
                 case "feature": {
-                    boolean expectedToBeSupported = requiresSupport(dependencyNode);
                     boolean supported = SUPPORTED_FEATURES.contains(value);
-                    if (expectedToBeSupported != supported) {
-                        result.skipReason = type + " " + value;
-                        return result;
-                    }
-                    if (expectedToBeSupported && value.equals("staticTyping")) {
+                    if (satisfied != supported) {
+                        unmet.add(unmetDependency(type, value, satisfied, supported));
+                    } else if (satisfied && value.equals("staticTyping")) {
                         result.staticTyping = true;
                     }
                     break;
                 }
                 case "default-language": {
-                    String satisfied = dependencyNode.attribute("satisfied");
-                    if (!"false".equals(satisfied)) {
+                    if (satisfied) {
                         result.defaultFormattingLanguage = value;
                     }
                     break;
@@ -342,23 +340,28 @@ public class CaseCollector {
                     // Check if not the XSLT (isApplicable original method)
                 case "spec": {
                     if (!matchesDependency(dependencyNode, isSupportedSpecDependency(value))) {
-                        result.skipReason = type + " " + value;
-                        return result;
+                        unmet.add(
+                                new SkipReason.UnmetDependency(type, value, satisfied, SkipReason.Category.OTHER_SPEC));
                     }
                     break;
                 }
-                case "limit": {
+                case "limit":
+                case "limits": {
                     // year_lt_0 - I am not sure I don't think we have this limit.
-                    result.skipReason = type + " " + value;
-                    return result;
+                    unmet.add(unmetDependency(type, value, satisfied, false));
+                    break;
                 }
                 default: {
                     System.out.println(
                             "WARNING: unconsidered dependency " + type + " in " + testCaseName + "; removing testcase");
-                    result.skipReason = type + " " + value;
-                    return result;
+                    unmet.add(unmetDependency(type, value, satisfied, false));
+                    break;
                 }
             }
+        }
+        if (!unmet.isEmpty()) {
+            result.skipReason = new SkipReason(unmet);
+            return result;
         }
         if (hasXmlDependency) {
             result.xmlVersion = xmlVersions.iterator().next();
@@ -366,6 +369,17 @@ public class CaseCollector {
         // all dependencies are okay
 
         return result;
+    }
+
+    /**
+     * An unmet dependency on an optional capability: either the test case needs it and Rumble lacks it,
+     * or the test case needs it to be absent and Rumble supports it.
+     */
+    private static SkipReason.UnmetDependency unmetDependency(
+            String type, String value, boolean satisfied, boolean supported) {
+        SkipReason.Category category =
+                supported ? SkipReason.Category.NOT_APPLICABLE : SkipReason.Category.MISSING_FEATURE;
+        return new SkipReason.UnmetDependency(type, value, satisfied, category);
     }
 
     private static boolean matchesXmlVersion(String value, String version) {
@@ -392,10 +406,10 @@ public class CaseCollector {
         return specs.stream().anyMatch(SUPPORTED_SPECS::contains);
     }
 
-    private static final class DependencyCheckResult {
-        private String skipReason;
-        private String xmlVersion;
-        private String defaultFormattingLanguage;
-        private boolean staticTyping;
+    static final class DependencyCheckResult {
+        SkipReason skipReason;
+        String xmlVersion;
+        String defaultFormattingLanguage;
+        boolean staticTyping;
     }
 }

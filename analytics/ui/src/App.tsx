@@ -1,5 +1,5 @@
 import { Show, createSignal, onMount } from "solid-js";
-import type { AnalysisPayload, ParserMode, StatusFilter, ViewModel } from "./lib/analysis";
+import type { AnalysisPayload, SkipCategory, StatusFilter, ViewModel } from "./lib/analysis";
 import { buildViewModel, findIssueKeyForCase } from "./lib/analysis";
 import { ShieldAlert } from "./components/Icons";
 import type { TabType } from "./components/HeaderNav";
@@ -8,6 +8,7 @@ import { OverviewTab } from "./components/OverviewTab";
 import { SuitesTab } from "./components/SuitesTab";
 import { IssuesTab } from "./components/IssuesTab";
 import { ChangesTab } from "./components/ChangesTab";
+import { FeatureGapsTab } from "./components/FeatureGapsTab";
 
 function readEmbeddedAnalysis(): AnalysisPayload {
   const payload = document.getElementById("initial-analysis-data");
@@ -20,7 +21,17 @@ function readEmbeddedAnalysis(): AnalysisPayload {
 export default function App() {
   const [viewModel, setViewModel] = createSignal<ViewModel | null>(null);
   const [loadError, setLoadError] = createSignal("");
-  const [activeTab, setActiveTab] = createSignal<TabType>("overview");
+  // The active tab is mirrored in the URL hash so that a tab can be linked to directly.
+  const TABS: readonly TabType[] = ["overview", "suites", "issues", "gaps", "changes"];
+  const tabFromHash = (): TabType => {
+    const hash = window.location.hash.slice(1) as TabType;
+    return TABS.includes(hash) ? hash : "overview";
+  };
+  const [activeTab, setActiveTabSignal] = createSignal<TabType>(tabFromHash());
+  const setActiveTab = (tab: TabType) => {
+    setActiveTabSignal(tab);
+    history.replaceState(null, "", `#${tab}`);
+  };
   
   // Filtering and selection states
   const [activeSuite, setActiveSuite] = createSignal("ALL");
@@ -31,6 +42,10 @@ export default function App() {
   // Issue explorer / diagnostic states
   const [selectedIssueKey, setSelectedIssueKey] = createSignal<string | null>(null);
   const [copiedKey, setCopiedKey] = createSignal<string | null>(null);
+
+  // Feature gaps states
+  const [gapCategory, setGapCategory] = createSignal<SkipCategory | "ALL">("missing-feature");
+  const [expandedGapKey, setExpandedGapKey] = createSignal<string | null>(null);
 
   onMount(async () => {
     try {
@@ -70,6 +85,14 @@ export default function App() {
   const handleSelectIssue = (key: string) => {
     setSelectedIssueKey(key);
     setActiveTab("issues");
+  };
+
+  // Handle navigation to a dependency (or a skip category) in the feature gaps tab
+  const handleSelectGap = (category: SkipCategory | "ALL", key: string | null) => {
+    setActiveSuite("ALL");
+    setGapCategory(category);
+    setExpandedGapKey(key);
+    setActiveTab("gaps");
   };
 
   // Handle direct navigation to issue from Changes tab
@@ -135,6 +158,7 @@ export default function App() {
                       onSelectSuite={handleSelectSuite}
                       onSelectIssue={handleSelectIssue}
                       onSelectStatus={handleSelectStatus}
+                      onSelectGap={handleSelectGap}
                       onViewAllChanges={() => setActiveTab("changes")}
                     />
                   </Show>
@@ -161,6 +185,20 @@ export default function App() {
                       setSortBy={setSortBy}
                       selectedIssueKey={selectedIssueKey()}
                       setSelectedIssueKey={setSelectedIssueKey}
+                      copiedKey={copiedKey()}
+                      handleCopyCommand={handleCopyCommand}
+                    />
+                  </Show>
+
+                  <Show when={activeTab() === "gaps"}>
+                    <FeatureGapsTab
+                      viewModel={model}
+                      activeSuite={activeSuite()}
+                      setActiveSuite={setActiveSuite}
+                      category={gapCategory()}
+                      setCategory={setGapCategory}
+                      expandedKey={expandedGapKey()}
+                      setExpandedKey={setExpandedGapKey}
                       copiedKey={copiedKey()}
                       handleCopyCommand={handleCopyCommand}
                     />

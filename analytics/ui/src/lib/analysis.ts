@@ -1,8 +1,38 @@
 export const STATUS_ORDER = ["PASS", "FAIL", "ERROR", "SKIP"] as const;
 
 export type Status = (typeof STATUS_ORDER)[number];
-export type StatusFilter = Status | "ALL";
+/** Failure groups only cover tests that ran: passing tests are not in the report, and skips are feature gaps. */
+export type IssueStatus = "FAIL" | "ERROR";
+export type StatusFilter = IssueStatus | "ALL";
 export type ParserMode = "jsoniq" | "xquery" | "default";
+
+export const SKIP_CATEGORY_ORDER = ["missing-feature", "not-applicable", "other-spec", "unclassified"] as const;
+
+export type SkipCategory = (typeof SKIP_CATEGORY_ORDER)[number];
+export type SkipCategoryCounts = Record<SkipCategory, number>;
+
+export const SKIP_CATEGORY_META: Record<SkipCategory, { label: string; description: string; color: string }> = {
+  "missing-feature": {
+    label: "Missing feature",
+    description: "Requires a feature RumbleDB does not implement yet",
+    color: "var(--skip-missing)",
+  },
+  "not-applicable": {
+    label: "Not applicable",
+    description: "Requires a supported feature to be absent, or an implementation-defined alternative",
+    color: "var(--skip-na)",
+  },
+  "other-spec": {
+    label: "Other spec",
+    description: "Only applies to another language or specification version (e.g. XPath, XQuery 1.0)",
+    color: "var(--skip-spec)",
+  },
+  unclassified: {
+    label: "Unclassified",
+    description: "Skip reason was not recorded in a structured form",
+    color: "var(--skip)",
+  },
+};
 
 export type SlowestCase = {
   id: string;
@@ -13,6 +43,29 @@ export type SlowestCase = {
 export type RawCountRecord = Partial<Record<Lowercase<Status>, number | string>> & {
   time?: number;
   slowest?: SlowestCase[];
+  parser?: string;
+  skipCategories?: Partial<SkipCategoryCounts>;
+};
+
+export type UnmetDependency = {
+  key: string;
+  type: string;
+  value: string;
+  satisfied: boolean;
+  category: SkipCategory;
+};
+
+export type SkipInfo = {
+  category: SkipCategory;
+  dependencies: UnmetDependency[];
+};
+
+type RawDependencyItem = UnmetDependency & {
+  count?: number;
+  actionable?: number;
+  exclusive?: number;
+  suites?: Record<string, number>;
+  cases?: string[];
 };
 
 export type TestCaseRuntime = {
@@ -38,6 +91,10 @@ export type AnalysisPayload = {
   regressions?: Record<string, RawRegressionItem[]>;
   improvements?: Record<string, string[]>;
   cases?: Record<string, TestCaseInfo>;
+  skips?: {
+    categories?: Partial<SkipCategoryCounts>;
+    dependencies?: RawDependencyItem[];
+  };
 };
 
 export type SuiteSummary = {
@@ -51,6 +108,7 @@ export type SuiteSummary = {
   time: number;
   slowest: SlowestCase[];
   parser: string;
+  skipCategories: SkipCategoryCounts;
 };
 
 export type Totals = {
@@ -61,6 +119,11 @@ export type Totals = {
   total: number;
   passRate: number;
   time: number;
+  skipCategories: SkipCategoryCounts;
+  /** Tests that apply to RumbleDB: everything except not-applicable and other-spec skips. */
+  applicable: number;
+  /** Passing share of applicable tests, so missing-feature skips count against it. */
+  applicablePassRate: number;
 };
 
 export type TestCaseInfo = {
@@ -73,11 +136,21 @@ export type TestCaseInfo = {
   type?: string;
   message?: string;
   detail?: string;
+  skip?: SkipInfo;
+};
+
+export type DependencyRow = UnmetDependency & {
+  label: string;
+  count: number;
+  actionable: number;
+  exclusive: number;
+  suites: { name: string; count: number }[];
+  cases: TestCaseInfo[];
 };
 
 export type IssueRow = {
   suite: string;
-  status: Status;
+  status: IssueStatus;
   message: string;
   count: number;
   cases: TestCaseInfo[];
@@ -109,6 +182,7 @@ export type ViewModel = {
   suites: SuiteSummary[];
   totals: Totals;
   issueRows: IssueRow[];
+  dependencyRows: DependencyRow[];
   regressions: RegressionRow[];
   improvements: ImprovementRow[];
 };
@@ -127,7 +201,8 @@ export function buildViewModel(analysis: AnalysisPayload, sourceName: string): V
       skip: toInt(counts.skip),
       time: counts.time || 0,
       slowest: counts.slowest || [],
-      parser: String((counts as any).parser || "jsoniq"),
+      parser: String(counts.parser || "jsoniq"),
+      skipCategories: toSkipCategoryCounts(counts.skipCategories, toInt(counts.skip)),
     }))
     .map((suite) => ({
       ...suite,
@@ -136,7 +211,7 @@ export function buildViewModel(analysis: AnalysisPayload, sourceName: string): V
     }))
     .sort((left, right) => right.total - left.total || left.name.localeCompare(right.name));
 
-  const totals = suites.reduce<Totals>(
+  const totals = suites.reduce<Omit<Totals, "passRate" | "applicable" | "applicablePassRate">>(
     (acc, suite) => ({
       pass: acc.pass + suite.pass,
       fail: acc.fail + suite.fail,
@@ -144,10 +219,12 @@ export function buildViewModel(analysis: AnalysisPayload, sourceName: string): V
       skip: acc.skip + suite.skip,
       total: acc.total + suite.total,
       time: acc.time + suite.time,
-      passRate: 0,
+      skipCategories: addSkipCategoryCounts(acc.skipCategories, suite.skipCategories),
     }),
-    { pass: 0, fail: 0, error: 0, skip: 0, total: 0, time: 0, passRate: 0 }
+    { pass: 0, fail: 0, error: 0, skip: 0, total: 0, time: 0, skipCategories: emptySkipCategoryCounts() }
   );
+  const applicable =
+    totals.total - totals.skipCategories["not-applicable"] - totals.skipCategories["other-spec"];
 
   return {
     sourceName,
@@ -155,11 +232,47 @@ export function buildViewModel(analysis: AnalysisPayload, sourceName: string): V
     totals: {
       ...totals,
       passRate: percentNumber(totals.pass, totals.pass + totals.fail + totals.error),
+      applicable,
+      applicablePassRate: percentNumber(totals.pass, applicable),
     },
     issueRows: flattenIssues(analysis.issues || {}, analysis.cases || {}),
+    dependencyRows: flattenDependencies(analysis.skips?.dependencies || [], analysis.cases || {}),
     regressions: flattenRegressions(analysis.regressions || {}, analysis.cases || {}),
     improvements: flattenImprovements(analysis.improvements || {}),
   };
+}
+
+export function formatDependency(dependency: Pick<UnmetDependency, "type" | "value" | "satisfied">): string {
+  const subject = dependency.type === "spec" ? `${dependency.value} only` : dependency.value;
+  const prefix = dependency.type === "feature" || dependency.type === "spec" ? "" : `${dependency.type} `;
+  return dependency.satisfied ? `${prefix}${subject}` : `${prefix}${subject} (must be absent)`;
+}
+
+export type StatusSegment = {
+  key: Exclude<Status, "SKIP"> | SkipCategory;
+  label: string;
+  count: number;
+  color: string;
+};
+
+/** Pass/fail/error followed by the skip categories, so skips are never shown as one opaque block. */
+export function statusSegments(counts: Pick<Totals, "pass" | "fail" | "error" | "skipCategories">): StatusSegment[] {
+  return [
+    { key: "PASS" as const, label: "Pass", count: counts.pass, color: "var(--pass)" },
+    { key: "FAIL" as const, label: "Fail", count: counts.fail, color: "var(--fail)" },
+    { key: "ERROR" as const, label: "Error", count: counts.error, color: "var(--error)" },
+    ...SKIP_CATEGORY_ORDER.map((category) => ({
+      key: category,
+      label: SKIP_CATEGORY_META[category].label,
+      count: counts.skipCategories[category],
+      color: SKIP_CATEGORY_META[category].color,
+    })),
+  ];
+}
+
+export function suiteOfCase(caseId: string): string {
+  const slash = caseId.indexOf("/");
+  return slash > 0 ? caseId.slice(0, slash) : "unknown";
 }
 
 export function formatPercent(value: number): string {
@@ -261,7 +374,8 @@ function flattenIssues(
   for (const [suiteName, statuses] of Object.entries(issuesBySuite || {})) {
     for (const [statusKey, items] of Object.entries(statuses || {})) {
       const status = toStatus(statusKey);
-      if (!status) {
+      // Reports produced before skips moved to their own section still contain skip groups.
+      if (status !== "FAIL" && status !== "ERROR") {
         continue;
       }
       for (const item of items || []) {
@@ -362,6 +476,56 @@ function flattenImprovements(improvementsBySuite: AnalysisPayload["improvements"
 
   rows.sort((left, right) => left.suite.localeCompare(right.suite) || left.id.localeCompare(right.id));
   return rows;
+}
+
+function flattenDependencies(
+  items: RawDependencyItem[],
+  casesMap: Record<string, TestCaseInfo>
+): DependencyRow[] {
+  return items.map((item) => ({
+    key: item.key,
+    type: item.type,
+    value: item.value,
+    satisfied: item.satisfied !== false,
+    category: toSkipCategory(item.category),
+    label: formatDependency(item),
+    count: toInt(item.count),
+    actionable: toInt(item.actionable),
+    exclusive: toInt(item.exclusive),
+    suites: Object.entries(item.suites || {})
+      .map(([name, count]) => ({ name, count: toInt(count) }))
+      .sort((left, right) => right.count - left.count || left.name.localeCompare(right.name)),
+    cases: (item.cases || []).map((id) => ({ ...casesMap[id], id })),
+  }));
+}
+
+function emptySkipCategoryCounts(): SkipCategoryCounts {
+  return { "missing-feature": 0, "not-applicable": 0, "other-spec": 0, unclassified: 0 };
+}
+
+/** Reports without skip categories treat every skip as unclassified. */
+function toSkipCategoryCounts(raw: Partial<SkipCategoryCounts> | undefined, skip: number): SkipCategoryCounts {
+  const counts = emptySkipCategoryCounts();
+  if (!raw) {
+    counts.unclassified = skip;
+    return counts;
+  }
+  for (const category of SKIP_CATEGORY_ORDER) {
+    counts[category] = toInt(raw[category]);
+  }
+  return counts;
+}
+
+function addSkipCategoryCounts(left: SkipCategoryCounts, right: SkipCategoryCounts): SkipCategoryCounts {
+  const counts = emptySkipCategoryCounts();
+  for (const category of SKIP_CATEGORY_ORDER) {
+    counts[category] = left[category] + right[category];
+  }
+  return counts;
+}
+
+function toSkipCategory(value: string | undefined): SkipCategory {
+  return (SKIP_CATEGORY_ORDER as readonly string[]).includes(String(value)) ? (value as SkipCategory) : "unclassified";
 }
 
 function toInt(value: number | string | undefined): number {

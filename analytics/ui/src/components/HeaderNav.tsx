@@ -1,8 +1,8 @@
-import { Terminal, LayoutDashboard, FolderOpen, AlertOctagon, RefreshCw } from "./Icons";
+import { Terminal, LayoutDashboard, FolderOpen, AlertOctagon, RefreshCw, Puzzle } from "./Icons";
 import { formatPercent } from "../lib/analysis";
 import type { ViewModel } from "../lib/analysis";
 
-export type TabType = "overview" | "suites" | "issues" | "changes";
+export type TabType = "overview" | "suites" | "issues" | "gaps" | "changes";
 
 type HeaderNavProps = {
   viewModel: ViewModel;
@@ -60,6 +60,19 @@ export function HeaderNav(props: HeaderNavProps) {
               classList={{ "badge-alert": props.viewModel.issueRows.length > 0 }}
             >
               {props.viewModel.issueRows.length}
+            </span>
+          </button>
+
+          <button
+            class="header-nav-tab"
+            classList={{ "header-nav-tab-active": props.activeTab === "gaps" }}
+            onClick={() => props.setActiveTab("gaps")}
+            title="Skipped tests grouped by the dependency that blocks them"
+          >
+            <Puzzle size={16} />
+            <span>Feature Gaps</span>
+            <span class="header-nav-badge">
+              {props.viewModel.dependencyRows.filter((row) => row.category === "missing-feature").length}
             </span>
           </button>
 

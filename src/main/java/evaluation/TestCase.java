@@ -11,7 +11,7 @@ import net.sf.saxon.s9api.XdmNode;
 public class TestCase {
     public String testString;
     public XdmNode assertion;
-    public String skipReason;
+    public SkipReason skipReason;
     public final String xmlVersion;
     public final String defaultFormattingLanguage;
     public final boolean staticTyping;
@@ -22,7 +22,7 @@ public class TestCase {
     public TestCase(
             String testString,
             XdmNode assertion,
-            String skipReason,
+            SkipReason skipReason,
             Environment environment,
             String xmlVersion,
             String defaultFormattingLanguage,

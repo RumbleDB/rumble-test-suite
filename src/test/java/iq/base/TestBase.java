@@ -89,7 +89,7 @@ public class TestBase {
     protected void testCase(CollectedTestCase collectedTestCase) {
         TestCase testCase = collectedTestCase.testCase();
         if (testCase.skipReason != null) {
-            assumeTrue(false, testCase.skipReason);
+            assumeTrue(false, testCase.skipReason.message());
         }
 
         String testString = testCase.testString;

@@ -1,6 +1,6 @@
 import { For, Show } from "solid-js";
 import type { SuiteSummary, IssueRow } from "../lib/analysis";
-import { formatPercent, formatDuration } from "../lib/analysis";
+import { formatPercent, formatDuration, statusSegments } from "../lib/analysis";
 
 type PassRateGaugeProps = {
   passRate: number;
@@ -69,10 +69,6 @@ export function SuitesBarChart(props: SuitesBarChartProps) {
       <For each={sortedSuites()}>
         {(suite) => {
           const total = Math.max(suite.total, 1);
-          const passPct = (suite.pass / total) * 100;
-          const failPct = (suite.fail / total) * 100;
-          const errPct = (suite.error / total) * 100;
-          const skipPct = (suite.skip / total) * 100;
 
           const isActive = () => props.activeSuite === suite.name;
 
@@ -98,42 +94,19 @@ export function SuitesBarChart(props: SuitesBarChartProps) {
               {/* Stacked bar showing suite breakdown */}
               <div style={{ display: "flex", "flex-direction": "column", gap: "4px" }}>
                 <div class="mini-progress" style={{ height: "8px" }}>
-                  <div 
-                    class="mini-progress-segment" 
-                    style={{ 
-                      width: `${passPct}%`, 
-                      background: "var(--pass)",
-                      transition: "width 500ms ease" 
-                    }} 
-                    title={`${suite.pass} Pass`}
-                  />
-                  <div 
-                    class="mini-progress-segment" 
-                    style={{ 
-                      width: `${failPct}%`, 
-                      background: "var(--fail)",
-                      transition: "width 500ms ease" 
-                    }} 
-                    title={`${suite.fail} Fail`}
-                  />
-                  <div 
-                    class="mini-progress-segment" 
-                    style={{ 
-                      width: `${errPct}%`, 
-                      background: "var(--error)",
-                      transition: "width 500ms ease" 
-                    }} 
-                    title={`${suite.error} Error`}
-                  />
-                  <div 
-                    class="mini-progress-segment" 
-                    style={{ 
-                      width: `${skipPct}%`, 
-                      background: "var(--skip)",
-                      transition: "width 500ms ease" 
-                    }} 
-                    title={`${suite.skip} Skip`}
-                  />
+                  <For each={statusSegments(suite)}>
+                    {(segment) => (
+                      <div
+                        class="mini-progress-segment"
+                        style={{
+                          width: `${(segment.count / total) * 100}%`,
+                          background: segment.color,
+                          transition: "width 500ms ease"
+                        }}
+                        title={`${segment.count} ${segment.label}`}
+                      />
+                    )}
+                  </For>
                 </div>
               </div>
             </div>

@@ -1,6 +1,8 @@
 xquery version '3.1';
 module namespace summary = "urn:analytics:analysis:summary";
 
+import module namespace skips = "urn:analytics:analysis:skips" at "skips.xquery";
+
 declare namespace map = "http://www.w3.org/2005/xpath-functions/map";
 
 declare function summary:count-status($cases as array(*), $suite as xs:string, $status as xs:string) as xs:integer {
@@ -34,6 +36,7 @@ declare function summary:run($cases as array(*)) as map(*) {
                 "fail": summary:count-status($cases, $suite, "FAIL"),
                 "error": summary:count-status($cases, $suite, "ERROR"),
                 "skip": summary:count-status($cases, $suite, "SKIP"),
+                "skipCategories": skips:category-counts($suite-cases[string(?status) eq "SKIP"]),
                 "time": sum(for $case in $suite-cases return xs:double($case?time)),
                 "slowest": $slowest-top-10,
                 "parser": $parser
@@ -85,8 +88,7 @@ declare function summary:issues($cases as array(*)) as map(*) {
             $suite,
             map {
                 "error": summary:issue-cases($cases, $suite, "ERROR", "type"),
-                "fail": summary:issue-cases($cases, $suite, "FAIL", "message"),
-                "skip": summary:issue-cases($cases, $suite, "SKIP", "message")
+                "fail": summary:issue-cases($cases, $suite, "FAIL", "message")
             }
         ),
         map { "duplicates": "use-last" }

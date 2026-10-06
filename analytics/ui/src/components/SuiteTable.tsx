@@ -1,6 +1,6 @@
 import { createSignal, createMemo, For } from "solid-js";
 import type { SuiteSummary } from "../lib/analysis";
-import { formatPercent, formatDuration } from "../lib/analysis";
+import { formatPercent, formatDuration, statusSegments } from "../lib/analysis";
 
 type SuiteTableProps = {
   suites: SuiteSummary[];
@@ -110,15 +110,28 @@ export function SuiteTable(props: SuiteTableProps) {
                   <td style={{ "padding-left": "24px" }}>
                     <div style={{ display: "flex", "align-items": "center", gap: "10px" }}>
                       <div class="mini-progress" style={{ height: "6px", width: "120px", background: "#f1f5f9" }}>
-                        <div class="mini-progress-segment" style={{ width: `${(suite.pass / suite.total) * 100}%`, background: "var(--pass)" }} />
-                        <div class="mini-progress-segment" style={{ width: `${(suite.fail / suite.total) * 100}%`, background: "var(--fail)" }} />
-                        <div class="mini-progress-segment" style={{ width: `${(suite.error / suite.total) * 100}%`, background: "var(--error)" }} />
-                        <div class="mini-progress-segment" style={{ width: `${(suite.skip / suite.total) * 100}%`, background: "var(--skip)" }} />
+                        <For each={statusSegments(suite)}>
+                          {(segment) => (
+                            <div
+                              class="mini-progress-segment"
+                              style={{ width: `${(segment.count / Math.max(suite.total, 1)) * 100}%`, background: segment.color }}
+                              title={`${segment.label}: ${segment.count}`}
+                            />
+                          )}
+                        </For>
                       </div>
                       <div class="suite-card-split" style={{ "font-size": "0.72rem", display: "flex", gap: "6px", color: "var(--muted)" }}>
                         <span style={{ color: suite.fail > 0 ? "var(--fail)" : "inherit" }}>{suite.fail}F</span>
                         <span style={{ color: suite.error > 0 ? "var(--error)" : "inherit" }}>{suite.error}E</span>
-                        <span style={{ color: suite.skip > 0 ? "var(--skip)" : "inherit" }}>{suite.skip}S</span>
+                        <span
+                          style={{ color: suite.skipCategories["missing-feature"] > 0 ? "var(--skip-missing-ink)" : "inherit" }}
+                          title="Skipped for a missing feature"
+                        >
+                          {suite.skipCategories["missing-feature"]}M
+                        </span>
+                        <span title="Skipped as not applicable, other spec, or unclassified">
+                          {suite.skip - suite.skipCategories["missing-feature"]}N/A
+                        </span>
                       </div>
                     </div>
                   </td>

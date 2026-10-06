@@ -1,8 +1,8 @@
 import { For, Show } from "solid-js";
 import { PassRateGauge, SuitesBarChart, IssueDistributionChart } from "./DashboardCharts";
-import { formatPercent, formatDuration } from "../lib/analysis";
-import type { ViewModel, StatusFilter } from "../lib/analysis";
-import type { TabType } from "./HeaderNav";
+import { GapBar } from "./FeatureGapsTab";
+import { formatPercent, formatDuration, statusSegments } from "../lib/analysis";
+import type { ViewModel, StatusFilter, SkipCategory, StatusSegment } from "../lib/analysis";
 
 type OverviewTabProps = {
   viewModel: ViewModel;
@@ -10,11 +10,27 @@ type OverviewTabProps = {
   onSelectSuite: (name: string) => void;
   onSelectIssue: (key: string) => void;
   onSelectStatus: (status: StatusFilter) => void;
+  onSelectGap: (category: SkipCategory | "ALL", key: string | null) => void;
   onViewAllChanges: () => void;
 };
 
 export function OverviewTab(props: OverviewTabProps) {
   const openProblems = () => props.viewModel.totals.fail + props.viewModel.totals.error;
+  const skipCounts = () => props.viewModel.totals.skipCategories;
+  const notApplicable = () => skipCounts()["not-applicable"] + skipCounts()["other-spec"];
+  const segments = () => statusSegments(props.viewModel.totals).filter((segment) => segment.count > 0);
+  const missingFeatures = () =>
+    props.viewModel.dependencyRows.filter((row) => row.category === "missing-feature");
+  const topMissingFeatures = () => missingFeatures().slice(0, 6);
+
+  // Passing tests have no detail view; failures and errors open their groups, skips their feature gaps.
+  const selectSegment = (segment: StatusSegment) => {
+    if (segment.key === "FAIL" || segment.key === "ERROR") {
+      props.onSelectStatus(segment.key);
+    } else if (segment.key !== "PASS") {
+      props.onSelectGap(segment.key, null);
+    }
+  };
 
   return (
     <div class="tab-content-animate" style={{ display: "flex", "flex-direction": "column", gap: "24px" }}>
@@ -23,7 +39,9 @@ export function OverviewTab(props: OverviewTabProps) {
         <div class="panel stat-card stat-card-total">
           <span class="stat-label">Total Tests</span>
           <strong class="stat-value">{props.viewModel.totals.total}</strong>
-          <span class="stat-hint">{props.viewModel.totals.pass} passing tests</span>
+          <span class="stat-hint">
+            {props.viewModel.totals.pass} passing · {formatDuration(props.viewModel.totals.time)} runtime
+          </span>
         </div>
         <div class="panel stat-card stat-card-pass">
           <span class="stat-label">Pass Rate</span>
@@ -33,7 +51,9 @@ export function OverviewTab(props: OverviewTabProps) {
           >
             {formatPercent(props.viewModel.totals.passRate)}
           </strong>
-          <span class="stat-hint">{openProblems()} outstanding issues</span>
+          <span class="stat-hint" title="Passing share of all tests except not-applicable and other-spec skips">
+            {formatPercent(props.viewModel.totals.applicablePassRate)} of applicable tests
+          </span>
         </div>
         <div class="panel stat-card stat-card-fail">
           <span class="stat-label">Failures</span>
@@ -55,20 +75,37 @@ export function OverviewTab(props: OverviewTabProps) {
           </strong>
           <span class="stat-hint">Exceptions occurred</span>
         </div>
-        <div class="panel stat-card stat-card-skip">
-          <span class="stat-label">Skips</span>
-          <strong class="stat-value" style={{ color: "var(--skip)" }}>
-            {props.viewModel.totals.skip}
+        <div
+          class="panel stat-card stat-card-missing"
+          style={{ cursor: "pointer" }}
+          onClick={() => props.onSelectGap("missing-feature", null)}
+          title="Skipped because RumbleDB does not implement a required feature"
+        >
+          <span class="stat-label">Missing Features</span>
+          <strong class="stat-value" style={{ color: "var(--skip-missing-ink)" }}>
+            {skipCounts()["missing-feature"]}
           </strong>
-          <span class="stat-hint">Omitted test cases</span>
+          <span class="stat-hint">skipped tests · {missingFeatures().length} features</span>
         </div>
-        <div class="panel stat-card stat-card-time">
-          <span class="stat-label">Total Runtime</span>
-          <strong class="stat-value" style={{ color: "var(--accent)" }}>
-            {formatDuration(props.viewModel.totals.time)}
-          </strong>
-          <span class="stat-hint">Suite execution duration</span>
+        <div
+          class="panel stat-card stat-card-na"
+          style={{ cursor: "pointer" }}
+          onClick={() => props.onSelectGap("ALL", null)}
+          title="Skipped because the test does not apply to RumbleDB"
+        >
+          <span class="stat-label">Not Applicable</span>
+          <strong class="stat-value" style={{ color: "var(--muted)" }}>{notApplicable()}</strong>
+          <span class="stat-hint">
+            {skipCounts()["not-applicable"]} negative/alternative · {skipCounts()["other-spec"]} other spec
+          </span>
         </div>
+        <Show when={skipCounts().unclassified > 0}>
+          <div class="panel stat-card stat-card-skip">
+            <span class="stat-label">Unclassified Skips</span>
+            <strong class="stat-value" style={{ color: "var(--skip)" }}>{skipCounts().unclassified}</strong>
+            <span class="stat-hint">Skip reason not structured</span>
+          </div>
+        </Show>
       </section>
 
       <div class="dashboard-grid">
@@ -90,47 +127,69 @@ export function OverviewTab(props: OverviewTabProps) {
               />
 
               <div class="status-bar-bar">
-                <div
-                  class="status-bar-segment"
-                  style={{ width: `${(props.viewModel.totals.pass / props.viewModel.totals.total) * 100}%`, background: "var(--pass)" }}
-                  title={`Pass: ${props.viewModel.totals.pass}`}
-                />
-                <div
-                  class="status-bar-segment"
-                  style={{ width: `${(props.viewModel.totals.fail / props.viewModel.totals.total) * 100}%`, background: "var(--fail)" }}
-                  title={`Fail: ${props.viewModel.totals.fail}`}
-                />
-                <div
-                  class="status-bar-segment"
-                  style={{ width: `${(props.viewModel.totals.error / props.viewModel.totals.total) * 100}%`, background: "var(--error)" }}
-                  title={`Error: ${props.viewModel.totals.error}`}
-                />
-                <div
-                  class="status-bar-segment"
-                  style={{ width: `${(props.viewModel.totals.skip / props.viewModel.totals.total) * 100}%`, background: "var(--skip)" }}
-                  title={`Skip: ${props.viewModel.totals.skip}`}
-                />
+                <For each={segments()}>
+                  {(segment) => (
+                    <div
+                      class="status-bar-segment"
+                      style={{ width: `${(segment.count / Math.max(props.viewModel.totals.total, 1)) * 100}%`, background: segment.color }}
+                      title={`${segment.label}: ${segment.count}`}
+                    />
+                  )}
+                </For>
               </div>
 
               <div class="chart-legend-grid">
-                <div class="chart-legend-item" onClick={() => props.onSelectStatus("PASS")}>
-                  <span class="legend-dot" style={{ background: "var(--pass)" }} />
-                  <span>Pass ({props.viewModel.totals.pass})</span>
-                </div>
-                <div class="chart-legend-item" onClick={() => props.onSelectStatus("FAIL")}>
-                  <span class="legend-dot" style={{ background: "var(--fail)" }} />
-                  <span>Fail ({props.viewModel.totals.fail})</span>
-                </div>
-                <div class="chart-legend-item" onClick={() => props.onSelectStatus("ERROR")}>
-                  <span class="legend-dot" style={{ background: "var(--error)" }} />
-                  <span>Error ({props.viewModel.totals.error})</span>
-                </div>
-                <div class="chart-legend-item" onClick={() => props.onSelectStatus("SKIP")}>
-                  <span class="legend-dot" style={{ background: "var(--skip)" }} />
-                  <span>Skip ({props.viewModel.totals.skip})</span>
-                </div>
+                <For each={segments()}>
+                  {(segment) => (
+                    <div
+                      class="chart-legend-item"
+                      style={{ cursor: segment.key === "PASS" ? "default" : "pointer" }}
+                      onClick={() => selectSegment(segment)}
+                    >
+                      <span class="legend-dot" style={{ background: segment.color }} />
+                      <span>
+                        {segment.label} ({segment.count})
+                      </span>
+                    </div>
+                  )}
+                </For>
               </div>
             </div>
+          </section>
+
+          {/* Left: Missing features ranked by skipped tests */}
+          <section class="panel">
+            <div class="section-header">
+              <div>
+                <h2>Top Missing Features</h2>
+                <p class="section-subtitle">Features whose absence skips the most tests</p>
+              </div>
+            </div>
+            <Show
+              when={topMissingFeatures().length > 0}
+              fallback={<div class="empty-state" style={{ padding: "16px" }}>No tests are skipped for missing features.</div>}
+            >
+              <div style={{ display: "flex", "flex-direction": "column", gap: "10px", "margin-top": "10px" }}>
+                <For each={topMissingFeatures()}>
+                  {(row) => (
+                    <div class="issue-card" onClick={() => props.onSelectGap("missing-feature", row.key)}>
+                      <div style={{ display: "flex", "justify-content": "space-between", "font-size": "0.78rem", gap: "8px" }}>
+                        <span style={{ "font-family": "var(--font-mono)", "font-weight": "700", color: "var(--ink)" }}>{row.label}</span>
+                        <span style={{ color: "var(--muted)", "white-space": "nowrap" }}>
+                          {row.count} tests · {row.exclusive} sole blocker
+                        </span>
+                      </div>
+                      <GapBar row={row} max={topMissingFeatures()[0].count} />
+                    </div>
+                  )}
+                </For>
+                <Show when={missingFeatures().length > topMissingFeatures().length}>
+                  <button class="btn-view-more" onClick={() => props.onSelectGap("missing-feature", null)}>
+                    View all missing features ({missingFeatures().length}) →
+                  </button>
+                </Show>
+              </div>
+            </Show>
           </section>
 
           {/* Left: Change Digest Summary */}

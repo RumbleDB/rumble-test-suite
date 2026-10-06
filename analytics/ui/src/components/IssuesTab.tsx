@@ -2,7 +2,7 @@ import { Show, createMemo, createSignal, For, createEffect } from "solid-js";
 import { Search, AlertCircle, ChevronLeft, ChevronRight, Copy, Check, Play } from "./Icons";
 import { HighlightText } from "./HighlightText";
 import { decodeExpectedResult, getParserCommand, getSingleTestCaseCommand } from "../lib/analysis";
-import type { ViewModel, StatusFilter, ParserMode, IssueRow } from "../lib/analysis";
+import type { ViewModel, StatusFilter } from "../lib/analysis";
 
 type IssuesTabProps = {
   viewModel: ViewModel;
@@ -110,10 +110,8 @@ export function IssuesTab(props: IssuesTabProps) {
           onChange={(e) => props.setActiveStatus(e.currentTarget.value as StatusFilter)}
         >
           <option value="ALL">All Statuses</option>
-          <option value="PASS">Pass</option>
           <option value="FAIL">Fail</option>
           <option value="ERROR">Error</option>
-          <option value="SKIP">Skip</option>
         </select>
 
         <select
@@ -396,16 +394,6 @@ export function IssuesTab(props: IssuesTabProps) {
                                     </div>
                                   </Show>
 
-                                  <Show when={c.status === "SKIP" && c.message}>
-                                    <div style={{ display: "flex", "flex-direction": "column", gap: "2px", "margin-bottom": "4px" }}>
-                                      <span style={{ "font-size": "0.68rem", color: "var(--skip)", "font-weight": "800", "text-transform": "uppercase", "letter-spacing": "0.05em" }}>Skip Reason:</span>
-                                      <div style={{ background: "var(--skip-light)", border: "1px solid rgba(120, 144, 156, 0.15)", padding: "8px 10px", "border-radius": "6px", overflow: "auto" }}>
-                                        <div style={{ "font-family": "var(--font-mono)", "font-size": "0.78rem", color: "var(--skip)", "white-space": "pre-wrap" }}>
-                                          {c.message}
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </Show>
 
                                   <Show when={c.query} fallback={<p style={{ margin: "4px 0 0 0", "font-size": "0.75rem", color: "var(--muted)" }}>No query text available</p>}>
                                     <div style={{ display: "flex", "flex-direction": "column", gap: "6px", width: "100%", "margin-top": "4px" }}>

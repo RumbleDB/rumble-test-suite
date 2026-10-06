@@ -122,20 +122,24 @@ def render_improvement_details(analysis: dict) -> str:
 
 def render_summary(summary: dict) -> str:
     lines = [
-        "| Test Suite | Passing | Failing | Errors | Skipped | Total |",
-        "| --- | ---: | ---: | ---: | ---: | ---: |",
+        "| Test Suite | Passing | Failing | Errors | Skipped | Missing features | Total |",
+        "| --- | ---: | ---: | ---: | ---: | ---: | ---: |",
     ]
 
     totals = {"pass": 0, "fail": 0, "error": 0, "skip": 0}
+    total_missing = 0
     for suite, counts in sorted(summary.items()):
         passing = counts["pass"]
         failing = counts["fail"]
         errors = counts["error"]
         skipped = counts["skip"]
+        # Skipped tests that need an unimplemented feature, as opposed to tests that do not apply.
+        missing = counts.get("skipCategories", {}).get("missing-feature", 0)
         total = passing + failing + errors + skipped
         lines.append(
-            f"| `{table_cell(suite)}` | {passing} | {failing} | {errors} | {skipped} | {total} |"
+            f"| `{table_cell(suite)}` | {passing} | {failing} | {errors} | {skipped} | {missing} | {total} |"
         )
+        total_missing += missing
         totals["pass"] += passing
         totals["fail"] += failing
         totals["error"] += errors
@@ -144,7 +148,7 @@ def render_summary(summary: dict) -> str:
     total_tests = sum(totals.values())
     lines.append(
         f"| **Total** | **{totals['pass']}** | **{totals['fail']}** | "
-        f"**{totals['error']}** | **{totals['skip']}** | **{total_tests}** |"
+        f"**{totals['error']}** | **{totals['skip']}** | **{total_missing}** | **{total_tests}** |"
     )
     return "\n".join(lines)
 

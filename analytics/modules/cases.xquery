@@ -1,6 +1,8 @@
 xquery version '3.1';
 module namespace cases = "urn:analytics:analysis:cases";
 
+import module namespace skips = "urn:analytics:analysis:skips" at "skips.xquery";
+
 declare namespace map = "http://www.w3.org/2005/xpath-functions/map";
 
 declare variable $cases:translated-query-start := "=== Translated query ===";
@@ -35,6 +37,22 @@ declare function cases:translated-queries($case as element(testcase)) as array(*
         where $trimmed-query ne ""
         return cases:safe-string($trimmed-query)
     }
+};
+
+(:
+ : The JUnit 5 reporter writes no message attribute for aborted tests, only the stack trace, e.g.
+ : "org.opentest4j.TestAbortedException: Assumption failed: <message>" followed by "at ..." lines.
+ :)
+declare function cases:skip-message($skipped as element(skipped)?) as xs:string? {
+    let $attribute := $skipped/@message ! cases:safe-string(string(.)) ! normalize-space(.)
+    let $first-line := cases:node-text($skipped) ! tokenize(., "\r?\n")[normalize-space(.) ne ""][1]
+    return (
+        $attribute[. ne ""],
+        $first-line
+            ! replace(., "^[\w.$]+(Exception|Error):\s*", "")
+            ! replace(., "^Assumption failed:\s*", "")
+            ! normalize-space(.)
+    )[1]
 };
 
 declare function cases:status($case as element(testcase)) as xs:string {
@@ -97,8 +115,7 @@ declare function cases:case-data(
     let $details := if ($status eq "PASS") then () else cases:lookup-testcase($id)
     
     let $error-fail-msg := ($case/error/@message, $case/failure/@message)[1] ! string(.) ! cases:safe-string(.) ! normalize-space(.)
-    let $skip-msg := ($case/skipped/@message ! string(.) ! cases:safe-string(.) ! normalize-space(.))[. ne ""]
-    let $skip-text := $case/skipped ! cases:node-text(.) ! normalize-space(.)
+    let $skip-msg := cases:skip-message($case/skipped)
     
     return map:merge((
         map {
@@ -108,9 +125,13 @@ declare function cases:case-data(
             "parser": $parser,
             "time": $time,
             "type": ($case/error/@type, $case/failure/@type)[1] ! string(.) ! cases:safe-string(.) ! normalize-space(.),
-            "message": ($error-fail-msg, $skip-msg, $skip-text)[1],
+            "message": ($error-fail-msg, $skip-msg)[1],
             "detail": ($case/error, $case/failure, $case/skipped)[1] ! cases:node-text(.)
         },
+        if ($status eq "SKIP") then
+            skips:parse($skip-msg) ! map { "skip": . }
+        else
+            (),
         if ($include-translated-queries) then
             map { "translatedQueries": cases:translated-queries($case) }
         else
