@@ -45,6 +45,14 @@ A `!` before a value marks a dependency with `satisfied="false"`, i.e. the test 
 
 A test case takes the category of its highest-precedence dependency, since implementing a missing feature does not make a test case run while another dependency rules it out. The analytics parse these messages (``analytics/modules/skips.xquery``) into a ``skips`` section of ``analysis.json`` that ranks the unmet dependencies by the number of skipped tests, and the dashboard shows them in the *Feature Gaps* tab.
 
+Failures and errors are further classified by cause (``analytics/modules/causes.xquery``), since JUnit's FAIL/ERROR split only says whether an assertion failed:
+- ``wrong-result`` / ``wrong-error`` (FAIL) the result does not satisfy the assertion, or the expected error was not raised or had a different code
+- ``unexpected-error`` (ERROR) RumbleDB raised an error where a result was expected
+- ``unsupported`` (ERROR) RumbleDB reported the feature as not supported; these are also listed in *Feature Gaps*, grouped by feature
+- ``crash`` (ERROR) an internal RumbleDB error or a Java exception escaping RumbleDB
+- ``harness`` (ERROR) the exception was thrown by the test harness itself
+- ``timeout`` (ERROR) the test exceeded its time limit
+
 # View Analytics
 There are some analytics that are run after the tests are evaluated. You can view the resulting plots (and the complete JSON files) by browsing the artifacts of the *plot* job.
 

@@ -2,6 +2,7 @@ xquery version '3.1';
 module namespace cases = "urn:analytics:analysis:cases";
 
 import module namespace skips = "urn:analytics:analysis:skips" at "skips.xquery";
+import module namespace causes = "urn:analytics:analysis:causes" at "causes.xquery";
 
 declare namespace map = "http://www.w3.org/2005/xpath-functions/map";
 
@@ -116,7 +117,10 @@ declare function cases:case-data(
     
     let $error-fail-msg := ($case/error/@message, $case/failure/@message)[1] ! string(.) ! cases:safe-string(.) ! normalize-space(.)
     let $skip-msg := cases:skip-message($case/skipped)
-    
+    let $type := ($case/error/@type, $case/failure/@type)[1] ! string(.) ! cases:safe-string(.) ! normalize-space(.)
+    let $detail := ($case/error, $case/failure, $case/skipped)[1] ! cases:node-text(.)
+    let $cause := causes:cause($status, $type, $error-fail-msg, $detail)
+
     return map:merge((
         map {
             "id": $id,
@@ -124,10 +128,15 @@ declare function cases:case-data(
             "status": $status,
             "parser": $parser,
             "time": $time,
-            "type": ($case/error/@type, $case/failure/@type)[1] ! string(.) ! cases:safe-string(.) ! normalize-space(.),
+            "type": $type,
             "message": ($error-fail-msg, $skip-msg)[1],
-            "detail": ($case/error, $case/failure, $case/skipped)[1] ! cases:node-text(.)
+            "detail": $detail
         },
+        $cause ! map { "cause": . },
+        if ($cause eq "unsupported") then
+            causes:gap($type, $error-fail-msg, $details?query) ! map { "gap": . }
+        else
+            (),
         if ($status eq "SKIP") then
             skips:parse($skip-msg) ! map { "skip": . }
         else

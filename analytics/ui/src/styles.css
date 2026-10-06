@@ -705,13 +705,16 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 8px;
   width: 100%;
 }
 
 .issue-card-meta {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
+  gap: 4px 6px;
+  min-width: 0;
 }
 
 .pill {
@@ -772,6 +775,8 @@ body {
 }
 
 .issue-card-count {
+  white-space: nowrap;
+  flex-shrink: 0;
   font-size: 0.78rem;
   font-weight: 700;
   color: var(--ink);

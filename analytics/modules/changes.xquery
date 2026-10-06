@@ -64,11 +64,14 @@ declare function changes:regressions($baseline-cases as map(*), $candidate-cases
             $suite,
             array {
                 for $candidate-case in $cases?*
-                return map {
-                    "id": string($candidate-case?id),
-                    "status": lower-case(string($candidate-case?status)),
-                    "message": changes:message($candidate-case)
-                }
+                return map:merge((
+                    map {
+                        "id": string($candidate-case?id),
+                        "status": lower-case(string($candidate-case?status)),
+                        "message": changes:message($candidate-case)
+                    },
+                    $candidate-case?cause ! map { "cause": . }
+                ))
             }
         ),
         map { "duplicates": "use-last" }

@@ -27,8 +27,15 @@ type FeatureGapsTabProps = {
 
 type ScopedRow = DependencyRow & { scopedCases: DependencyRow["cases"] };
 
+type GapCounts = Pick<DependencyRow, "count" | "actionable" | "exclusive" | "category" | "source">;
+
+const RUNTIME_SEGMENT_LABEL = "Errors at runtime";
+
 /** Splits a dependency's skipped tests into what implementing it would achieve. */
-export function gapSegments(row: Pick<DependencyRow, "count" | "actionable" | "exclusive" | "category">) {
+export function gapSegments(row: GapCounts) {
+  if (row.source === "runtime") {
+    return [{ label: RUNTIME_SEGMENT_LABEL, count: row.count, color: "var(--error)", opacity: 1 }];
+  }
   if (row.category !== "missing-feature") {
     return [{ label: "Skipped", count: row.count, color: SKIP_CATEGORY_META[row.category].color, opacity: 1 }];
   }
@@ -39,7 +46,7 @@ export function gapSegments(row: Pick<DependencyRow, "count" | "actionable" | "e
   ];
 }
 
-export function GapBar(props: { row: Pick<DependencyRow, "count" | "actionable" | "exclusive" | "category">; max: number }) {
+export function GapBar(props: { row: GapCounts; max: number }) {
   return (
     <div class="gap-bar" style={{ width: `${Math.max((props.row.count / Math.max(props.max, 1)) * 100, 2)}%` }}>
       <For each={gapSegments(props.row).filter((segment) => segment.count > 0)}>
@@ -70,6 +77,10 @@ export function FeatureGapsTab(props: FeatureGapsTabProps) {
           return { ...row, scopedCases: row.cases };
         }
         const scopedCases = row.cases.filter((c) => suiteOfCase(c.id) === props.activeSuite);
+        if (row.source === "runtime") {
+          const count = scopedCases.length;
+          return { ...row, scopedCases, count, actionable: count, exclusive: count };
+        }
         return {
           ...row,
           scopedCases,
@@ -120,8 +131,12 @@ export function FeatureGapsTab(props: FeatureGapsTabProps) {
       ?? props.viewModel.totals.skipCategories;
   });
 
-  const missingRows = createMemo(() => scopedRows().filter((row) => row.category === "missing-feature"));
+  const missingRows = createMemo(() =>
+    scopedRows().filter((row) => row.category === "missing-feature" && row.source === "dependency")
+  );
+  const runtimeRows = createMemo(() => scopedRows().filter((row) => row.source === "runtime"));
   const soleBlockerTests = createMemo(() => missingRows().reduce((sum, row) => sum + row.exclusive, 0));
+  const runtimeTests = createMemo(() => runtimeRows().reduce((sum, row) => sum + row.count, 0));
 
   return (
     <div class="tab-content-animate" style={{ display: "flex", "flex-direction": "column", gap: "20px" }}>
@@ -137,6 +152,11 @@ export function FeatureGapsTab(props: FeatureGapsTabProps) {
           <span class="stat-label">Single Missing Feature</span>
           <strong class="stat-value" style={{ color: "var(--skip-missing-ink)" }}>{soleBlockerTests()}</strong>
           <span class="stat-hint">tests that one feature would unlock</span>
+        </div>
+        <div class="panel stat-card stat-card-error">
+          <span class="stat-label">Unsupported at Runtime</span>
+          <strong class="stat-value" style={{ color: "var(--error)" }}>{runtimeTests()}</strong>
+          <span class="stat-hint">erroring tests across {runtimeRows().length} features</span>
         </div>
         <div class="panel stat-card stat-card-na">
           <span class="stat-label">Not Applicable</span>
@@ -155,7 +175,8 @@ export function FeatureGapsTab(props: FeatureGapsTabProps) {
           <div>
             <h2>Unmet Dependencies</h2>
             <p class="section-subtitle">
-              Every QT3 dependency that keeps a test from running. A test with several unmet dependencies is listed under each.
+              Every QT3 dependency that keeps a test from running, and every feature RumbleDB reported as unsupported
+              while running a test. A test with several unmet dependencies is listed under each.
             </p>
           </div>
           <div class="segmented" role="tablist">
@@ -203,7 +224,14 @@ export function FeatureGapsTab(props: FeatureGapsTabProps) {
 
         <Show when={props.category === "missing-feature" || props.category === "ALL"}>
           <div class="gap-legend">
-            <For each={gapSegments({ count: 0, actionable: 0, exclusive: 0, category: "missing-feature" })}>
+            <For
+              each={[
+                ...gapSegments({ count: 0, actionable: 0, exclusive: 0, category: "missing-feature", source: "dependency" }),
+                ...(runtimeRows().length > 0
+                  ? gapSegments({ count: 0, actionable: 0, exclusive: 0, category: "missing-feature", source: "runtime" })
+                  : []),
+              ]}
+            >
               {(segment) => (
                 <span>
                   <span class="legend-dot" style={{ background: segment.color, opacity: segment.opacity }} />
@@ -252,13 +280,22 @@ export function FeatureGapsTab(props: FeatureGapsTabProps) {
                             <HighlightText text={row.label} query={search()} />
                           </td>
                           <td>
-                            <span class={`pill pill-skip-${row.category}`} title={SKIP_CATEGORY_META[row.category].description}>
-                              {SKIP_CATEGORY_META[row.category].label}
-                            </span>
+                            <Show
+                              when={row.source === "runtime"}
+                              fallback={
+                                <span class={`pill pill-skip-${row.category}`} title={SKIP_CATEGORY_META[row.category].description}>
+                                  {SKIP_CATEGORY_META[row.category].label}
+                                </span>
+                              }
+                            >
+                              <span class="pill pill-error" title="Tests ran and RumbleDB reported the feature as not supported">
+                                Runtime error
+                              </span>
+                            </Show>
                           </td>
                           <td style={{ "text-align": "right", "font-family": "var(--font-mono)", "font-weight": "700" }}>{row.count}</td>
-                          <td style={{ "text-align": "right", "font-family": "var(--font-mono)", color: row.exclusive > 0 && row.category === "missing-feature" ? "var(--skip-missing-ink)" : "var(--muted)" }}>
-                            {row.category === "missing-feature" ? row.exclusive : "–"}
+                          <td style={{ "text-align": "right", "font-family": "var(--font-mono)", color: row.exclusive > 0 && row.category === "missing-feature" && row.source === "dependency" ? "var(--skip-missing-ink)" : "var(--muted)" }}>
+                            {row.category === "missing-feature" && row.source === "dependency" ? row.exclusive : "–"}
                           </td>
                           <td>
                             <GapBar row={row} max={maxCount()} />
@@ -274,8 +311,12 @@ export function FeatureGapsTab(props: FeatureGapsTabProps) {
                           <tr class="gap-row-detail">
                             <td colSpan={6}>
                               <p style={{ "font-size": "0.78rem", color: "var(--muted)", "margin-bottom": "10px" }}>
-                                {SKIP_CATEGORY_META[row.category].description}.
-                                <Show when={row.category === "missing-feature"}>
+                                <Show when={row.source === "runtime"}>
+                                  These {row.count} tests ran and RumbleDB raised an error reporting the feature as not supported,
+                                  so they count as errors rather than skips.
+                                </Show>
+                                <Show when={row.source === "dependency"}>{SKIP_CATEGORY_META[row.category].description}.</Show>
+                                <Show when={row.category === "missing-feature" && row.source === "dependency"}>
                                   {" "}Implementing it lets {row.exclusive} of {row.count} tests run; {row.actionable - row.exclusive} also need another missing feature
                                   {row.count > row.actionable ? `, and ${row.count - row.actionable} are ruled out by another dependency` : ""}.
                                 </Show>
@@ -291,6 +332,9 @@ export function FeatureGapsTab(props: FeatureGapsTabProps) {
                                           <HighlightText text={c.id} query={search()} />
                                         </span>
                                         <div class="gap-case-deps">
+                                          <Show when={row.source === "runtime" && c.type}>
+                                            <span class="dependency-chip" title={c.message}>{c.type?.split(".").pop()}</span>
+                                          </Show>
                                           <For each={c.skip?.dependencies || []}>
                                             {(dependency) => (
                                               <span

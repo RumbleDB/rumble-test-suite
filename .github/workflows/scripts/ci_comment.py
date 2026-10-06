@@ -65,6 +65,8 @@ def render_regression_details(analysis: dict) -> str:
             test_id = table_cell(test_name)
             test_file_link = render_test_file_link(test_file, test_name)
             status = table_cell(str(item.get("status", "")).upper())
+            if item.get("cause"):
+                status = f"{status} ({table_cell(item['cause'])})"
             message = table_cell(item.get("message", ""))
             lines.append(
                 f"| `{table_cell(suite)}` | `{status}` | {test_file_link} | `{test_id}` | `{message}` |"

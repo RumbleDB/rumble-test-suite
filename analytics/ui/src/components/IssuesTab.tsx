@@ -1,15 +1,15 @@
 import { Show, createMemo, createSignal, For, createEffect } from "solid-js";
 import { Search, AlertCircle, ChevronLeft, ChevronRight, Copy, Check, Play } from "./Icons";
 import { HighlightText } from "./HighlightText";
-import { decodeExpectedResult, getParserCommand, getSingleTestCaseCommand } from "../lib/analysis";
-import type { ViewModel, StatusFilter } from "../lib/analysis";
+import { CAUSE_META, CAUSE_ORDER, decodeExpectedResult, getParserCommand, getSingleTestCaseCommand, matchesCauseFilter } from "../lib/analysis";
+import type { ViewModel, CauseFilter, IssueStatus } from "../lib/analysis";
 
 type IssuesTabProps = {
   viewModel: ViewModel;
   activeSuite: string;
   setActiveSuite: (suite: string) => void;
-  activeStatus: StatusFilter;
-  setActiveStatus: (status: StatusFilter) => void;
+  activeCause: CauseFilter;
+  setActiveCause: (cause: CauseFilter) => void;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   sortBy: "count" | "count-asc" | "suite" | "message";
@@ -31,7 +31,7 @@ export function IssuesTab(props: IssuesTabProps) {
   const filteredIssues = createMemo(() => {
     const query = props.searchQuery.trim().toLowerCase();
     const list = props.viewModel.issueRows.filter((item) => {
-      if (props.activeStatus !== "ALL" && item.status !== props.activeStatus) {
+      if (!matchesCauseFilter(item.cause, props.activeCause)) {
         return false;
       }
       if (props.activeSuite !== "ALL" && item.suite !== props.activeSuite) {
@@ -70,13 +70,13 @@ export function IssuesTab(props: IssuesTabProps) {
 
   const handleClearFilters = () => {
     props.setActiveSuite("ALL");
-    props.setActiveStatus("ALL");
+    props.setActiveCause("ALL");
     props.setSearchQuery("");
     props.setSortBy("count");
   };
 
   const hasActiveFilters = () => {
-    return props.activeSuite !== "ALL" || props.activeStatus !== "ALL" || props.searchQuery.trim() !== "" || props.sortBy !== "count";
+    return props.activeSuite !== "ALL" || props.activeCause !== "ALL" || props.searchQuery.trim() !== "" || props.sortBy !== "count";
   };
 
   return (
@@ -106,12 +106,20 @@ export function IssuesTab(props: IssuesTabProps) {
 
         <select
           class="select-filter"
-          value={props.activeStatus}
-          onChange={(e) => props.setActiveStatus(e.currentTarget.value as StatusFilter)}
+          value={props.activeCause}
+          onChange={(e) => props.setActiveCause(e.currentTarget.value as CauseFilter)}
         >
-          <option value="ALL">All Statuses</option>
-          <option value="FAIL">Fail</option>
-          <option value="ERROR">Error</option>
+          <option value="ALL">All Causes</option>
+          <For each={["FAIL", "ERROR"] as IssueStatus[]}>
+            {(status) => (
+              <optgroup label={status === "FAIL" ? "Fail" : "Error"}>
+                <option value={status}>All {status === "FAIL" ? "failures" : "errors"}</option>
+                <For each={CAUSE_ORDER.filter((cause) => CAUSE_META[cause].status === status)}>
+                  {(cause) => <option value={cause}>{CAUSE_META[cause].label}</option>}
+                </For>
+              </optgroup>
+            )}
+          </For>
         </select>
 
         <select
@@ -166,7 +174,9 @@ export function IssuesTab(props: IssuesTabProps) {
                     >
                       <div class="issue-card-header">
                         <div class="issue-card-meta">
-                          <span class={`pill pill-${issue.status.toLowerCase()}`}>{issue.status}</span>
+                          <span class={`pill pill-${issue.status.toLowerCase()}`} title={`${issue.status}: ${CAUSE_META[issue.cause].description}`}>
+                            {CAUSE_META[issue.cause].label}
+                          </span>
                           <span class="pill pill-parser">{issue.parser}</span>
                           <span class="issue-card-suite">
                             <HighlightText text={issue.suite} query={props.searchQuery} />
@@ -259,6 +269,10 @@ export function IssuesTab(props: IssuesTabProps) {
                     </div>
                     <div class="detail-msg-box" style={{ "font-family": "var(--font-mono)", "font-size": "0.82rem", color: "#f8fafc", "word-break": "break-all", "white-space": "pre-wrap" }}>
                       {issue.message}
+                    </div>
+                    <div style={{ display: "flex", gap: "8px", "align-items": "center", "font-size": "0.78rem", color: "var(--muted)" }}>
+                      <span class={`pill pill-${issue.status.toLowerCase()}`}>{CAUSE_META[issue.cause].label}</span>
+                      <span>{CAUSE_META[issue.cause].description}.</span>
                     </div>
                   </div>
 

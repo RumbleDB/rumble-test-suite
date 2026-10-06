@@ -3,7 +3,69 @@ export const STATUS_ORDER = ["PASS", "FAIL", "ERROR", "SKIP"] as const;
 export type Status = (typeof STATUS_ORDER)[number];
 /** Failure groups only cover tests that ran: passing tests are not in the report, and skips are feature gaps. */
 export type IssueStatus = "FAIL" | "ERROR";
-export type StatusFilter = IssueStatus | "ALL";
+
+export const CAUSE_ORDER = [
+  "wrong-result",
+  "wrong-error",
+  "unexpected-error",
+  "unsupported",
+  "crash",
+  "harness",
+  "timeout",
+] as const;
+
+export type FailureCause = (typeof CAUSE_ORDER)[number];
+
+/** Failure groups can be filtered by a single cause, or by all causes of a status. */
+export type CauseFilter = FailureCause | IssueStatus | "ALL";
+
+export const CAUSE_META: Record<FailureCause, { label: string; description: string; status: IssueStatus }> = {
+  "wrong-result": {
+    label: "Wrong result",
+    description: "The query ran, but its result does not satisfy the assertion",
+    status: "FAIL",
+  },
+  "wrong-error": {
+    label: "Wrong error",
+    description: "The expected error was not raised, or a different error code was raised",
+    status: "FAIL",
+  },
+  "unexpected-error": {
+    label: "Unexpected error",
+    description: "RumbleDB raised an error where the test expected a result",
+    status: "ERROR",
+  },
+  unsupported: {
+    label: "Unsupported",
+    description: "RumbleDB reported the feature as not supported; also listed in Feature Gaps",
+    status: "ERROR",
+  },
+  crash: {
+    label: "Crash",
+    description: "An internal RumbleDB error, or a Java exception escaping RumbleDB",
+    status: "ERROR",
+  },
+  harness: {
+    label: "Harness",
+    description: "The test harness itself failed, e.g. while converting the query or checking the assertion",
+    status: "ERROR",
+  },
+  timeout: {
+    label: "Timeout",
+    description: "The test exceeded its time limit",
+    status: "ERROR",
+  },
+};
+
+export function matchesCauseFilter(cause: FailureCause | undefined, filter: CauseFilter): boolean {
+  if (filter === "ALL") {
+    return true;
+  }
+  if (!cause) {
+    return false;
+  }
+  return filter === "FAIL" || filter === "ERROR" ? CAUSE_META[cause].status === filter : cause === filter;
+}
 export type ParserMode = "jsoniq" | "xquery" | "default";
 
 export const SKIP_CATEGORY_ORDER = ["missing-feature", "not-applicable", "other-spec", "unclassified"] as const;
@@ -45,6 +107,7 @@ export type RawCountRecord = Partial<Record<Lowercase<Status>, number | string>>
   slowest?: SlowestCase[];
   parser?: string;
   skipCategories?: Partial<SkipCategoryCounts>;
+  causes?: Partial<Record<FailureCause, number>>;
 };
 
 export type UnmetDependency = {
@@ -58,6 +121,13 @@ export type UnmetDependency = {
 export type SkipInfo = {
   category: SkipCategory;
   dependencies: UnmetDependency[];
+};
+
+/** A feature that RumbleDB reported as unsupported while running a test. */
+export type RuntimeGap = {
+  key: string;
+  type: string;
+  value: string;
 };
 
 type RawDependencyItem = UnmetDependency & {
@@ -77,6 +147,7 @@ export type RawIssueItem = {
   cases?: string[];
   message?: string;
   parser?: string;
+  cause?: string;
 };
 
 type RawRegressionItem = {
@@ -95,6 +166,7 @@ export type AnalysisPayload = {
     categories?: Partial<SkipCategoryCounts>;
     dependencies?: RawDependencyItem[];
   };
+  runtimeGaps?: RawDependencyItem[];
 };
 
 export type SuiteSummary = {
@@ -109,7 +181,10 @@ export type SuiteSummary = {
   slowest: SlowestCase[];
   parser: string;
   skipCategories: SkipCategoryCounts;
+  causes: CauseCounts;
 };
+
+export type CauseCounts = Record<FailureCause, number>;
 
 export type Totals = {
   pass: number;
@@ -120,6 +195,7 @@ export type Totals = {
   passRate: number;
   time: number;
   skipCategories: SkipCategoryCounts;
+  causes: CauseCounts;
   /** Tests that apply to RumbleDB: everything except not-applicable and other-spec skips. */
   applicable: number;
   /** Passing share of applicable tests, so missing-feature skips count against it. */
@@ -137,9 +213,13 @@ export type TestCaseInfo = {
   message?: string;
   detail?: string;
   skip?: SkipInfo;
+  cause?: FailureCause;
+  gap?: RuntimeGap;
 };
 
 export type DependencyRow = UnmetDependency & {
+  /** Whether the gap comes from skipped tests' QT3 dependencies, or from tests that failed at runtime. */
+  source: "dependency" | "runtime";
   label: string;
   count: number;
   actionable: number;
@@ -156,12 +236,14 @@ export type IssueRow = {
   cases: TestCaseInfo[];
   key: string;
   parser: string;
+  cause: FailureCause;
 };
 
 export type RegressionRow = {
   suite: string;
   id: string;
   status: Status;
+  cause?: FailureCause;
   message: string;
   detail?: string;
   type?: string;
@@ -203,6 +285,7 @@ export function buildViewModel(analysis: AnalysisPayload, sourceName: string): V
       slowest: counts.slowest || [],
       parser: String(counts.parser || "jsoniq"),
       skipCategories: toSkipCategoryCounts(counts.skipCategories, toInt(counts.skip)),
+      causes: toCauseCounts(counts.causes, toInt(counts.fail), toInt(counts.error)),
     }))
     .map((suite) => ({
       ...suite,
@@ -220,8 +303,18 @@ export function buildViewModel(analysis: AnalysisPayload, sourceName: string): V
       total: acc.total + suite.total,
       time: acc.time + suite.time,
       skipCategories: addSkipCategoryCounts(acc.skipCategories, suite.skipCategories),
+      causes: addCauseCounts(acc.causes, suite.causes),
     }),
-    { pass: 0, fail: 0, error: 0, skip: 0, total: 0, time: 0, skipCategories: emptySkipCategoryCounts() }
+    {
+      pass: 0,
+      fail: 0,
+      error: 0,
+      skip: 0,
+      total: 0,
+      time: 0,
+      skipCategories: emptySkipCategoryCounts(),
+      causes: emptyCauseCounts(),
+    }
   );
   const applicable =
     totals.total - totals.skipCategories["not-applicable"] - totals.skipCategories["other-spec"];
@@ -236,10 +329,20 @@ export function buildViewModel(analysis: AnalysisPayload, sourceName: string): V
       applicablePassRate: percentNumber(totals.pass, applicable),
     },
     issueRows: flattenIssues(analysis.issues || {}, analysis.cases || {}),
-    dependencyRows: flattenDependencies(analysis.skips?.dependencies || [], analysis.cases || {}),
+    dependencyRows: [
+      ...flattenDependencies(analysis.skips?.dependencies || [], analysis.cases || {}, "dependency"),
+      ...flattenDependencies(analysis.runtimeGaps || [], analysis.cases || {}, "runtime"),
+    ].sort((left, right) => right.count - left.count || left.label.localeCompare(right.label)),
     regressions: flattenRegressions(analysis.regressions || {}, analysis.cases || {}),
     improvements: flattenImprovements(analysis.improvements || {}),
   };
+}
+
+export function formatRuntimeGap(gap: Pick<RuntimeGap, "type" | "value">): string {
+  if (gap.type === "collation") {
+    return gap.value === "unspecified" ? "collation" : `${gap.value.split("/").pop()} collation`;
+  }
+  return gap.value;
 }
 
 export function formatDependency(dependency: Pick<UnmetDependency, "type" | "value" | "satisfied">): string {
@@ -392,6 +495,7 @@ function flattenIssues(
             type: details.type,
             message: details.message,
             detail: details.detail,
+            cause: details.cause,
           };
         });
         const message = item.message || "(no message)";
@@ -403,7 +507,8 @@ function flattenIssues(
           count: cases.length,
           cases,
           parser,
-          key: `${status}::${suiteName}::${message}`,
+          key: `${status}::${suiteName}::${item.cause || ""}::${message}`,
+          cause: toCause(item.cause, status),
         });
       }
     }
@@ -432,6 +537,7 @@ function flattenRegressions(
         suite: suiteName,
         id,
         status,
+        cause: details.cause,
         message: item.message || details.message || "(no message)",
         detail: details.detail,
         type: details.type,
@@ -480,23 +586,59 @@ function flattenImprovements(improvementsBySuite: AnalysisPayload["improvements"
 
 function flattenDependencies(
   items: RawDependencyItem[],
-  casesMap: Record<string, TestCaseInfo>
+  casesMap: Record<string, TestCaseInfo>,
+  source: DependencyRow["source"]
 ): DependencyRow[] {
   return items.map((item) => ({
+    source,
     key: item.key,
     type: item.type,
     value: item.value,
     satisfied: item.satisfied !== false,
     category: toSkipCategory(item.category),
-    label: formatDependency(item),
+    label: source === "runtime" ? formatRuntimeGap(item) : formatDependency(item),
     count: toInt(item.count),
-    actionable: toInt(item.actionable),
-    exclusive: toInt(item.exclusive),
+    // Tests that fail at runtime are not blocked by anything else.
+    actionable: source === "runtime" ? toInt(item.count) : toInt(item.actionable),
+    exclusive: source === "runtime" ? toInt(item.count) : toInt(item.exclusive),
     suites: Object.entries(item.suites || {})
       .map(([name, count]) => ({ name, count: toInt(count) }))
       .sort((left, right) => right.count - left.count || left.name.localeCompare(right.name)),
     cases: (item.cases || []).map((id) => ({ ...casesMap[id], id })),
   }));
+}
+
+function emptyCauseCounts(): CauseCounts {
+  return Object.fromEntries(CAUSE_ORDER.map((cause) => [cause, 0])) as CauseCounts;
+}
+
+/** Reports without causes count every failure as a wrong result and every error as unexpected. */
+function toCauseCounts(raw: Partial<CauseCounts> | undefined, fail: number, error: number): CauseCounts {
+  const counts = emptyCauseCounts();
+  if (!raw) {
+    counts["wrong-result"] = fail;
+    counts["unexpected-error"] = error;
+    return counts;
+  }
+  for (const cause of CAUSE_ORDER) {
+    counts[cause] = toInt(raw[cause]);
+  }
+  return counts;
+}
+
+function addCauseCounts(left: CauseCounts, right: CauseCounts): CauseCounts {
+  const counts = emptyCauseCounts();
+  for (const cause of CAUSE_ORDER) {
+    counts[cause] = left[cause] + right[cause];
+  }
+  return counts;
+}
+
+function toCause(value: string | undefined, status: IssueStatus): FailureCause {
+  if ((CAUSE_ORDER as readonly string[]).includes(String(value))) {
+    return value as FailureCause;
+  }
+  return status === "FAIL" ? "wrong-result" : "unexpected-error";
 }
 
 function emptySkipCategoryCounts(): SkipCategoryCounts {

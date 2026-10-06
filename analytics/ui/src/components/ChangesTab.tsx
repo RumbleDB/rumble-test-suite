@@ -2,12 +2,13 @@ import { Show, createMemo, createSignal, For } from "solid-js";
 import { Search, CheckCircle, AlertCircle, Play, Check, Copy, ExternalLink, ChevronDown, ChevronRight } from "./Icons";
 import { HighlightText } from "./HighlightText";
 import { decodeExpectedResult, getSingleTestCaseCommand } from "../lib/analysis";
-import type { ViewModel, StatusFilter, ParserMode } from "../lib/analysis";
+import { matchesCauseFilter } from "../lib/analysis";
+import type { ViewModel, CauseFilter } from "../lib/analysis";
 
 type ChangesTabProps = {
   viewModel: ViewModel;
   activeSuite: string;
-  activeStatus: StatusFilter;
+  activeCause: CauseFilter;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   copiedKey: string | null;
@@ -29,7 +30,7 @@ export function ChangesTab(props: ChangesTabProps) {
   const filteredRegressions = createMemo(() => {
     const query = props.searchQuery.trim().toLowerCase();
     return (props.viewModel.regressions ?? []).filter((item) => {
-      if (props.activeStatus !== "ALL" && item.status !== props.activeStatus) {
+      if (!matchesCauseFilter(item.cause, props.activeCause)) {
         return false;
       }
       if (props.activeSuite !== "ALL" && item.suite !== props.activeSuite) {

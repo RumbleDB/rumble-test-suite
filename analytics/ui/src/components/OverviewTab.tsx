@@ -1,15 +1,15 @@
 import { For, Show } from "solid-js";
 import { PassRateGauge, SuitesBarChart, IssueDistributionChart } from "./DashboardCharts";
 import { GapBar } from "./FeatureGapsTab";
-import { formatPercent, formatDuration, statusSegments } from "../lib/analysis";
-import type { ViewModel, StatusFilter, SkipCategory, StatusSegment } from "../lib/analysis";
+import { CAUSE_META, CAUSE_ORDER, formatPercent, formatDuration, statusSegments } from "../lib/analysis";
+import type { ViewModel, CauseFilter, SkipCategory, StatusSegment } from "../lib/analysis";
 
 type OverviewTabProps = {
   viewModel: ViewModel;
   activeSuite: string;
   onSelectSuite: (name: string) => void;
   onSelectIssue: (key: string) => void;
-  onSelectStatus: (status: StatusFilter) => void;
+  onSelectCause: (cause: CauseFilter) => void;
   onSelectGap: (category: SkipCategory | "ALL", key: string | null) => void;
   onViewAllChanges: () => void;
 };
@@ -22,11 +22,16 @@ export function OverviewTab(props: OverviewTabProps) {
   const missingFeatures = () =>
     props.viewModel.dependencyRows.filter((row) => row.category === "missing-feature");
   const topMissingFeatures = () => missingFeatures().slice(0, 6);
+  const causes = () => props.viewModel.totals.causes;
+  const causeRows = () =>
+    CAUSE_ORDER.map((cause) => ({ cause, count: causes()[cause] })).filter((row) => row.count > 0);
+  const maxCauseCount = () => Math.max(...causeRows().map((row) => row.count), 1);
+  const runtimeGapTests = () => causes().unsupported;
 
   // Passing tests have no detail view; failures and errors open their groups, skips their feature gaps.
   const selectSegment = (segment: StatusSegment) => {
     if (segment.key === "FAIL" || segment.key === "ERROR") {
-      props.onSelectStatus(segment.key);
+      props.onSelectCause(segment.key);
     } else if (segment.key !== "PASS") {
       props.onSelectGap(segment.key, null);
     }
@@ -63,7 +68,9 @@ export function OverviewTab(props: OverviewTabProps) {
           >
             {props.viewModel.totals.fail}
           </strong>
-          <span class="stat-hint">Unmet assertions</span>
+          <span class="stat-hint">
+            {causes()["wrong-result"]} wrong result · {causes()["wrong-error"]} wrong error
+          </span>
         </div>
         <div class="panel stat-card stat-card-error">
           <span class="stat-label">Errors</span>
@@ -73,7 +80,9 @@ export function OverviewTab(props: OverviewTabProps) {
           >
             {props.viewModel.totals.error}
           </strong>
-          <span class="stat-hint">Exceptions occurred</span>
+          <span class="stat-hint">
+            {causes().crash} crashes · {causes().harness} harness
+          </span>
         </div>
         <div
           class="panel stat-card stat-card-missing"
@@ -85,7 +94,9 @@ export function OverviewTab(props: OverviewTabProps) {
           <strong class="stat-value" style={{ color: "var(--skip-missing-ink)" }}>
             {skipCounts()["missing-feature"]}
           </strong>
-          <span class="stat-hint">skipped tests · {missingFeatures().length} features</span>
+          <span class="stat-hint">
+            skipped · +{runtimeGapTests()} unsupported at runtime
+          </span>
         </div>
         <div
           class="panel stat-card stat-card-na"
@@ -162,7 +173,7 @@ export function OverviewTab(props: OverviewTabProps) {
             <div class="section-header">
               <div>
                 <h2>Top Missing Features</h2>
-                <p class="section-subtitle">Features whose absence skips the most tests</p>
+                <p class="section-subtitle">Features whose absence skips, or breaks at runtime, the most tests</p>
               </div>
             </div>
             <Show
@@ -176,7 +187,9 @@ export function OverviewTab(props: OverviewTabProps) {
                       <div style={{ display: "flex", "justify-content": "space-between", "font-size": "0.78rem", gap: "8px" }}>
                         <span style={{ "font-family": "var(--font-mono)", "font-weight": "700", color: "var(--ink)" }}>{row.label}</span>
                         <span style={{ color: "var(--muted)", "white-space": "nowrap" }}>
-                          {row.count} tests · {row.exclusive} sole blocker
+                          {row.source === "runtime"
+                            ? `${row.count} tests error at runtime`
+                            : `${row.count} tests · ${row.exclusive} sole blocker`}
                         </span>
                       </div>
                       <GapBar row={row} max={topMissingFeatures()[0].count} />
@@ -295,6 +308,42 @@ export function OverviewTab(props: OverviewTabProps) {
               activeSuite={props.activeSuite}
               onSelectSuite={props.onSelectSuite}
             />
+          </section>
+
+          {/* Right: failures and errors by cause */}
+          <section class="panel">
+            <div class="section-header">
+              <div>
+                <h2>Failures by Cause</h2>
+                <p class="section-subtitle">Why tests that ran did not pass</p>
+              </div>
+            </div>
+            <div style={{ display: "flex", "flex-direction": "column", gap: "10px", "margin-top": "10px" }}>
+              <For each={causeRows()}>
+                {(row) => {
+                  const meta = CAUSE_META[row.cause];
+                  return (
+                    <div class="issue-card" onClick={() => props.onSelectCause(row.cause)} title={meta.description}>
+                      <div style={{ display: "flex", "justify-content": "space-between", "font-size": "0.8rem", gap: "8px" }}>
+                        <span style={{ "font-weight": "700", color: "var(--ink)" }}>{meta.label}</span>
+                        <span style={{ color: "var(--muted)", "white-space": "nowrap" }}>
+                          {row.count} {meta.status === "FAIL" ? "failures" : "errors"}
+                        </span>
+                      </div>
+                      <div class="mini-progress" style={{ height: "4px", background: "var(--bg)" }}>
+                        <div
+                          class="mini-progress-segment"
+                          style={{
+                            width: `${(row.count / maxCauseCount()) * 100}%`,
+                            background: meta.status === "FAIL" ? "var(--fail)" : "var(--error)",
+                          }}
+                        />
+                      </div>
+                    </div>
+                  );
+                }}
+              </For>
+            </div>
           </section>
 
           {/* Right: Top Failure distribution */}

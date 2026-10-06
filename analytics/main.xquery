@@ -5,6 +5,7 @@ import module namespace cases = "urn:analytics:analysis:cases" at "modules/cases
 import module namespace summary = "urn:analytics:analysis:summary" at "modules/summary.xquery";
 import module namespace changes = "urn:analytics:analysis:changes" at "modules/changes.xquery";
 import module namespace skips = "urn:analytics:analysis:skips" at "modules/skips.xquery";
+import module namespace causes = "urn:analytics:analysis:causes" at "modules/causes.xquery";
 
 declare variable $baseline as xs:string? external;
 declare variable $candidate as xs:string external;
@@ -18,6 +19,7 @@ return map:merge((
         "summary": summary:run($candidate-values),
         "issues": summary:issues($candidate-values),
         "skips": skips:report($candidate-values),
+        "runtimeGaps": causes:runtime-gaps($candidate-values),
         "cases": map:merge(
             for $key in map:keys($candidate-cases)
             let $c := $candidate-cases($key)
@@ -31,7 +33,7 @@ return map:merge((
                 "message": $c?message,
                 "detail": $c?detail,
                 "translatedQueries": $c?translatedQueries
-            }, $c?skip ! map { "skip": . })))
+            }, $c?skip ! map { "skip": . }, $c?cause ! map { "cause": . }, $c?gap ! map { "gap": . })))
         )
     },
     if (empty($baseline)) then

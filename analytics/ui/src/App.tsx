@@ -1,5 +1,5 @@
 import { Show, createSignal, onMount } from "solid-js";
-import type { AnalysisPayload, SkipCategory, StatusFilter, ViewModel } from "./lib/analysis";
+import type { AnalysisPayload, CauseFilter, SkipCategory, ViewModel } from "./lib/analysis";
 import { buildViewModel, findIssueKeyForCase } from "./lib/analysis";
 import { ShieldAlert } from "./components/Icons";
 import type { TabType } from "./components/HeaderNav";
@@ -35,7 +35,7 @@ export default function App() {
   
   // Filtering and selection states
   const [activeSuite, setActiveSuite] = createSignal("ALL");
-  const [activeStatus, setActiveStatus] = createSignal<StatusFilter>("ALL");
+  const [activeCause, setActiveCause] = createSignal<CauseFilter>("ALL");
   const [searchQuery, setSearchQuery] = createSignal("");
   const [sortBy, setSortBy] = createSignal<"count" | "count-asc" | "suite" | "message">("count");
   
@@ -108,9 +108,10 @@ export default function App() {
     setActiveTab("issues");
   };
 
-  // Handle active status selection from health legend (navigate to issues tab)
-  const handleSelectStatus = (status: StatusFilter) => {
-    setActiveStatus(status);
+  // Handle a status or cause selection from the overview (navigate to issues tab)
+  const handleSelectCause = (cause: CauseFilter) => {
+    setActiveSuite("ALL");
+    setActiveCause(cause);
     setActiveTab("issues");
   };
 
@@ -157,7 +158,7 @@ export default function App() {
                       activeSuite={activeSuite()}
                       onSelectSuite={handleSelectSuite}
                       onSelectIssue={handleSelectIssue}
-                      onSelectStatus={handleSelectStatus}
+                      onSelectCause={handleSelectCause}
                       onSelectGap={handleSelectGap}
                       onViewAllChanges={() => setActiveTab("changes")}
                     />
@@ -177,8 +178,8 @@ export default function App() {
                       viewModel={model}
                       activeSuite={activeSuite()}
                       setActiveSuite={setActiveSuite}
-                      activeStatus={activeStatus()}
-                      setActiveStatus={setActiveStatus}
+                      activeCause={activeCause()}
+                      setActiveCause={setActiveCause}
                       searchQuery={searchQuery()}
                       setSearchQuery={setSearchQuery}
                       sortBy={sortBy()}
@@ -208,7 +209,7 @@ export default function App() {
                     <ChangesTab
                       viewModel={model}
                       activeSuite={activeSuite()}
-                      activeStatus={activeStatus()}
+                      activeCause={activeCause()}
                       searchQuery={searchQuery()}
                       setSearchQuery={setSearchQuery}
                       copiedKey={copiedKey()}
