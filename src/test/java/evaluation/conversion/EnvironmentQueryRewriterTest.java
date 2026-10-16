@@ -43,11 +43,11 @@ public class EnvironmentQueryRewriterTest {
     }
 
     @Test
-    public void preservesAnExistingExternalDefault() {
+    public void suppliedExternalValueOverridesAnExistingDefault() {
         String query = "declare variable $value external := 1; $value";
 
         assertEquals(
-                query,
+                "declare variable $value external := (42); $value",
                 EnvironmentQueryRewriter.rewrite(
                         query, Map.of(), "", Map.of("value", "42"), Map.of(), Map.of(), Map.of(), false));
     }
