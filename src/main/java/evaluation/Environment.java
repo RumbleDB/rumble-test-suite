@@ -15,6 +15,7 @@ import net.sf.saxon.s9api.XdmNode;
 import net.sf.saxon.s9api.XdmSequenceIterator;
 import net.sf.saxon.s9api.streams.Steps;
 
+import org.rumbledb.compiler.utils.URILiteralUtils;
 import org.rumbledb.resources.ResourceResolver;
 
 public class Environment {
@@ -264,6 +265,12 @@ public class Environment {
                 if (logicalUri != null && file != null) {
                     imports.putIfAbsent(logicalUri, basePath.resolve(file).toUri());
                 }
+                URI location = parseLogicalUri(resource.attribute("location"));
+                if (location != null && file != null) {
+                    imports.putIfAbsent(
+                            basePath.toUri().resolve(location),
+                            basePath.resolve(file).toUri());
+                }
             }
         }
         return new ImportResources(imports, moduleLocationHints, schemaLocationHints);
@@ -274,7 +281,7 @@ public class Environment {
             return null;
         }
         try {
-            return URI.create(uri);
+            return URI.create(URILiteralUtils.normalizeAsAnyURI(uri).replace(" ", "%20"));
         } catch (IllegalArgumentException ignored) {
             // Negative tests can deliberately declare malformed logical URIs.
             return null;
