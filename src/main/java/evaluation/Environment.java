@@ -15,10 +15,12 @@ import net.sf.saxon.s9api.XdmNode;
 import net.sf.saxon.s9api.XdmSequenceIterator;
 import net.sf.saxon.s9api.streams.Steps;
 
+import org.rumbledb.compiler.utils.URILiteralUtils;
 import org.rumbledb.resources.ResourceResolver;
 
 public class Environment {
     private final Map<String, String> runtimeResourceLookup = new HashMap<>();
+    private final Map<URI, URI> resolvedRuntimeResources = new HashMap<>();
     private final Map<String, String> paramLookup = new HashMap<>();
     private final Map<String, String> externalParamLookup = new HashMap<>();
     private final Map<String, SourceBinding> roleLookup = new LinkedHashMap<>();
@@ -47,6 +49,7 @@ public class Environment {
 
     private Environment(Environment environment) {
         this.runtimeResourceLookup.putAll(environment.runtimeResourceLookup);
+        this.resolvedRuntimeResources.putAll(environment.resolvedRuntimeResources);
         this.paramLookup.putAll(environment.paramLookup);
         this.externalParamLookup.putAll(environment.externalParamLookup);
         this.roleLookup.putAll(environment.roleLookup);
@@ -187,6 +190,7 @@ public class Environment {
             String file = envPath.resolve(resource.attribute("file")).toUri().toString();
             String uri = resource.attribute("uri");
             runtimeResourceLookup.put(uri, file);
+            addResolvedRuntimeResource(uri, file, envPath);
         }
     }
 
@@ -200,11 +204,24 @@ public class Environment {
             String validation = source.attribute("validation");
             if (uri != null && !file.equals(uri)) {
                 runtimeResourceLookup.put(uri, file);
+                addResolvedRuntimeResource(uri, file, envPath);
             }
             if (role != null) {
                 roleLookup.put(role, new SourceBinding(file, validation));
             }
         }
+    }
+
+    private void addResolvedRuntimeResource(String uri, String file, Path envPath) {
+        URI logicalUri = parseLogicalUri(uri);
+        if (logicalUri == null) {
+            return;
+        }
+        URI base = this.staticBaseUri == null ? envPath.toUri() : parseLogicalUri(this.staticBaseUri);
+        if (!logicalUri.isAbsolute() && base != null) {
+            logicalUri = base.resolve(logicalUri);
+        }
+        this.resolvedRuntimeResources.put(logicalUri, URI.create(file));
     }
 
     private void addImportResources(ImportResources imports) {
@@ -248,6 +265,12 @@ public class Environment {
                 if (logicalUri != null && file != null) {
                     imports.putIfAbsent(logicalUri, basePath.resolve(file).toUri());
                 }
+                URI location = parseLogicalUri(resource.attribute("location"));
+                if (location != null && file != null) {
+                    imports.putIfAbsent(
+                            basePath.toUri().resolve(location),
+                            basePath.resolve(file).toUri());
+                }
             }
         }
         return new ImportResources(imports, moduleLocationHints, schemaLocationHints);
@@ -258,7 +281,7 @@ public class Environment {
             return null;
         }
         try {
-            return URI.create(uri);
+            return URI.create(URILiteralUtils.normalizeAsAnyURI(uri).replace(" ", "%20"));
         } catch (IllegalArgumentException ignored) {
             // Negative tests can deliberately declare malformed logical URIs.
             return null;
@@ -266,7 +289,9 @@ public class Environment {
     }
 
     public ResourceResolver getResourceResolver() {
-        return new ResourceResolver(importResourceLookup);
+        Map<URI, URI> mappings = new HashMap<>(this.resolvedRuntimeResources);
+        mappings.putAll(this.importResourceLookup);
+        return new ResourceResolver(mappings);
     }
 
     /**
