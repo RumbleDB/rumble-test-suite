@@ -26,6 +26,9 @@ public class CaseCollector {
     // olson-timezone is partially supported by the date/time formatting functions.
     private static final Set<String> SUPPORTED_FEATURES = Set.of(
             "arbitraryPrecisionDecimal",
+            "advanced-uca-fallback",
+            "simple-uca-fallback",
+            "non_unicode_codepoint_collation",
             "higherOrderFunctions",
             "moduleImport",
             "olson-timezone",
