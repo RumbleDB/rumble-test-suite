@@ -363,17 +363,18 @@ public class TestBase {
      * QT3 assertions are XPath expressions, whose string literals do not expand references.
      * Both execution paths first embed assertions in an XQuery module: the XQuery parser
      * expands references directly, and the JSONiq converter decodes XQuery literals before
-     * serialization. Escape assertion ampersands in both paths to preserve their XPath value.
+     * serialization. Escape assertion ampersands and characters subject to XQuery line-ending
+     * normalization in both paths to preserve their XPath value.
      * See https://dev.w3.org/2011/QT3-test-suite/catalog-schema.html#assert-eq
      */
     static String prepareAssertionExpression(String expression) {
-        if (expression == null || !expression.contains("&")) {
+        if (expression == null) {
             return expression;
         }
-        return escapeAmpersandsInStringLiterals(expression);
+        return escapeXQueryStringLiterals(expression);
     }
 
-    private static String escapeAmpersandsInStringLiterals(String expression) {
+    private static String escapeXQueryStringLiterals(String expression) {
         StringBuilder sb = new StringBuilder(expression.length() + 8);
         char inString = 0;
         int commentDepth = 0;
@@ -408,6 +409,12 @@ public class TestBase {
                     }
                 } else if (c == '&') {
                     sb.append("&amp;");
+                } else if (c == '\r') {
+                    sb.append("&#xD;");
+                } else if (c == '\u0085') {
+                    sb.append("&#x85;");
+                } else if (c == '\u2028') {
+                    sb.append("&#x2028;");
                 } else {
                     sb.append(c);
                 }
