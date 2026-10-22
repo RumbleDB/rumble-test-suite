@@ -10,6 +10,21 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 public class EnvironmentQueryRewriterTest {
 
     @Test
+    public void bindsAnExternalContextWithoutAddingADuplicateDeclaration() {
+        assertEquals(
+                " declare context item as document-node() external := doc('input.xml'); .",
+                EnvironmentQueryRewriter.rewrite(
+                        "declare context item as document-node() external; .",
+                        Map.of(),
+                        "declare context item := doc('input.xml'); ",
+                        Map.of(),
+                        Map.of(),
+                        Map.of(),
+                        Map.of(),
+                        false));
+    }
+
+    @Test
     public void replacesOnlyCompleteStringLiteralValues() {
         String query = "\"urn:test\", \"prefix urn:test\", (: \"urn:test\" :) <e>urn:test</e>";
 
@@ -43,11 +58,11 @@ public class EnvironmentQueryRewriterTest {
     }
 
     @Test
-    public void preservesAnExistingExternalDefault() {
+    public void suppliedExternalValueOverridesAnExistingDefault() {
         String query = "declare variable $value external := 1; $value";
 
         assertEquals(
-                query,
+                "declare variable $value external := (42); $value",
                 EnvironmentQueryRewriter.rewrite(
                         query, Map.of(), "", Map.of("value", "42"), Map.of(), Map.of(), Map.of(), false));
     }

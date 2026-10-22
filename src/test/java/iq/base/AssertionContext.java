@@ -98,7 +98,7 @@ class AssertionContext {
 
         RumbleConfiguration updatedConfig = applyDependenciesToConfig(this.rumbleConfig);
         ResourceResolver resourceResolver =
-                this.environment == null ? new ResourceResolver() : this.environment.getResourceResolver();
+                this.environment == null ? new ResourceResolver() : this.environment.getResourceResolver(updatedConfig);
         CompilationConfiguration compilationConfig = new CompilationConfiguration(updatedConfig, resourceResolver);
         return new Rumble(compilationConfig).runQuery(query);
     }
@@ -106,7 +106,7 @@ class AssertionContext {
     private RumbleConfiguration applyDependenciesToConfig(RumbleConfiguration config) {
         RumbleConfiguration.RumbleConfigurationBuilder builder = config.toBuilder();
 
-        builder.configureSemantics(s -> s.xmlVersion("1.0"));
+        builder.configureSemantics(s -> s.xmlVersion("1.0").allowScripting(false));
 
         String v = this.xmlVersion;
         if (v != null) {
@@ -116,7 +116,7 @@ class AssertionContext {
         if ("1.1".equals(v)) {
             builder.configureSemantics(s -> s.xmlVersion("1.1"));
         } else if ("1.0".equals(v)) {
-            builder.configureSemantics(s -> s.xmlVersion("1.0"));
+            builder.configureSemantics(s -> s.xmlVersion("1.0").allowScripting(false));
         }
 
         if (this.defaultFormattingLanguage != null) {

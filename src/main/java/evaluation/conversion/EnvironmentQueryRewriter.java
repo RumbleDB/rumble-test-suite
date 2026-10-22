@@ -34,6 +34,7 @@ public final class EnvironmentQueryRewriter {
         new ExternalParamVisitor(context, externalParams).visit(module);
         new ModuleImportVisitor(context, moduleLocationHints).visit(module);
         new SchemaImportVisitor(context, schemaLocationHints).visit(module);
+        declarations = mergeContextDeclaration(context, module, declarations);
         insertDeclarations(
                 context,
                 module,
@@ -52,6 +53,45 @@ public final class EnvironmentQueryRewriter {
         ConversionContext resourceContext = new ConversionContext(queryWithDeclarations, queryWithDeclarationsModule);
         new ResourceVisitor(resourceContext, resources).visit(queryWithDeclarationsModule);
         return resourceContext.result();
+    }
+
+    private static String mergeContextDeclaration(
+            ConversionContext context, XQueryParser.ModuleAndThisIsItContext module, String declarations) {
+        if (module.module().main == null || !declarations.contains("declare context item")) {
+            return declarations;
+        }
+        XQueryParser.ModuleAndThisIsItContext environment = XQueryParsing.parseValidModule(declarations + "()");
+        if (environment == null) {
+            return declarations;
+        }
+        XQueryParser.ContextItemDeclContext supplied = null;
+        for (var declaration : environment.module().main.prolog().declarations) {
+            if (declaration.contextItemDecl() != null) {
+                supplied = declaration.contextItemDecl();
+                break;
+            }
+        }
+        if (supplied == null) {
+            return declarations;
+        }
+        for (var declaration : module.module().main.prolog().declarations) {
+            var target = declaration.contextItemDecl();
+            if (target != null) {
+                if (target.external != null) {
+                    String expression = declarations.substring(
+                            supplied.value.getStart().getStartIndex(),
+                            supplied.value.getStop().getStopIndex() + 1);
+                    if (target.defaultValue != null) {
+                        context.replace(target.defaultValue, expression);
+                    } else {
+                        context.insertAfter(target.external, " := " + expression);
+                    }
+                }
+                return declarations.substring(0, supplied.getStart().getStartIndex())
+                        + declarations.substring(supplied.getStop().getStopIndex() + 1);
+            }
+        }
+        return declarations;
     }
 
     private static String environmentSchemaImports(
@@ -206,8 +246,12 @@ public final class EnvironmentQueryRewriter {
         public Void visitVarDecl(XQueryParser.VarDeclContext varDecl) {
             String name = this.context.text(varDecl.varBinding().eqName());
             String defaultValue = this.externalParams.get(name);
-            if (defaultValue != null && varDecl.external != null && varDecl.COLON_EQ() == null) {
-                this.context.insertAfter(varDecl.external, " := (" + defaultValue + ")");
+            if (defaultValue != null && varDecl.external != null) {
+                if (varDecl.exprSingle() != null) {
+                    this.context.replace(varDecl.exprSingle(), "(" + defaultValue + ")");
+                } else {
+                    this.context.insertAfter(varDecl.external, " := (" + defaultValue + ")");
+                }
             }
             return visitChildren(varDecl);
         }
