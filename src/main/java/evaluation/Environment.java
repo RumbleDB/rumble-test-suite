@@ -15,7 +15,11 @@ import net.sf.saxon.s9api.XdmNode;
 import net.sf.saxon.s9api.XdmSequenceIterator;
 import net.sf.saxon.s9api.streams.Steps;
 
+import org.rumbledb.api.Rumble;
 import org.rumbledb.compiler.utils.URILiteralUtils;
+import org.rumbledb.config.CompilationConfiguration;
+import org.rumbledb.config.RumbleConfiguration;
+import org.rumbledb.resources.ResourceCollection;
 import org.rumbledb.resources.ResourceResolver;
 
 public class Environment {
@@ -23,6 +27,7 @@ public class Environment {
     private final Map<URI, URI> resolvedRuntimeResources = new HashMap<>();
     private final Map<String, String> paramLookup = new HashMap<>();
     private final Map<String, String> externalParamLookup = new HashMap<>();
+    private final Map<String, CollectionDefinition> collections = new LinkedHashMap<>();
     private final Map<String, SourceBinding> roleLookup = new LinkedHashMap<>();
     private final Map<URI, URI> importResourceLookup = new HashMap<>();
     private final Map<String, List<String>> moduleLocationHints = new HashMap<>();
@@ -42,6 +47,7 @@ public class Environment {
         initStaticBaseUri(environmentNode);
         initResources(environmentNode, envPath);
         initSources(environmentNode, envPath);
+        initCollections(environmentNode, envPath);
         addImportResources(collectImportResources(environmentNode, envPath));
     }
 
@@ -53,6 +59,7 @@ public class Environment {
         this.paramLookup.putAll(environment.paramLookup);
         this.externalParamLookup.putAll(environment.externalParamLookup);
         this.roleLookup.putAll(environment.roleLookup);
+        this.collections.putAll(environment.collections);
         this.importResourceLookup.putAll(environment.importResourceLookup);
         environment.moduleLocationHints.forEach((namespace, locations) -> {
             this.moduleLocationHints.put(namespace, new ArrayList<>(locations));
@@ -212,6 +219,29 @@ public class Environment {
         }
     }
 
+    private void initCollections(XdmNode environmentNode, Path envPath) {
+        for (XdmNode collection : environmentNode.children("collection")) {
+            List<String> members = new ArrayList<>();
+            List<URI> uris = new ArrayList<>();
+            for (XdmNode source : collection.children("source")) {
+                URI physical = envPath.resolve(source.attribute("file")).toUri();
+                String logical = source.attribute("uri");
+                URI uri = logical == null ? physical : envPath.toUri().resolve(logical);
+                this.resolvedRuntimeResources.put(uri, physical);
+                members.add(new SourceBinding(uri.toString(), source.attribute("validation")).documentExpression());
+                uris.add(uri);
+            }
+            for (XdmNode query : collection.children("query")) {
+                members.add(query.getStringValue());
+            }
+            String uri = collection.attribute("uri");
+            this.collections.put(
+                    uri == null ? "" : uri,
+                    new CollectionDefinition(
+                            members.isEmpty() ? "()" : String.join(", ", members), uris, envPath.toUri()));
+        }
+    }
+
     private void addResolvedRuntimeResource(String uri, String file, Path envPath) {
         URI logicalUri = parseLogicalUri(uri);
         if (logicalUri == null) {
@@ -293,6 +323,33 @@ public class Environment {
         mappings.putAll(this.importResourceLookup);
         return new ResourceResolver(mappings);
     }
+
+    /** Materializes each collection once per evaluation, preserving repeated-call node identity. */
+    public ResourceResolver getResourceResolver(RumbleConfiguration config) {
+        ResourceResolver resources = getResourceResolver();
+        if (this.collections.isEmpty()) {
+            return resources;
+        }
+        Map<URI, ResourceCollection> named = new LinkedHashMap<>();
+        ResourceCollection defaultCollection = null;
+        Rumble rumble = new Rumble(new CompilationConfiguration(config, resources));
+        for (Map.Entry<String, CollectionDefinition> entry : this.collections.entrySet()) {
+            CollectionDefinition definition = entry.getValue();
+            var items = rumble.runQuery(applyToQuery(definition.query()), definition.base())
+                    .getAsList();
+            ResourceCollection collection = new ResourceCollection(items, definition.uris());
+            if (entry.getKey().isEmpty()) {
+                defaultCollection = collection;
+            } else {
+                named.put(definition.base().resolve(entry.getKey()), collection);
+            }
+        }
+        Map<URI, URI> mappings = new HashMap<>(this.resolvedRuntimeResources);
+        mappings.putAll(this.importResourceLookup);
+        return new ResourceResolver(mappings, named, defaultCollection);
+    }
+
+    private record CollectionDefinition(String query, List<URI> uris, URI base) {}
 
     /**
      * This method takes a query and modifies it such that it executes inside the environment. It adds a context-item

@@ -10,9 +10,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import org.xmlunit.builder.DiffBuilder;
-import org.xmlunit.diff.ComparisonResult;
-import org.xmlunit.diff.ComparisonType;
 import org.xmlunit.diff.Diff;
 
 import evaluation.*;
@@ -229,17 +226,14 @@ public class TestBase {
             case "assert-xml":
                 results = context.getPrimaryResult();
                 String actualXml = "<assert-xml>"
-                        + results.stream().map(Item::serialize).collect(Collectors.joining(""))
+                        + org.rumbledb.serialization.SequenceSerializer.serialize(
+                                results,
+                                new org.rumbledb.serialization.SerializationParameters(),
+                                org.rumbledb.exceptions.ExceptionMetadata.EMPTY_METADATA)
                         + "</assert-xml>";
                 String expectedXml = "<assert-xml>" + assertionText(assertion, testSetDirectory) + "</assert-xml>";
-
-                DiffBuilder diffBuilder =
-                        DiffBuilder.compare(expectedXml).withTest(actualXml).ignoreWhitespace();
-                if ("true".equals(assertion.attribute("ignore-prefixes"))) {
-                    diffBuilder.withDifferenceEvaluator((comparison, outcome) ->
-                            comparison.getType() == ComparisonType.NAMESPACE_PREFIX ? ComparisonResult.EQUAL : outcome);
-                }
-                Diff diff = diffBuilder.build();
+                Diff diff = XmlAssertions.compare(
+                        expectedXml, actualXml, "true".equals(assertion.attribute("ignore-prefixes")));
 
                 assertFalse(diff.hasDifferences(), "Expected vs actual XML are different:\n" + diff.toString());
                 break;

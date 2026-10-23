@@ -63,6 +63,12 @@ public class CaseCollector {
      */
     public void execute(String testFolder) throws IOException, SaxonApiException, InterruptedException {
         getTestsRepository();
+        execute(this.testsRepositoryDirectoryPath, testFolder);
+    }
+
+    /** Runs against an existing QT3 checkout without fetching or modifying it. */
+    public void execute(Path repositoryDirectory, String testFolder) throws IOException, SaxonApiException {
+        this.testsRepositoryDirectoryPath = repositoryDirectory;
         processCatalog(testFolder);
 
         // Verify that the selected test case was found in this partition.
