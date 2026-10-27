@@ -24,6 +24,30 @@ public class SkipReasonTest {
     }
 
     @Test
+    public void xsltFeaturesBelongToOtherSpec() throws Exception {
+        for (String feature : List.of("fn-transform-XSLT", "fn-transform-XSLT30")) {
+            assertEquals(
+                    "other-spec: feature=" + feature + " [other-spec]",
+                    skipMessage("<dependency type=\"feature\" value=\"" + feature + "\"/>"));
+        }
+    }
+
+    @Test
+    public void namespaceAxisIsNotApplicable() throws Exception {
+        assertEquals(
+                "not-applicable: feature=namespace-axis [not-applicable]",
+                skipMessage("<dependency type=\"feature\" value=\"namespace-axis\"/>"));
+    }
+
+    @Test
+    public void negativeTestsOfExcludedFeaturesRun() throws Exception {
+        for (String feature : List.of("fn-transform-XSLT", "fn-transform-XSLT30", "namespace-axis")) {
+            assertNull(skipMessage(
+                    "<dependency type=\"feature\" value=\"" + feature + "\" satisfied=\"false\"/>"));
+        }
+    }
+
+    @Test
     public void negativeTestOfSupportedFeatureIsNotApplicable() throws Exception {
         assertEquals(
                 "not-applicable: feature=!serialization [not-applicable]",
@@ -38,7 +62,7 @@ public class SkipReasonTest {
     @Test
     public void reportsEveryUnmetDependencyWithTheHighestPrecedenceCategory() throws Exception {
         assertEquals(
-                "other-spec: feature=namespace-axis [missing-feature]; spec=XP20+ [other-spec]",
+                "other-spec: feature=namespace-axis [not-applicable]; spec=XP20+ [other-spec]",
                 skipMessage("<dependency type=\"feature\" value=\"namespace-axis\"/>"
                         + "<dependency type=\"spec\" value=\"XP20+\"/>"));
     }

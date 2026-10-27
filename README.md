@@ -35,13 +35,13 @@ Tests are skipped only when their QT3 dependency metadata says that they do not 
 A skip message lists every unmet QT3 dependency of the test case, each with the reason it is unmet, and starts with the category of the test case as a whole:
 
 ```
-other-spec: feature=namespace-axis [missing-feature]; spec=XP20+ [other-spec]
+other-spec: feature=namespace-axis [not-applicable]; spec=XP20+ [other-spec]
 ```
 
 A `!` before a value marks a dependency with `satisfied="false"`, i.e. the test case requires the feature to be absent. The categories are, in increasing precedence:
 - ``missing-feature`` the test case requires something RumbleDB does not implement yet
-- ``not-applicable`` the test case requires the absence of a supported feature (a negative test), or an implementation-defined alternative that RumbleDB does not use (e.g. XSD 1.0, XML 1.0 fourth edition)
-- ``other-spec`` the test case only applies to another language or specification version (XPath-only, XQuery 1.0-only)
+- ``not-applicable`` the test case requires the absence of a supported feature (a negative test), or an implementation-defined alternative that RumbleDB does not use (e.g. XSD 1.0, XML 1.0 fourth edition, namespace-axis)
+- ``other-spec`` the test case only applies to another language or specification version (XPath-only, XQuery 1.0-only, fn-transform-XSLT, fn-transform-XSLT30)
 
 A test case takes the category of its highest-precedence dependency, since implementing a missing feature does not make a test case run while another dependency rules it out. The analytics parse these messages (``analytics/modules/skips.xquery``) into a ``skips`` section of ``analysis.json`` that ranks the unmet dependencies by the number of skipped tests, and the dashboard shows them in the *Feature Gaps* tab.
 

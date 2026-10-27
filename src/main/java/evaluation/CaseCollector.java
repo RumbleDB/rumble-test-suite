@@ -388,6 +388,14 @@ public class CaseCollector {
             String type, String value, boolean satisfied, boolean supported) {
         SkipReason.Category category =
                 supported ? SkipReason.Category.NOT_APPLICABLE : SkipReason.Category.MISSING_FEATURE;
+        if (!supported && type.equals("feature")) {
+            // These optional capabilities are outside the implementation's target, rather than feature gaps.
+            category = switch (value) {
+                case "fn-transform-XSLT", "fn-transform-XSLT30" -> SkipReason.Category.OTHER_SPEC;
+                case "namespace-axis" -> SkipReason.Category.NOT_APPLICABLE;
+                default -> category;
+            };
+        }
         return new SkipReason.UnmetDependency(type, value, satisfied, category);
     }
 
