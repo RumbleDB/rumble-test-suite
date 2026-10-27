@@ -319,10 +319,10 @@ public class CaseCollector {
                     break;
                 }
                 case "xsd-version": {
-                    // Rumble implements XSD 1.1, so tests for XSD 1.0 specific behaviour do not apply.
-                    // TODO maybe it influences Saxon environment processor (check 221 in
-                    // QT3TestDriverHE)
-                    if (value.contains("1.0")) {
+                    // Imported schemas and schema validation support XML Schema 1.0 only.
+                    boolean supported =
+                            Arrays.stream(value.trim().split("\\s+")).anyMatch("1.0"::equals);
+                    if (!matchesDependency(dependencyNode, supported)) {
                         unmet.add(new SkipReason.UnmetDependency(
                                 type, value, satisfied, SkipReason.Category.NOT_APPLICABLE));
                     }

@@ -104,3 +104,5 @@ python analytics/plot.py
 
 # Notes
 This work was started as part of a master's thesis by Stevan Mihajlovic. To view the original state of that final work, check out the ``stevan-master`` branch.
+
+XML Schema dependencies are evaluated for XSD 1.0 support: tests requiring XSD 1.1 are skipped as not applicable. This is independent of XML document version support.
