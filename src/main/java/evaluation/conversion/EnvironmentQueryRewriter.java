@@ -16,6 +16,20 @@ public final class EnvironmentQueryRewriter {
 
     private EnvironmentQueryRewriter() {}
 
+    /** The environment supplies the initial default; an explicit query declaration overrides it. */
+    public static String withDefaultCollation(String query, String collation) {
+        if (collation == null) return query;
+        var module = XQueryParsing.parseValidModule(query);
+        if (module == null || module.module().main == null) return query;
+        for (var header : module.module().main.prolog().headers) {
+            if (header.setter() != null && header.setter().defaultCollationDecl() != null) return query;
+        }
+        ConversionContext context = new ConversionContext(query, module);
+        insertDeclarations(
+                context, module, "declare default collation " + XQueryStringLiteral.serialize(collation, '"') + ";\n");
+        return context.result();
+    }
+
     public static String rewrite(
             String query,
             Map<String, String> environmentNamespaces,
