@@ -1,6 +1,8 @@
 package iq.base;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import evaluation.Environment;
 import evaluation.conversion.Converter;
@@ -74,17 +76,27 @@ class AssertionContext {
 
     /** Assertions have their own static context and see the cached result as an external variable. */
     List<Item> runAssertion(String expression, XdmNode assertion) {
-        StringBuilder query = new StringBuilder();
+        Map<String, String> namespaceBindings = new LinkedHashMap<>();
+        if (this.environment != null) namespaceBindings.putAll(this.environment.getNamespaceBindings());
         var namespaces = assertion.axisIterator(Axis.NAMESPACE);
         while (namespaces.hasNext()) {
             XdmNode namespace = namespaces.next();
             if (namespace.getNodeName() == null) continue;
             String prefix = namespace.getNodeName().getLocalName();
             if (prefix.isEmpty() || "xml".equals(prefix)) continue;
-            query.append("declare namespace ")
-                    .append(prefix)
-                    .append(" = \"")
-                    .append(namespace.getStringValue().replace("&", "&amp;").replace("\"", "\"\""))
+            // An assertion-local prefix binding overrides its environment binding.
+            namespaceBindings.put(prefix, namespace.getStringValue());
+        }
+        StringBuilder query = new StringBuilder();
+        for (var binding : namespaceBindings.entrySet()) {
+            if ("xml".equals(binding.getKey())) continue;
+            if (binding.getKey().isEmpty()) {
+                query.append("declare default element namespace ");
+            } else {
+                query.append("declare namespace ").append(binding.getKey()).append(" = ");
+            }
+            query.append("\"")
+                    .append(binding.getValue().replace("&", "&amp;").replace("\"", "\"\""))
                     .append("\";\n");
         }
         query.append("declare variable $result external;\n").append(expression);
