@@ -39,6 +39,7 @@ public class Environment {
 
     private boolean staticBaseUriUndefined = false;
     private String staticBaseUri = null;
+    private String defaultCollation = null;
     private String contextItemSelect = null;
 
     public Environment(XdmNode environmentNode, Path envPath) {
@@ -46,6 +47,11 @@ public class Environment {
         initNamespaces(environmentNode);
         initDecimalFormats(environmentNode);
         initStaticBaseUri(environmentNode);
+        for (XdmNode collation : environmentNode.children("collation")) {
+            if ("true".equals(collation.attribute("default"))) {
+                this.defaultCollation = collation.attribute("uri");
+            }
+        }
         initResources(environmentNode, envPath);
         initSources(environmentNode, envPath);
         for (XdmNode contextItem : environmentNode.children("context-item")) {
@@ -75,6 +81,7 @@ public class Environment {
         this.decimalFormatDeclarations.addAll(environment.decimalFormatDeclarations);
         this.staticBaseUriUndefined = environment.staticBaseUriUndefined;
         this.staticBaseUri = environment.staticBaseUri;
+        this.defaultCollation = environment.defaultCollation;
         this.contextItemSelect = environment.contextItemSelect;
     }
 
@@ -364,6 +371,7 @@ public class Environment {
      * @return a String containing the updated query with the context-item, params and resources set.
      */
     public String applyToQuery(String query) {
+        query = EnvironmentQueryRewriter.withDefaultCollation(query, this.defaultCollation);
         return EnvironmentQueryRewriter.rewrite(
                 query,
                 this.namespaceLookup,
