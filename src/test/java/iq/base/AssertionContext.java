@@ -4,7 +4,10 @@ import java.util.List;
 
 import evaluation.Environment;
 import evaluation.conversion.Converter;
+import net.sf.saxon.s9api.Axis;
+import net.sf.saxon.s9api.XdmNode;
 
+import org.rumbledb.api.ExternalBindings;
 import org.rumbledb.api.Item;
 import org.rumbledb.api.Rumble;
 import org.rumbledb.api.SequenceOfItems;
@@ -67,6 +70,34 @@ class AssertionContext {
 
     List<Item> runQuery(String query) {
         return evaluateQuery(query).getResult();
+    }
+
+    /** Assertions have their own static context and see the cached result as an external variable. */
+    List<Item> runAssertion(String expression, XdmNode assertion) {
+        StringBuilder query = new StringBuilder();
+        var namespaces = assertion.axisIterator(Axis.NAMESPACE);
+        while (namespaces.hasNext()) {
+            XdmNode namespace = namespaces.next();
+            if (namespace.getNodeName() == null) continue;
+            String prefix = namespace.getNodeName().getLocalName();
+            if (prefix.isEmpty() || "xml".equals(prefix)) continue;
+            query.append("declare namespace ")
+                    .append(prefix)
+                    .append(" = \"")
+                    .append(namespace.getStringValue().replace("&", "&amp;").replace("\"", "\"\""))
+                    .append("\";\n");
+        }
+        query.append("declare variable $result external;\n").append(expression);
+        String source = query.toString();
+        if (!this.useXQueryParser) source = Converter.convert(source);
+        RumbleConfiguration config = applyDependenciesToConfig(this.rumbleConfig);
+        ResourceResolver resolver =
+                this.environment == null ? new ResourceResolver() : this.environment.getResourceResolver(config);
+        ExternalBindings bindings = new ExternalBindings();
+        bindings.bindItems("result", getPrimaryResult());
+        return new Rumble(new CompilationConfiguration(config, resolver))
+                .runQuery(source, bindings)
+                .getAsList();
     }
 
     String getPrimarySerialization() {

@@ -13,7 +13,6 @@ import java.util.stream.Collectors;
 import org.xmlunit.diff.Diff;
 
 import evaluation.*;
-import evaluation.conversion.XQueryMainModuleRewriter;
 import net.sf.saxon.s9api.XdmNode;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -109,7 +108,6 @@ public class TestBase {
 
     private void checkAssertion(XdmNode assertion, AssertionContext context, Path testSetDirectory) {
         String tag = assertion.getNodeName().getLocalName();
-        String secondQuery;
         List<Item> results;
 
         switch (tag) {
@@ -118,9 +116,8 @@ public class TestBase {
                 assertTrue(results.isEmpty());
                 break;
             case "assert":
-                secondQuery = declareResultVariableFromTestExpression(
-                        context.getTestString(), prepareAssertionExpression(assertion.getStringValue()));
-                assertTrueSingleElement(context.runQuery(secondQuery));
+                assertTrueSingleElement(context.runAssertion(
+                        "boolean(" + prepareAssertionExpression(assertion.getStringValue()) + ")", assertion));
                 break;
             case "not":
                 List<XdmNode> nestedAssertions = new ArrayList<>();
@@ -136,30 +133,18 @@ public class TestBase {
                         // Expected: the nested assertion should fail.
                     }
                 } else {
-                    secondQuery = declareResultVariableFromTestExpression(
-                            context.getTestString(), prepareAssertionExpression(assertion.getStringValue()));
-                    assertFalseSingleElement(context.runQuery(secondQuery));
+                    assertFalseSingleElement(context.runAssertion(
+                            "boolean(" + prepareAssertionExpression(assertion.getStringValue()) + ")", assertion));
                 }
                 break;
             case "assert-eq":
-                secondQuery = XQueryMainModuleRewriter.rewriteProgram(
-                        context.getTestString(),
-                        program -> "(("
-                                + program
-                                + ") eq ("
-                                + prepareAssertionExpression(assertion.getStringValue())
-                                + "))");
-                assertTrueSingleElement(context.runQuery(secondQuery));
+                assertTrueSingleElement(context.runAssertion(
+                        "$result eq (" + prepareAssertionExpression(assertion.getStringValue()) + ")", assertion));
                 break;
             case "assert-deep-eq":
-                secondQuery = XQueryMainModuleRewriter.rewriteProgram(
-                        context.getTestString(),
-                        program -> "deep-equal(("
-                                + program
-                                + "), ("
-                                + prepareAssertionExpression(assertion.getStringValue())
-                                + "))");
-                assertTrueSingleElement(context.runQuery(secondQuery));
+                assertTrueSingleElement(context.runAssertion(
+                        "deep-equal($result, (" + prepareAssertionExpression(assertion.getStringValue()) + "))",
+                        assertion));
                 break;
             case "assert-true":
                 results = context.getPrimaryResult();
@@ -207,10 +192,8 @@ public class TestBase {
                 assertTrue(success, "All assertions in any-of failed");
                 break;
             case "assert-type":
-                secondQuery = XQueryMainModuleRewriter.rewriteProgram(
-                        context.getTestString(),
-                        program -> "(" + program + ") instance of " + assertion.getStringValue());
-                assertTrueSingleElement(context.runQuery(secondQuery));
+                assertTrueSingleElement(
+                        context.runAssertion("$result instance of " + assertion.getStringValue(), assertion));
                 break;
             case "assert-count":
                 results = context.getPrimaryResult();
@@ -333,10 +316,9 @@ public class TestBase {
     }
 
     private void assertPermutation(XdmNode assertion, AssertionContext context) {
-        String assertExpression = XQueryMainModuleRewriter.rewriteProgram(
-                context.getTestString(),
-                program -> PERMUTATION_ASSERTION_QUERY.formatted(program, assertion.getStringValue()));
-        List<Item> results = context.runQuery(assertExpression);
+        String assertExpression = PERMUTATION_ASSERTION_QUERY.formatted(
+                "$result", prepareAssertionExpression(assertion.getStringValue()));
+        List<Item> results = context.runAssertion(assertExpression, assertion);
         assertTrueSingleElement(results);
     }
 
@@ -345,12 +327,6 @@ public class TestBase {
             return "";
         }
         return s.replaceAll("\\s+", " ").trim();
-    }
-
-    private static String declareResultVariableFromTestExpression(String query, String assertionExpression) {
-        return XQueryMainModuleRewriter.rewriteProgram(
-                query,
-                program -> "declare variable $result := (" + program + ");\nboolean(" + assertionExpression + ")");
     }
 
     /**
