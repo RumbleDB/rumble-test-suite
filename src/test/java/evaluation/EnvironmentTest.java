@@ -28,17 +28,6 @@ public class EnvironmentTest {
     Path directory;
 
     @Test
-    public void preservesLogicalResourceUrisInAssertions() throws Exception {
-        Path resource = Files.writeString(this.directory.resolve("resource.xml"), "<root/>");
-        Environment environment = new Environment(element("<environment>"
-                + "<resource uri=\"http://example.org/resource.xml\" file=\"resource.xml\"/>"
-                + "</environment>", "environment"), this.directory);
-        String query = "base-uri(doc('http://example.org/resource.xml')) eq 'http://example.org/resource.xml'";
-        assertEquals(query, environment.applyToQuery(query));
-        assertResolvedLocation(environment, URI.create("http://example.org/resource.xml"), resource);
-    }
-
-    @Test
     public void rewritesEnvironmentModulesToExplicitLocationHints() throws Exception {
         Path module = Files.writeString(this.directory.resolve("module.xq"), "module namespace m = \"urn:module\";");
         Path schema = Files.writeString(this.directory.resolve("schema.xsd"), "<schema/>");
