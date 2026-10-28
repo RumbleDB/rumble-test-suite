@@ -364,7 +364,8 @@ public class Environment {
                 this.namespaceLookup,
                 createDeclarations(),
                 this.externalParamLookup,
-                this.runtimeResourceLookup,
+                // ResourceResolver maps logical URIs at I/O time; literals also occur in assertions.
+                Map.of(),
                 this.moduleLocationHints,
                 this.schemaLocationHints,
                 hasSchemaValidatedSource());
