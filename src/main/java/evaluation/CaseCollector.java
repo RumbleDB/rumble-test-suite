@@ -13,6 +13,8 @@ import java.util.regex.Pattern;
 import net.sf.saxon.s9api.*;
 import net.sf.saxon.s9api.streams.Steps;
 
+import com.ibm.icu.lang.UCharacter;
+
 public class CaseCollector {
     // Features intentionally omitted from this set include:
     // schemaValidation and schemaImport (XML Schema is not supported),
@@ -279,9 +281,23 @@ public class CaseCollector {
                     break;
                 }
                 case "unicode-version": {
-                    // 7.0,3.1.1,5.2,6.0,6.2 - We will need to look at the tests. I am not sure
-                    // which
-                    // unicode Java 8 supports. For now you can keep them all.
+                    // Fixed-version tests must not run against a newer character database:
+                    // characters unassigned in the requested version may now have mappings.
+                    String implementedVersion;
+                    if ("fn-normalize-unicode".equals(testCase.getParent().attribute("name"))) {
+                        var version = UCharacter.getUnicodeVersion();
+                        implementedVersion = version.getMajor() + "." + version.getMinor();
+                    } else {
+                        // Case conversion and regular expressions use the JDK character database.
+                        // Java 17 specifies Unicode 13.0; do not guess for other Java releases.
+                        implementedVersion = Runtime.version().feature() == 17 ? "13.0" : null;
+                    }
+                    boolean supported = implementedVersion != null
+                            && Arrays.asList(value.trim().split("\\s+")).contains(implementedVersion);
+                    if (!matchesDependency(dependencyNode, supported)) {
+                        unmet.add(new SkipReason.UnmetDependency(
+                                type, value, satisfied, SkipReason.Category.NOT_APPLICABLE));
+                    }
                     break;
                 }
                 case "unicode-normalization-form": {
