@@ -102,7 +102,7 @@ public class EnvironmentTest {
                 this.directory);
 
         assertEquals(
-                "declare context item := validate strict { doc(\""
+                "declare context item as document-node(schema-element(Q{}root)) := validate strict { doc(\""
                         + strict.toUri()
                         + "\") }; declare variable $other := validate lax { doc(\""
                         + lax.toUri()

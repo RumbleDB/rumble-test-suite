@@ -1,6 +1,7 @@
 package evaluation;
 
 import java.net.URI;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -8,6 +9,8 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.xml.stream.XMLInputFactory;
+import javax.xml.stream.XMLStreamConstants;
 
 import evaluation.conversion.EnvironmentQueryRewriter;
 import net.sf.saxon.s9api.Axis;
@@ -383,7 +386,9 @@ public class Environment {
             SourceBinding source = r.getValue();
             if (role.equals(".")) {
                 declarations
-                        .append("declare context item := ")
+                        .append("declare context item")
+                        .append(source.staticDocumentType())
+                        .append(" := ")
                         .append(source.documentExpression())
                         .append("; ");
             } else {
@@ -430,6 +435,36 @@ public class Environment {
     private record SourceBinding(String file, String validation) {
         private boolean requiresSchemaValidation() {
             return "strict".equals(this.validation) || "lax".equals(this.validation);
+        }
+
+        /** Supply the type of a strict, schema-validated fixture without changing the test query. */
+        private String staticDocumentType() {
+            if (!"strict".equals(this.validation)) {
+                return "";
+            }
+            XMLInputFactory factory = XMLInputFactory.newFactory();
+            factory.setProperty(XMLInputFactory.SUPPORT_DTD, false);
+            factory.setProperty("javax.xml.stream.isSupportingExternalEntities", false);
+            try (var input = Files.newInputStream(Path.of(URI.create(this.file)))) {
+                var reader = factory.createXMLStreamReader(input);
+                try {
+                    while (reader.hasNext()) {
+                        if (reader.next() == XMLStreamConstants.START_ELEMENT) {
+                            String namespace = reader.getNamespaceURI();
+                            return " as document-node(schema-element(Q{"
+                                    + (namespace == null ? "" : namespace)
+                                    + "}"
+                                    + reader.getLocalName()
+                                    + "))";
+                        }
+                    }
+                } finally {
+                    reader.close();
+                }
+            } catch (java.io.IOException | javax.xml.stream.XMLStreamException | IllegalArgumentException exception) {
+                // Let normal query evaluation report unavailable or malformed fixtures.
+            }
+            return "";
         }
 
         private String documentExpression() {
