@@ -39,6 +39,7 @@ public class Environment {
 
     private boolean staticBaseUriUndefined = false;
     private String staticBaseUri = null;
+    private String contextItemSelect = null;
 
     public Environment(XdmNode environmentNode, Path envPath) {
         initParams(environmentNode);
@@ -47,6 +48,9 @@ public class Environment {
         initStaticBaseUri(environmentNode);
         initResources(environmentNode, envPath);
         initSources(environmentNode, envPath);
+        for (XdmNode contextItem : environmentNode.children("context-item")) {
+            this.contextItemSelect = contextItem.attribute("select");
+        }
         initCollections(environmentNode, envPath);
         addImportResources(collectImportResources(environmentNode, envPath));
     }
@@ -71,6 +75,7 @@ public class Environment {
         this.decimalFormatDeclarations.addAll(environment.decimalFormatDeclarations);
         this.staticBaseUriUndefined = environment.staticBaseUriUndefined;
         this.staticBaseUri = environment.staticBaseUri;
+        this.contextItemSelect = environment.contextItemSelect;
     }
 
     public static Environment forTestCase(Environment environment, XdmNode testCase, Path testSetDirectory) {
@@ -377,6 +382,15 @@ public class Environment {
     private String createDeclarations() {
         StringBuilder declarations = new StringBuilder();
         declarations.append(createDecimalFormatProlog());
+        if (this.contextItemSelect != null) {
+            if (this.roleLookup.containsKey(".")) {
+                throw new IllegalArgumentException("QT3 environment supplies both a context item and a context source");
+            }
+            declarations
+                    .append("declare context item := ")
+                    .append(this.contextItemSelect)
+                    .append("; ");
+        }
         for (Map.Entry<String, SourceBinding> r : roleLookup.entrySet()) {
             String role = r.getKey();
             SourceBinding source = r.getValue();
@@ -432,7 +446,8 @@ public class Environment {
         }
 
         private String documentExpression() {
-            String document = "doc(\"" + file + "\")";
+            // The query may change the default function namespace; environment loading still uses fn:doc.
+            String document = "fn:doc(\"" + file + "\")";
             if (requiresSchemaValidation()) {
                 return "validate " + validation + " { " + document + " }";
             }

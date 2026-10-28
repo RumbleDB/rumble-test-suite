@@ -182,11 +182,12 @@ public class CaseCollector {
             return;
         }
 
-        // the directory containing this test-set's own XML file; relative resource
-        // hrefs in the test query must resolve against this
+        // The test-set document supplies the initial static base URI. Keeping its
+        // filename matters for empty URI references; relative resources still use its directory.
         Path testSetDirectory =
                 testsRepositoryDirectoryPath.resolve(currentTestSet).getParent();
-        String staticBaseUri = toDirectoryUri(testSetDirectory);
+        String staticBaseUri =
+                testsRepositoryDirectoryPath.resolve(currentTestSet).toUri().toString();
 
         Environment environment = prepareEnvironment(testCase, testSetDirectory);
 
@@ -244,14 +245,6 @@ public class CaseCollector {
             return catalogEnvironments.get(reference);
         }
         throw new IllegalArgumentException("No environment found with name: " + reference);
-    }
-
-    private static String toDirectoryUri(Path directory) {
-        String uri = directory.toUri().toString();
-        if (!uri.endsWith("/")) {
-            uri += "/";
-        }
-        return uri + ".";
     }
 
     /**
