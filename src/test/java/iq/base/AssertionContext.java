@@ -1,10 +1,15 @@
 package iq.base;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import evaluation.Environment;
 import evaluation.conversion.Converter;
+import net.sf.saxon.s9api.Axis;
+import net.sf.saxon.s9api.XdmNode;
 
+import org.rumbledb.api.ExternalBindings;
 import org.rumbledb.api.Item;
 import org.rumbledb.api.Rumble;
 import org.rumbledb.api.SequenceOfItems;
@@ -67,6 +72,44 @@ class AssertionContext {
 
     List<Item> runQuery(String query) {
         return evaluateQuery(query).getResult();
+    }
+
+    /** Assertions have their own static context and see the cached result as an external variable. */
+    List<Item> runAssertion(String expression, XdmNode assertion) {
+        Map<String, String> namespaceBindings = new LinkedHashMap<>();
+        if (this.environment != null) namespaceBindings.putAll(this.environment.getNamespaceBindings());
+        var namespaces = assertion.axisIterator(Axis.NAMESPACE);
+        while (namespaces.hasNext()) {
+            XdmNode namespace = namespaces.next();
+            if (namespace.getNodeName() == null) continue;
+            String prefix = namespace.getNodeName().getLocalName();
+            if (prefix.isEmpty() || "xml".equals(prefix)) continue;
+            // An assertion-local prefix binding overrides its environment binding.
+            namespaceBindings.put(prefix, namespace.getStringValue());
+        }
+        StringBuilder query = new StringBuilder();
+        for (var binding : namespaceBindings.entrySet()) {
+            if ("xml".equals(binding.getKey())) continue;
+            if (binding.getKey().isEmpty()) {
+                query.append("declare default element namespace ");
+            } else {
+                query.append("declare namespace ").append(binding.getKey()).append(" = ");
+            }
+            query.append("\"")
+                    .append(binding.getValue().replace("&", "&amp;").replace("\"", "\"\""))
+                    .append("\";\n");
+        }
+        query.append("declare variable $result external;\n").append(expression);
+        String source = query.toString();
+        if (!this.useXQueryParser) source = Converter.convert(source);
+        RumbleConfiguration config = applyDependenciesToConfig(this.rumbleConfig);
+        ResourceResolver resolver =
+                this.environment == null ? new ResourceResolver() : this.environment.getResourceResolver(config);
+        ExternalBindings bindings = new ExternalBindings();
+        bindings.bindItems("result", getPrimaryResult());
+        return new Rumble(new CompilationConfiguration(config, resolver))
+                .runQuery(source, bindings)
+                .getAsList();
     }
 
     String getPrimarySerialization() {
