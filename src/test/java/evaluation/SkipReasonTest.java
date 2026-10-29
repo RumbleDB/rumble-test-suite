@@ -17,6 +17,25 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 public class SkipReasonTest {
 
     @Test
+    public void skipsOnlyKnownXercesXsd11SchemaFailures() throws Exception {
+        for (int number = 20; number <= 25; number++) {
+            var result = CaseCollector.checkDependencies(
+                    testCase("<test-set name='prod-SchemaImport'><test-case name='substitution-0"
+                            + number
+                            + "'><dependency type='xsd-version' value='1.1'/></test-case></test-set>"));
+            assertEquals(
+                    "missing-feature: feature=xsd-1.1-schema-validation [missing-feature]",
+                    result.skipReason.message());
+        }
+        for (String xml : List.of(
+                "<test-set name='prod-SchemaImport'><test-case name='substitution-019'/></test-set>",
+                "<test-set name='another-suite'><test-case name='substitution-020'/></test-set>",
+                "<test-set><test-case name='datatype'><dependency type='xsd-version' value='1.1'/></test-case></test-set>")) {
+            assertNull(CaseCollector.checkDependencies(testCase(xml)).skipReason);
+        }
+    }
+
+    @Test
     public void selectsXsdVersionPerTest() throws Exception {
         for (String value : List.of("1.0", "1.1", "1.0 1.1")) {
             var result = CaseCollector.checkDependencies(testCase("<test-set><test-case name='t'>"
