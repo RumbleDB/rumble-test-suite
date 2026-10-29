@@ -17,6 +17,30 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 public class SkipReasonTest {
 
     @Test
+    public void selectsXsdVersionPerTest() throws Exception {
+        for (String value : List.of("1.0", "1.1", "1.0 1.1")) {
+            var result = CaseCollector.checkDependencies(testCase("<test-set><test-case name='t'>"
+                    + "<dependency type='xsd-version' value='"
+                    + value
+                    + "'/></test-case></test-set>"));
+            assertNull(result.skipReason);
+            assertEquals(value.equals("1.1") ? "1.1" : "1.0", result.xsdVersion);
+        }
+        assertEquals(
+                "1.0",
+                CaseCollector.checkDependencies(testCase("<test-set><test-case name='t'/></test-set>")).xsdVersion);
+        var negative = CaseCollector.checkDependencies(
+                testCase(
+                        "<test-set><dependency type='xsd-version' value='1.0' satisfied='false'/><test-case name='t'/></test-set>"));
+        assertNull(negative.skipReason);
+        assertEquals("1.1", negative.xsdVersion);
+        var inherited = CaseCollector.checkDependencies(
+                testCase("<test-set><dependency type='xsd-version' value='1.1'/><test-case name='t'/></test-set>"));
+        assertNull(inherited.skipReason);
+        assertEquals("1.1", inherited.xsdVersion);
+    }
+
+    @Test
     public void missingFeatureIsReported() throws Exception {
         assertEquals(
                 "missing-feature: feature=infoset-dtd [missing-feature]",
