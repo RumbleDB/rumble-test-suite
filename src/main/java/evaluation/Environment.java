@@ -119,6 +119,11 @@ public class Environment {
         }
     }
 
+    /** Namespace bindings supplied by the test environment, also needed by result assertions. */
+    public Map<String, String> getNamespaceBindings() {
+        return Map.copyOf(this.namespaceLookup);
+    }
+
     private void initDecimalFormats(XdmNode environmentNode) {
         for (XdmNode decimalFormat : environmentNode.children("decimal-format")) {
             StringBuilder sb = new StringBuilder();
