@@ -87,6 +87,7 @@ class AssertionContext {
             // An assertion-local prefix binding overrides its environment binding.
             namespaceBindings.put(prefix, namespace.getStringValue());
         }
+        List<Item> result = getPrimaryResult();
         StringBuilder query = new StringBuilder();
         for (var binding : namespaceBindings.entrySet()) {
             if ("xml".equals(binding.getKey())) continue;
@@ -99,6 +100,8 @@ class AssertionContext {
                     .append(binding.getValue().replace("&", "&amp;").replace("\"", "\"\""))
                     .append("\";\n");
         }
+        // QT3 supplies a context item only when the test result is a singleton.
+        if (result.size() == 1) query.append("declare context item external;\n");
         query.append("declare variable $result external;\n").append(expression);
         String source = query.toString();
         if (!this.useXQueryParser) source = Converter.convert(source);
@@ -106,7 +109,8 @@ class AssertionContext {
         ResourceResolver resolver =
                 this.environment == null ? new ResourceResolver() : this.environment.getResourceResolver(config);
         ExternalBindings bindings = new ExternalBindings();
-        bindings.bindItems("result", getPrimaryResult());
+        bindings.bindItems("result", result);
+        if (result.size() == 1) bindings.bindItems("$", result);
         return new Rumble(new CompilationConfiguration(config, resolver))
                 .runQuery(source, bindings)
                 .getAsList();
