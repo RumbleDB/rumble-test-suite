@@ -17,6 +17,49 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 public class SkipReasonTest {
 
     @Test
+    public void skipsOnlyKnownXercesXsd11SchemaFailures() throws Exception {
+        for (int number = 20; number <= 25; number++) {
+            var result = CaseCollector.checkDependencies(
+                    testCase("<test-set name='prod-SchemaImport'><test-case name='substitution-0"
+                            + number
+                            + "'><dependency type='xsd-version' value='1.1'/></test-case></test-set>"));
+            assertEquals(
+                    "missing-feature: feature=xsd-1.1-schema-validation [missing-feature]",
+                    result.skipReason.message());
+        }
+        for (String xml : List.of(
+                "<test-set name='prod-SchemaImport'><test-case name='substitution-019'/></test-set>",
+                "<test-set name='another-suite'><test-case name='substitution-020'/></test-set>",
+                "<test-set><test-case name='datatype'><dependency type='xsd-version' value='1.1'/></test-case></test-set>")) {
+            assertNull(CaseCollector.checkDependencies(testCase(xml)).skipReason);
+        }
+    }
+
+    @Test
+    public void selectsXsdVersionPerTest() throws Exception {
+        for (String value : List.of("1.0", "1.1", "1.0 1.1")) {
+            var result = CaseCollector.checkDependencies(testCase("<test-set><test-case name='t'>"
+                    + "<dependency type='xsd-version' value='"
+                    + value
+                    + "'/></test-case></test-set>"));
+            assertNull(result.skipReason);
+            assertEquals(value.equals("1.1") ? "1.1" : "1.0", result.xsdVersion);
+        }
+        assertEquals(
+                "1.0",
+                CaseCollector.checkDependencies(testCase("<test-set><test-case name='t'/></test-set>")).xsdVersion);
+        var negative = CaseCollector.checkDependencies(
+                testCase(
+                        "<test-set><dependency type='xsd-version' value='1.0' satisfied='false'/><test-case name='t'/></test-set>"));
+        assertNull(negative.skipReason);
+        assertEquals("1.1", negative.xsdVersion);
+        var inherited = CaseCollector.checkDependencies(
+                testCase("<test-set><dependency type='xsd-version' value='1.1'/><test-case name='t'/></test-set>"));
+        assertNull(inherited.skipReason);
+        assertEquals("1.1", inherited.xsdVersion);
+    }
+
+    @Test
     public void missingFeatureIsReported() throws Exception {
         assertEquals(
                 "missing-feature: feature=infoset-dtd [missing-feature]",
@@ -42,8 +85,7 @@ public class SkipReasonTest {
     @Test
     public void negativeTestsOfExcludedFeaturesRun() throws Exception {
         for (String feature : List.of("fn-transform-XSLT", "fn-transform-XSLT30", "namespace-axis")) {
-            assertNull(skipMessage(
-                    "<dependency type=\"feature\" value=\"" + feature + "\" satisfied=\"false\"/>"));
+            assertNull(skipMessage("<dependency type=\"feature\" value=\"" + feature + "\" satisfied=\"false\"/>"));
         }
     }
 

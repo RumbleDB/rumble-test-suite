@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.antlr.v4.runtime.Token;
+import org.antlr.v4.runtime.tree.ParseTree;
 
 import org.rumbledb.parser.xquery.XQueryParser;
 import org.rumbledb.parser.xquery.XQueryParserBaseVisitor;
@@ -52,7 +53,11 @@ public final class EnvironmentQueryRewriter {
         insertDeclarations(
                 context,
                 module,
-                environmentSchemaImports(injectEnvironmentSchemaImports ? schemaLocationHints : Map.of(), module)
+                environmentSchemaImports(
+                                injectEnvironmentSchemaImports || containsValidateExpression(module)
+                                        ? schemaLocationHints
+                                        : Map.of(),
+                                module)
                         + environmentNamespaceDeclarations(environmentNamespaces, module)
                         + declarations);
         String queryWithDeclarations = context.result();
@@ -67,6 +72,14 @@ public final class EnvironmentQueryRewriter {
         ConversionContext resourceContext = new ConversionContext(queryWithDeclarations, queryWithDeclarationsModule);
         new ResourceVisitor(resourceContext, resources).visit(queryWithDeclarationsModule);
         return resourceContext.result();
+    }
+
+    private static boolean containsValidateExpression(ParseTree tree) {
+        if (tree instanceof XQueryParser.ValidateExprContext) return true;
+        for (int index = 0; index < tree.getChildCount(); index++) {
+            if (containsValidateExpression(tree.getChild(index))) return true;
+        }
+        return false;
     }
 
     private static String mergeContextDeclaration(
