@@ -55,7 +55,8 @@ public final class EnvironmentQueryRewriter {
                 module,
                 environmentSchemaImports(
                                 injectEnvironmentSchemaImports || containsValidateExpression(module)
-                                        ? schemaLocationHints : Map.of(),
+                                        ? schemaLocationHints
+                                        : Map.of(),
                                 module)
                         + environmentNamespaceDeclarations(environmentNamespaces, module)
                         + declarations);
