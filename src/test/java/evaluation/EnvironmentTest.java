@@ -102,9 +102,9 @@ public class EnvironmentTest {
                 this.directory);
 
         assertEquals(
-                "declare context item := validate strict { doc(\""
+                "declare context item := validate strict { fn:doc(\""
                         + strict.toUri()
-                        + "\") }; declare variable $other := validate lax { doc(\""
+                        + "\") }; declare variable $other := validate lax { fn:doc(\""
                         + lax.toUri()
                         + "\") }; 1",
                 environment.applyToQuery("1"));
@@ -131,10 +131,44 @@ public class EnvironmentTest {
                         + "import schema \"\" at \""
                         + noNamespaceSchema.toUri()
                         + "\";\n"
-                        + "declare context item := validate strict { doc(\""
+                        + "declare context item := validate strict { fn:doc(\""
                         + this.directory.resolve("document.xml").toUri()
                         + "\") }; 1",
                 environment.applyToQuery("1"));
+    }
+
+    @Test
+    public void explicitValidationUsesEnvironmentSchemasWithSkippedSourceValidation() throws Exception {
+        Files.writeString(this.directory.resolve("schema.xsd"), """
+                <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="urn:test"
+                           xmlns:t="urn:test" elementFormDefault="qualified">
+                  <xs:element name="object" type="t:abstractType"/>
+                  <xs:complexType name="abstractType" abstract="true"/>
+                  <xs:complexType name="concreteType"><xs:complexContent>
+                    <xs:extension base="t:abstractType"><xs:sequence>
+                      <xs:element name="field" type="xs:string"/>
+                    </xs:sequence></xs:extension>
+                  </xs:complexContent></xs:complexType>
+                </xs:schema>
+                """);
+        Files.writeString(this.directory.resolve("document.xml"), """
+                <dummy><t:object xmlns:t="urn:test" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                                 xsi:type="t:concreteType"><t:field>value</t:field></t:object></dummy>
+                """);
+        Environment environment = new Environment(
+                element("""
+                        <environment>
+                          <schema uri="urn:test" file="schema.xsd"/>
+                          <source role="." file="document.xml" validation="skip"/>
+                        </environment>
+                        """, "environment"), this.directory);
+        String query = environment.applyToQuery("(validate { ./dummy/* })//*:field = 'value'");
+        RumbleConfiguration configuration = RumbleConfiguration.builder()
+                .configureSemantics(semantics -> semantics.queryLanguage("xquery31")).build();
+        assertEquals(true, new Rumble(configuration).runQuery(query).getAsList().get(0).getBooleanValue());
+        // The source itself stays untyped; only the explicit validate expression validates it.
+        String sourceQuery = environment.applyToQuery("data(./dummy/*/*) instance of xs:untypedAtomic");
+        assertEquals(true, new Rumble(configuration).runQuery(sourceQuery).getAsList().get(0).getBooleanValue());
     }
 
     @Test
