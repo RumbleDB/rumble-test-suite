@@ -106,3 +106,9 @@ python analytics/plot.py
 This work was started as part of a master's thesis by Stevan Mihajlovic. To view the original state of that final work, check out the ``stevan-master`` branch.
 
 XSD semantics default to 1.0 for each QT3 test. An `xsd-version` dependency selects the required version (including inherited and negative dependencies) through RumbleDB’s `semantics.xsdVersion` setting. Schema validation continues to use Xerces XSD 1.0 in either mode.
+
+The six `prod/SchemaImport.xml` cases `substitution-020`–`substitution-025` are
+manually skipped as `feature=xsd-1.1-schema-validation` (missing feature): their
+multiple substitution-group heads require XSD 1.1, while Xerces validates XSD 1.0.
+Other XSD 1.1 tests remain enabled. Remove the override in `CaseCollector` when
+the schema validator supports XSD 1.1.
