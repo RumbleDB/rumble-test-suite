@@ -100,6 +100,7 @@ public class TestBase {
                         useXQueryParser,
                         this.rumbleConfig,
                         testCase.xmlVersion,
+                        testCase.xsdVersion,
                         testCase.defaultFormattingLanguage,
                         testCase.staticTyping,
                         testCase.staticBaseUri),

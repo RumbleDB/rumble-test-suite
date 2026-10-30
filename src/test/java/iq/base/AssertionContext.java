@@ -30,6 +30,7 @@ class AssertionContext {
     private final boolean useXQueryParser;
     private final RumbleConfiguration rumbleConfig;
     private final String xmlVersion;
+    private final String xsdVersion;
     private final String defaultFormattingLanguage;
     private final boolean staticTyping;
     private final String staticBaseUri;
@@ -41,6 +42,7 @@ class AssertionContext {
             boolean useXQueryParser,
             RumbleConfiguration rumbleConfig,
             String xmlVersion,
+            String xsdVersion,
             String defaultFormattingLanguage,
             boolean staticTyping,
             String staticBaseUri) {
@@ -50,6 +52,7 @@ class AssertionContext {
         this.useXQueryParser = useXQueryParser;
         this.rumbleConfig = rumbleConfig;
         this.xmlVersion = xmlVersion;
+        this.xsdVersion = xsdVersion;
         this.defaultFormattingLanguage = defaultFormattingLanguage;
         this.staticTyping = staticTyping;
         this.staticBaseUri = staticBaseUri;
@@ -153,7 +156,8 @@ class AssertionContext {
     private RumbleConfiguration applyDependenciesToConfig(RumbleConfiguration config) {
         RumbleConfiguration.RumbleConfigurationBuilder builder = config.toBuilder();
 
-        builder.configureSemantics(s -> s.xmlVersion("1.0").allowScripting(false));
+        builder.configureSemantics(
+                s -> s.xmlVersion("1.0").xsdVersion(this.xsdVersion).allowScripting(false));
 
         String v = this.xmlVersion;
         if (v != null) {

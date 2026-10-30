@@ -13,6 +13,7 @@ public class TestCase {
     public XdmNode assertion;
     public SkipReason skipReason;
     public final String xmlVersion;
+    public final String xsdVersion;
     public final String defaultFormattingLanguage;
     public final boolean staticTyping;
     public Environment environment;
@@ -25,6 +26,7 @@ public class TestCase {
             SkipReason skipReason,
             Environment environment,
             String xmlVersion,
+            String xsdVersion,
             String defaultFormattingLanguage,
             boolean staticTyping,
             String staticBaseUri,
@@ -34,6 +36,7 @@ public class TestCase {
         this.skipReason = skipReason;
         this.environment = environment;
         this.xmlVersion = xmlVersion;
+        this.xsdVersion = xsdVersion;
         this.defaultFormattingLanguage = defaultFormattingLanguage;
         this.staticTyping = staticTyping;
         this.staticBaseUri = staticBaseUri;
