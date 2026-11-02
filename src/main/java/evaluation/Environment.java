@@ -16,9 +16,12 @@ import net.sf.saxon.s9api.XdmSequenceIterator;
 import net.sf.saxon.s9api.streams.Steps;
 
 import org.rumbledb.api.Rumble;
+import org.rumbledb.bindings.ExternalBindings;
+import org.rumbledb.bindings.ItemSequenceBinding;
 import org.rumbledb.compiler.utils.URILiteralUtils;
 import org.rumbledb.config.CompilationConfiguration;
 import org.rumbledb.config.RumbleConfiguration;
+import org.rumbledb.context.Name;
 import org.rumbledb.resources.ResourceCollection;
 import org.rumbledb.resources.ResourceResolver;
 
@@ -27,6 +30,7 @@ public class Environment {
     private final Map<URI, URI> resolvedRuntimeResources = new HashMap<>();
     private final Map<String, String> paramLookup = new HashMap<>();
     private final Map<String, String> externalParamLookup = new HashMap<>();
+    private final Map<Name, String> externalBindingExpressions = new LinkedHashMap<>();
     private final Map<String, CollectionDefinition> collections = new LinkedHashMap<>();
     private final Map<String, SourceBinding> roleLookup = new LinkedHashMap<>();
     private final Map<URI, URI> importResourceLookup = new HashMap<>();
@@ -68,6 +72,7 @@ public class Environment {
         this.resolvedRuntimeResources.putAll(environment.resolvedRuntimeResources);
         this.paramLookup.putAll(environment.paramLookup);
         this.externalParamLookup.putAll(environment.externalParamLookup);
+        this.externalBindingExpressions.putAll(environment.externalBindingExpressions);
         this.roleLookup.putAll(environment.roleLookup);
         this.collections.putAll(environment.collections);
         this.importResourceLookup.putAll(environment.importResourceLookup);
@@ -103,6 +108,21 @@ public class Environment {
             String declared = param.attribute("declared");
             if ("true".equals(declared)) {
                 externalParamLookup.put(name, select);
+                Name expandedName = Name.createVariableInNoNamespace(name);
+                if (name.contains(":") && !name.startsWith("Q{")) {
+                    String prefix = name.substring(0, name.indexOf(':'));
+                    XdmSequenceIterator<XdmNode> namespaces = param.axisIterator(Axis.NAMESPACE);
+                    while (namespaces.hasNext()) {
+                        XdmNode namespace = namespaces.next();
+                        if (namespace.getNodeName() != null
+                                && prefix.equals(namespace.getNodeName().getLocalName())) {
+                            expandedName =
+                                    new Name(namespace.getStringValue(), prefix, name.substring(name.indexOf(':') + 1));
+                            break;
+                        }
+                    }
+                }
+                this.externalBindingExpressions.put(expandedName, select);
             } else {
                 paramLookup.put(name, select);
             }
@@ -364,6 +384,19 @@ public class Environment {
         Map<URI, URI> mappings = new HashMap<>(this.resolvedRuntimeResources);
         mappings.putAll(this.importResourceLookup);
         return new ResourceResolver(mappings, named, defaultCollection);
+    }
+
+    /** Supplies declared external parameters to imported modules as well as the main query. */
+    public ExternalBindings getExternalBindings(RumbleConfiguration config, ResourceResolver resolver) {
+        ExternalBindings bindings = ExternalBindings.empty();
+        Rumble rumble = new Rumble(new CompilationConfiguration(config, resolver));
+        for (Map.Entry<Name, String> entry : this.externalBindingExpressions.entrySet()) {
+            bindings.bind(
+                    entry.getKey(),
+                    new ItemSequenceBinding(
+                            rumble.runQuery(applyToQuery(entry.getValue())).getAsList()));
+        }
+        return bindings;
     }
 
     private record CollectionDefinition(String query, List<URI> uris, URI base) {}

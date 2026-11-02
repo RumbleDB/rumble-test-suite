@@ -146,7 +146,10 @@ class AssertionContext {
         ResourceResolver resourceResolver =
                 this.environment == null ? new ResourceResolver() : this.environment.getResourceResolver(updatedConfig);
         CompilationConfiguration compilationConfig = new CompilationConfiguration(updatedConfig, resourceResolver);
-        return new Rumble(compilationConfig).runQuery(query);
+        org.rumbledb.bindings.ExternalBindings bindings = this.environment == null
+                ? org.rumbledb.bindings.ExternalBindings.empty()
+                : this.environment.getExternalBindings(updatedConfig, resourceResolver);
+        return new Rumble(compilationConfig).runQuery(query, bindings);
     }
 
     private RumbleConfiguration applyDependenciesToConfig(RumbleConfiguration config) {
