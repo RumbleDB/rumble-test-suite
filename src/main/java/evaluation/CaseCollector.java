@@ -22,7 +22,7 @@ public class CaseCollector {
     // (additional collations are not supported),
     // non_empty_sequence_collection, collection-stability, and directory-as-collection-uri
     // (collection support is incomplete),
-    // xpath-1.0-compatibility,
+    // xpath-1.0-compatibility, fn-load-xquery-module,
     // fn-transform-XSLT, fn-transform-XSLT30, namespace-axis, infoset-dtd, remote_http,
     // typedData, and schema-location-hint.
     // olson-timezone is partially supported by the date/time formatting functions.
@@ -36,6 +36,7 @@ public class CaseCollector {
             "fn-load-xquery-module",
             "moduleImport",
             "olson-timezone",
+            "remote_http",
             "serialization",
             "staticTyping",
             "schemaImport",
