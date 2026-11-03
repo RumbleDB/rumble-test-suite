@@ -24,7 +24,7 @@ public class CaseCollector {
     // (collection support is incomplete),
     // xpath-1.0-compatibility,
     // fn-transform-XSLT, fn-transform-XSLT30, namespace-axis, infoset-dtd, remote_http,
-    // typedData, and schema-location-hint.
+    // and schema-location-hint.
     // olson-timezone is partially supported by the date/time formatting functions.
     private static final Set<String> SUPPORTED_FEATURES = Set.of(
             "arbitraryPrecisionDecimal",
@@ -38,6 +38,7 @@ public class CaseCollector {
             "olson-timezone",
             "serialization",
             "staticTyping",
+            "typedData",
             "schemaImport",
             "schemaValidation",
             "schema-location-hint");
@@ -376,8 +377,10 @@ public class CaseCollector {
                 }
                 case "limit":
                 case "limits": {
-                    // year_lt_0 - I am not sure I don't think we have this limit.
-                    unmet.add(unmetDependency(type, value, satisfied, false));
+                    boolean supported = value.equals("year_lt_0");
+                    if (satisfied != supported) {
+                        unmet.add(unmetDependency(type, value, satisfied, supported));
+                    }
                     break;
                 }
                 default: {
@@ -414,7 +417,7 @@ public class CaseCollector {
         if (!supported && type.equals("feature")) {
             // These optional capabilities are outside the implementation's target, rather than feature gaps.
             category = switch (value) {
-                case "fn-transform-XSLT", "fn-transform-XSLT30" -> SkipReason.Category.OTHER_SPEC;
+                case "fn-transform-XSLT", "fn-transform-XSLT30", "xpath-1.0-compatibility" -> SkipReason.Category.OTHER_SPEC;
                 case "namespace-axis" -> SkipReason.Category.NOT_APPLICABLE;
                 default -> category;};
         }
