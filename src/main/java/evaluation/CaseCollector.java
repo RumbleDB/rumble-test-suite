@@ -20,7 +20,7 @@ public class CaseCollector {
     // schemaValidation and schemaImport (XML Schema is not supported),
     // advanced-uca-fallback, non_unicode_codepoint_collation, and simple-uca-fallback
     // (additional collations are not supported),
-    // collection-stability, and directory-as-collection-uri
+    // collection-stability
     // (collection support is incomplete),
     // xpath-1.0-compatibility,
     // fn-transform-XSLT, fn-transform-XSLT30, namespace-axis, remote_http,
@@ -40,6 +40,7 @@ public class CaseCollector {
             "staticTyping",
             "typedData",
             "infoset-dtd",
+            "directory-as-collection-uri",
             "non_empty_sequence_collection",
             "schemaImport",
             "schemaValidation",
