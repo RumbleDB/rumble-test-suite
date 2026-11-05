@@ -55,7 +55,7 @@ public class TestBase {
         this.rumbleConfig = RumbleConfiguration.builder()
                 .configureOutput(o -> o.outputFormat("json"))
                 .configureRuntime(r -> r.materializationCap(1000000000))
-                .configureSemantics(s -> s.queryLanguage(this.useXQueryParser ? "xquery31" : "jsoniq40"))
+                .configureSemantics(s -> s.queryLanguage(this.useXQueryParser ? "xquery31" : "jsoniq31"))
                 .build();
     }
 
