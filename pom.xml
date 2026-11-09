@@ -22,9 +22,9 @@
         <dependency>
             <groupId>com.github.rumbledb</groupId>
             <artifactId>rumbledb</artifactId>
-            <version>3.0.0</version>
+            <version>3.1.0</version>
             <scope>system</scope>
-            <systemPath>${project.basedir}/rumble/target/rumbledb-3.0.0-jar-with-dependencies.jar</systemPath>
+            <systemPath>${project.basedir}/rumble/target/rumbledb-3.1.0-jar-with-dependencies.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
