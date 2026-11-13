@@ -17,15 +17,14 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 public class SkipReasonTest {
 
     @Test
-    public void skipsOnlyKnownXercesXsd11SchemaFailures() throws Exception {
+    public void enablesXsd11SchemaValidation() throws Exception {
         for (int number = 20; number <= 25; number++) {
             var result = CaseCollector.checkDependencies(
                     testCase("<test-set name='prod-SchemaImport'><test-case name='substitution-0"
                             + number
                             + "'><dependency type='xsd-version' value='1.1'/></test-case></test-set>"));
-            assertEquals(
-                    "missing-feature: feature=xsd-1.1-schema-validation [missing-feature]",
-                    result.skipReason.message());
+            assertNull(result.skipReason);
+            assertEquals("1.1", result.xsdVersion);
         }
         for (String xml : List.of(
                 "<test-set name='prod-SchemaImport'><test-case name='substitution-019'/></test-set>",
@@ -62,8 +61,8 @@ public class SkipReasonTest {
     @Test
     public void missingFeatureIsReported() throws Exception {
         assertEquals(
-                "missing-feature: feature=infoset-dtd [missing-feature]",
-                skipMessage("<dependency type=\"feature\" value=\"infoset-dtd\"/>"));
+                "missing-feature: feature=remote_http [missing-feature]",
+                skipMessage("<dependency type=\"feature\" value=\"remote_http\"/>"));
     }
 
     @Test
@@ -98,7 +97,7 @@ public class SkipReasonTest {
 
     @Test
     public void negativeTestOfUnsupportedFeatureRuns() throws Exception {
-        assertNull(skipMessage("<dependency type=\"feature\" value=\"infoset-dtd\" satisfied=\"false\"/>"));
+        assertNull(skipMessage("<dependency type=\"feature\" value=\"remote_http\" satisfied=\"false\"/>"));
     }
 
     @Test
