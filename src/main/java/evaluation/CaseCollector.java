@@ -338,7 +338,13 @@ public class CaseCollector {
                     break;
                 }
                 case "feature": {
-                    boolean supported = SUPPORTED_FEATURES.contains(value);
+                    // Enable the HTTP stability case whose expected results allow an unavailable server.
+                    // Keep the timeanddate.com variant disabled.
+                    boolean supported = SUPPORTED_FEATURES.contains(value)
+                            || ("remote_http".equals(value)
+                                    && "fn-unparsed-text"
+                                            .equals(testCase.getParent().attribute("name"))
+                                    && "fn-unparsed-text-054".equals(testCaseName));
                     if (satisfied != supported) {
                         unmet.add(unmetDependency(type, value, satisfied, supported));
                     } else if (satisfied && value.equals("staticTyping")) {

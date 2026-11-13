@@ -17,6 +17,20 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 public class SkipReasonTest {
 
     @Test
+    public void enablesOnlyTheRemoteHttpCaseWithoutTimeanddate() throws Exception {
+        for (String name : List.of("fn-unparsed-text-054", "fn-unparsed-text-054a")) {
+            var result = CaseCollector.checkDependencies(testCase("<test-set name='fn-unparsed-text'><test-case name='"
+                    + name
+                    + "'><dependency type='feature' value='remote_http'/></test-case></test-set>"));
+            if (name.equals("fn-unparsed-text-054")) {
+                assertNull(result.skipReason);
+            } else {
+                assertEquals("missing-feature: feature=remote_http [missing-feature]", result.skipReason.message());
+            }
+        }
+    }
+
+    @Test
     public void enablesXsd11SchemaValidation() throws Exception {
         for (int number = 20; number <= 25; number++) {
             var result = CaseCollector.checkDependencies(
