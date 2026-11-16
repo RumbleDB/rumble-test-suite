@@ -268,21 +268,6 @@ public class CaseCollector {
 
         DependencyCheckResult result = new DependencyCheckResult();
         List<SkipReason.UnmetDependency> unmet = new ArrayList<>();
-        // These six schemas require multiple substitution-group heads, unsupported by Xerces XSD 1.0.
-        // Keep datatype-only XSD 1.1 cases enabled; remove this override when the validator supports 1.1.
-        if ("prod-SchemaImport".equals(testCase.getParent().attribute("name"))
-                && Set.of(
-                                "substitution-020",
-                                "substitution-021",
-                                "substitution-022",
-                                "substitution-023",
-                                "substitution-024",
-                                "substitution-025")
-                        .contains(testCaseName)) {
-            unmet.add(new SkipReason.UnmetDependency(
-                    "feature", "xsd-1.1-schema-validation", true, SkipReason.Category.MISSING_FEATURE));
-        }
-
         // Rumble supports XML 1.0 fifth edition and XML 1.1. Separate dependencies are conjunctive.
         Set<String> xmlVersions = new LinkedHashSet<>(List.of("1.0", "1.1"));
         Set<String> xsdVersions = new LinkedHashSet<>(List.of("1.0", "1.1"));
@@ -353,7 +338,13 @@ public class CaseCollector {
                     break;
                 }
                 case "feature": {
-                    boolean supported = SUPPORTED_FEATURES.contains(value);
+                    // Enable the HTTP stability case whose expected results allow an unavailable server.
+                    // Keep the timeanddate.com variant disabled.
+                    boolean supported = SUPPORTED_FEATURES.contains(value)
+                            || ("remote_http".equals(value)
+                                    && "fn-unparsed-text"
+                                            .equals(testCase.getParent().attribute("name"))
+                                    && "fn-unparsed-text-054".equals(testCaseName));
                     if (satisfied != supported) {
                         unmet.add(unmetDependency(type, value, satisfied, supported));
                     } else if (satisfied && value.equals("staticTyping")) {
@@ -420,7 +411,8 @@ public class CaseCollector {
         if (!supported && type.equals("feature")) {
             // These optional capabilities are outside the implementation's target, rather than feature gaps.
             category = switch (value) {
-                case "fn-transform-XSLT", "fn-transform-XSLT30", "xpath-1.0-compatibility" -> SkipReason.Category.OTHER_SPEC;
+                case "fn-transform-XSLT", "fn-transform-XSLT30", "xpath-1.0-compatibility" -> SkipReason.Category
+                        .OTHER_SPEC;
                 case "namespace-axis" -> SkipReason.Category.NOT_APPLICABLE;
                 default -> category;};
         }
